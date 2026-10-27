@@ -26,13 +26,14 @@ final class Issue extends Model
     {
         $order = match ($sort) {
             'experts' => 'CASE WHEN u.role = "expert" THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
-            'reputation' => 'r.created_at DESC',
+            'reputation' => 'reputation_points DESC, helpful_count DESC, r.created_at DESC',
             'helpful' => 'helpful_count DESC, r.created_at DESC',
             'newest' => 'r.created_at DESC',
             default => 'CASE WHEN r.id = (SELECT accepted_reply_id FROM issues WHERE id = ?) THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
         };
         $sql = 'SELECT r.id, r.issue_id, r.user_id, r.body, r.created_at, r.updated_at,
                        u.username, u.display_name, u.role, p.specialization,
+                       COALESCE((SELECT SUM(re.points) FROM reputation_events re WHERE re.user_id = u.id), 0) AS reputation_points,
                        (SELECT COUNT(*) FROM reply_votes v WHERE v.reply_id = r.id) AS helpful_count
                 FROM issue_replies r
                 JOIN users u ON u.id = r.user_id
@@ -46,12 +47,6 @@ final class Issue extends Model
             $stmt->execute([$issueId]);
         }
         $rows = $stmt->fetchAll();
-        if ($sort === 'reputation') {
-            usort($rows, static function (array $a, array $b): int {
-                $rank = static fn (array $r): int => ($r['role'] === 'expert' ? 1 : 0);
-                return ($rank($b) <=> $rank($a)) ?: strcmp((string) $b['created_at'], (string) $a['created_at']);
-            });
-        }
         return $rows;
     }
 
