@@ -19,6 +19,7 @@ return static function (Router $router): void {
     $router->post('/issues/{id}/vote', [IssueController::class, 'vote']);
     $router->post('/issues/{id}/accept', [IssueController::class, 'accept']);
     $router->post('/issues/{id}/close', [IssueController::class, 'close']);
+    $router->post('/issues/{id}/reopen', [IssueController::class, 'reopen']);
 
     $router->get('/login', [AuthController::class, 'showLogin']);
     $router->post('/login', [AuthController::class, 'login']);
