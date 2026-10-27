@@ -53,3 +53,5 @@
 @media (min-width:640px) {
   .issue-page { max-width:48rem; margin-inline:auto; }
 }
+
+.reopen-issue { display:grid; gap:.75rem; }
