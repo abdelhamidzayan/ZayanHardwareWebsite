@@ -1,0 +1,17 @@
+# Zayan Hardware: keep the project root out of the public document tree.
+Options -Indexes -MultiViews
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+
+# Requests already targeting /public are handled by public/.htaccess.
+RewriteRule ^public(?:/|$) - [L]
+
+# Open the app when visiting the project root.
+RewriteRule ^$ public/ [R=302,L]
+
+# Send all other application routes through the public front controller.
+RewriteRule ^(.*)$ public/$1 [L]
