@@ -224,3 +224,62 @@
     hiddenInput.value = mode === 'email' ? visibleInput.value.trim() : normalizedPhone();
   });
 })();
+
+
+/* ---------- Automatic featured home posts: no manual arrows ---------- */
+(() => {
+  'use strict';
+
+  const carousel = document.querySelector('[data-featured-carousel]');
+  if (!carousel) return;
+
+  const slides = Array.from(carousel.querySelectorAll('[data-featured-slide]'));
+  const progress = carousel.querySelector('[data-featured-progress]');
+  if (slides.length < 2) return;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const intervalMs = 7000;
+  let current = slides.findIndex((slide) => slide.classList.contains('is-active'));
+  let timer = null;
+  let paused = false;
+
+  const show = (index) => {
+    slides.forEach((slide, i) => {
+      const active = i === index;
+      slide.classList.toggle('is-active', active);
+      slide.setAttribute('aria-hidden', active ? 'false' : 'true');
+      slide.setAttribute('tabindex', active ? '0' : '-1');
+    });
+    current = index;
+    if (progress) {
+      progress.style.animation = 'none';
+      void progress.offsetWidth;
+      progress.style.animation = '';
+    }
+  };
+
+  const stop = () => {
+    if (timer !== null) window.clearInterval(timer);
+    timer = null;
+    carousel.classList.remove('is-running');
+  };
+
+  const start = () => {
+    stop();
+    if (paused || reducedMotion || document.hidden) return;
+    carousel.classList.add('is-running');
+    timer = window.setInterval(() => show((current + 1) % slides.length), intervalMs);
+  };
+
+  carousel.addEventListener('mouseenter', () => { paused = true; stop(); });
+  carousel.addEventListener('mouseleave', () => { paused = false; start(); });
+  carousel.addEventListener('focusin', () => { paused = true; stop(); });
+  carousel.addEventListener('focusout', (event) => {
+    if (!carousel.contains(event.relatedTarget)) { paused = false; start(); }
+  });
+  document.addEventListener('visibilitychange', start);
+
+  // The server randomizes the selected posts on each page load; rotation remains automatic.
+  show(Math.max(0, current));
+  start();
+})();
