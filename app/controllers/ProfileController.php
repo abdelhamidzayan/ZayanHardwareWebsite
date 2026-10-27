@@ -11,7 +11,7 @@ use App\Services\AuthService;
 
 final class ProfileController extends Controller
 {
-    private const ROLES = ['technician' => 'فنّي', 'expert' => 'خبير', 'moderator' => 'مشرف', 'admin' => 'مدير'];
+    private const ROLES = ['member' => 'فنّي', 'moderator' => 'مشرف', 'admin' => 'مدير'];
 
     private const EXPERIENCE = [
         'lt1'  => 'أقل من سنة',
@@ -29,7 +29,7 @@ final class ProfileController extends Controller
         }
 
         $profile = User::findProfileByUsername($username);
-        if ($profile === null || $profile['account_status'] === 'banned') {
+        if ($profile === null || $profile['account_status'] !== 'active') {
             return $this->notFound();
         }
 
@@ -49,7 +49,9 @@ final class ProfileController extends Controller
                 'username'       => $profile['username'],
                 'initials'       => $initials,
                 'role_label'     => self::ROLES[$profile['role']] ?? 'فنّي',
-                'specialization' => $topics[$profile['specialization']] ?? '',
+                'specialization' => $topics[$profile['specialization'] ?? ''] ?? '',
+                'device_specializations' => (string) ($profile['device_specializations'] ?? ''),
+                'skill_domains' => (string) ($profile['skill_domains'] ?? ''),
                 'experience'     => self::EXPERIENCE[$profile['experience']] ?? '',
                 'workshop'       => (string) ($profile['workshop_name'] ?? ''),
                 'joined'         => substr((string) $profile['created_at'], 0, 10),
