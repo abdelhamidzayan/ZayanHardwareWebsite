@@ -106,16 +106,19 @@ final class AuthController extends Controller
 
         $result = AuthService::register(
             $this->request->body,
-            array_column(DemoData::categories(), 'slug') // becomes a categories query later
+            array_column(DemoData::categories(), 'slug') // allowed repair-skill domains
         );
 
         if ($result['errors']) {
             return $this->registerForm($result['errors'], 422);
         }
 
-        $this->flash('success', 'تم إنشاء حسابك بنجاح. سجّل الدخول للمتابعة.');
+        $userId = (int) $result['userId'];
+        User::markLoggedIn($userId);
+        AuthService::login($userId);
+        $this->flash('success', 'تم إنشاء الحساب وتسجيل دخولك بنجاح. يمكنك استكمال ملفك الفني لاحقًا.');
 
-        return $this->redirect('/login');
+        return $this->redirect('/feed');
     }
 
     private function registerForm(array $errors = [], int $status = 200): Response
@@ -130,6 +133,7 @@ final class AuthController extends Controller
             'title'      => 'إنشاء حساب',
             'authPage'   => true,
             'categories' => DemoData::categories(),
+            'skillDomains' => DemoData::categories(),
             'errors'     => $errors,
             'old'        => $old,
         ], $status, 'guest');
