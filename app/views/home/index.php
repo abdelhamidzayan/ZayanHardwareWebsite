@@ -49,8 +49,12 @@ $steps = [
         <p class="hero__note">المنصة مخصّصة للفنّيين فقط ولا تقبل حسابات العملاء.</p>
     </div>
 
-    <div class="hero__preview">
-        <?php $issue = $previewIssue; require __DIR__ . '/../partials/issue-card.php'; ?>
+    <div class="hero__preview" aria-label="معاينة متحركة لمنشورات الهاردوير">
+        <?php foreach ($previewIssues as $index => $issue) : ?>
+            <div class="hero__deck-card hero__deck-card--<?= $index + 1 ?>">
+                <?php require __DIR__ . '/../partials/issue-card.php'; ?>
+            </div>
+        <?php endforeach; ?>
     </div>
 </section>
 
