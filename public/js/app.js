@@ -268,19 +268,15 @@
   }
 
   form.addEventListener('submit', () => {
-    const value = visibleInput.value.trim();
-    const digits = digitsOnly(value);
-    const looksLikePhone = /^[+0-9٠-٩۰-۹\s().-]+$/.test(value) && digits.length > 0;
-    if (value.includes('@')) hiddenInput.value = value.toLowerCase();
-    else if (mode === 'email' && !looksLikePhone) hiddenInput.value = value.toLowerCase();
-    else if (looksLikePhone) hiddenInput.value = normalizedPhone();
-    else hiddenInput.value = value.toLowerCase();
+    // The server checks username/email first, then normalizes phone numbers.
+    // Sending the original identifier also keeps numeric-only usernames usable.
+    hiddenInput.value = visibleInput.value.trim().toLowerCase();
 
     // Keep only the identifier, never the password, for the one redirect back to login.
     try {
       sessionStorage.setItem(pendingLoginKey, JSON.stringify({
         mode,
-        value,
+        value: visibleInput.value,
       }));
     } catch (_) {}
   });
