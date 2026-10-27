@@ -126,7 +126,7 @@ final class AuthController extends Controller
         foreach ($names as $name) {
             $name = strtolower(trim($name));
             if (preg_match('/^[a-z0-9_]{3,20}$/', $name) === 1 && !in_array($name, $reserved, true)) {
-                $valid[] = $name;
+                if (!in_array($name, $valid, true)) $valid[] = $name;
             }
         }
         $taken = User::existingUsernames($valid);
