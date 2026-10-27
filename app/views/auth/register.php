@@ -76,11 +76,11 @@ if ($phoneDisplay !== '' && str_starts_with($phoneDisplay, $selectedCountryCode)
                                aria-label="رقم الهاتف" <?= $mode === 'phone' ? 'required' : 'disabled' ?>>
                     </div>
                     <div class="contact-control__body" id="email-control" <?= $mode !== 'email' ? 'hidden' : '' ?>>
-                        <input id="email_local" type="text" inputmode="email" autocomplete="off"
+                        <input id="email_local" name="email_local" type="text" inputmode="email" autocomplete="off"
                                placeholder="name" value="<?= $mode === 'email' ? $e($emailParts[0] ?? '') : '' ?>"
                                aria-label="الجزء قبل علامة @ " <?= $mode === 'email' ? 'required' : 'disabled' ?>>
                         <span class="contact-control__at" aria-hidden="true">@</span>
-                        <input id="email_domain" type="text" inputmode="email" autocomplete="off"
+                        <input id="email_domain" name="email_domain" type="text" inputmode="email" autocomplete="off"
                                placeholder="example.com" value="<?= $mode === 'email' ? $e($emailParts[1] ?? '') : '' ?>"
                                aria-label="نطاق البريد الإلكتروني" <?= $mode === 'email' ? 'required' : 'disabled' ?>>
                         <input id="email" name="email" type="hidden" value="<?= $mode === 'email' ? $val('email') : '' ?>">
