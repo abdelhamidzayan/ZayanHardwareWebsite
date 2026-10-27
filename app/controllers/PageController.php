@@ -5,12 +5,15 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Response;
+use App\Services\AuthService;
 
 final class PageController extends Controller
 {
     /** Pages from the navigation that are not built yet. */
     public function soon(): Response
     {
+        if (!AuthService::user()) return $this->redirect('/login');
+
         $pages = [
             '/search'         => ['بحث', 'search'],
             '/market'         => ['السوق', 'market'],
