@@ -21,7 +21,7 @@ final class Response
     {
         $body = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
-        return new self($body, $status, ['Content-Type' => 'application/json; charset=utf-8']);
+        return new self($body, $status, ['Content-Type' => 'application/json; charset=utf-8', 'Cache-Control' => 'no-store']);
     }
 
     public function send(): void
