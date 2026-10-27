@@ -200,8 +200,8 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                 <p class="field__hint">يمكنك تخطي هذه الخطوة وإكمالها لاحقًا من ملفك الشخصي.</p>
                 <div class="wizard__actions">
                     <button class="btn btn--secondary" type="button" data-back>رجوع</button>
-                    <button class="btn btn--secondary" type="submit" name="wizard_action" value="skip">تخطي</button>
-                    <button class="btn btn--primary" type="submit" name="wizard_action" value="finish">إنهاء</button>
+                    <button class="btn btn--secondary" type="submit">تخطي</button>
+                    <button class="btn btn--primary" type="submit">إنهاء</button>
                 </div>
             </section>
         </form>
