@@ -9,6 +9,7 @@ use App\Controllers\HomeController;
 use App\Controllers\IssueController;
 use App\Controllers\PageController;
 use App\Controllers\ProfileController;
+use App\Controllers\SkillTestController;
 use App\Core\Router;
 
 return static function (Router $router): void {
@@ -31,6 +32,9 @@ return static function (Router $router): void {
     $router->post('/register', [AuthController::class, 'register']);
     $router->post('/logout', [AuthController::class, 'logout']);
     $router->post('/account/deletion-request', [AccountController::class, 'requestDeletion']);
+    $router->get('/skills/tests', [SkillTestController::class, 'index']);
+    $router->get('/skills/tests/{id}', [SkillTestController::class, 'show']);
+    $router->post('/skills/tests/{id}/submit', [SkillTestController::class, 'submit']);
     $router->get('/admin/users', [AdminUserController::class, 'index']);
     $router->post('/admin/users/{id}/password-reset', [AdminUserController::class, 'resetPassword']);
     $router->post('/admin/users/{id}/status', [AdminUserController::class, 'setStatus']);
