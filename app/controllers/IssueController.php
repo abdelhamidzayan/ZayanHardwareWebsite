@@ -136,7 +136,7 @@ final class IssueController extends Controller
         try {
             Issue::reopen($id, (int) $user['id']);
             $this->flash('success', 'تم فتح النقاش من جديد. يمكنك إضافة آخر تحديث واستقبال ردود جديدة.');
-        } catch (\\DomainException) {
+        } catch (\DomainException) {
             $this->flash('error', 'يمكن إعادة فتح النقاش لصاحبه فقط بعد مراجعة النتيجة السابقة من الإدارة.');
         }
         return $this->redirect('/issues/' . $id);
