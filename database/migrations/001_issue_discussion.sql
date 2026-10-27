@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS issue_results (
     reviewed_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_issue_result (issue_id),
+    KEY idx_issue_results_issue_created (issue_id, created_at),
     KEY idx_issue_results_review (review_status, created_at),
     CONSTRAINT fk_issue_results_issue FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE,
     CONSTRAINT fk_issue_results_submitter FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE RESTRICT,
