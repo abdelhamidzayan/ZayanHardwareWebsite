@@ -487,40 +487,57 @@
 .hero__deck-card {
   grid-area: 1 / 1;
   min-inline-size: 0;
-  transform-origin: 50% 10%;
+  transform-origin: 50% 8%;
   backface-visibility: hidden;
   will-change: transform;
 }
 
 .hero__deck-card:nth-child(1) {
   z-index: 2;
-  animation: hero-deck-card-front 8s cubic-bezier(.45, 0, .2, 1) infinite;
+  animation: hero-deck-card-front 8.4s cubic-bezier(.4, 0, .18, 1) infinite;
 }
 
 .hero__deck-card:nth-child(2) {
   z-index: 1;
-  animation: hero-deck-card-back 8s cubic-bezier(.45, 0, .2, 1) infinite;
+  animation: hero-deck-card-back 8.4s cubic-bezier(.4, 0, .18, 1) infinite;
 }
 
+/* The top card first loosens from the stack, then slides down past the card below. */
 @keyframes hero-deck-card-front {
-  0%, 34% {
+  0%, 32% {
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     z-index: 2;
   }
-  42% {
-    transform: translate3d(-0.2rem, 0.45rem, 0) rotate(-1deg) scale(.99);
+  37% {
+    transform: translate3d(-.15rem, -.25rem, 0) rotate(-1deg) scale(1.005);
     z-index: 2;
   }
-  52% {
-    transform: translate3d(1.2rem, 2.1rem, 0) rotate(5deg) scale(.94);
+  45% {
+    transform: translate3d(.2rem, 1.2rem, 0) rotate(2deg) scale(.985);
+    z-index: 2;
+  }
+  53% {
+    transform: translate3d(1rem, 4.5rem, 0) rotate(5deg) scale(.96);
     z-index: 1;
   }
-  60%, 86% {
-    transform: translate3d(.65rem, .8rem, 0) rotate(3deg) scale(.96);
+  59% {
+    transform: translate3d(1.25rem, 7rem, 0) rotate(7deg) scale(.94);
     z-index: 1;
   }
-  94% {
-    transform: translate3d(.15rem, .15rem, 0) rotate(.7deg) scale(.99);
+  66% {
+    transform: translate3d(.9rem, 5rem, 0) rotate(5deg) scale(.95);
+    z-index: 1;
+  }
+  74% {
+    transform: translate3d(.6rem, 1.8rem, 0) rotate(3.5deg) scale(.965);
+    z-index: 1;
+  }
+  82%, 90% {
+    transform: translate3d(.55rem, .8rem, 0) rotate(3deg) scale(.97);
+    z-index: 1;
+  }
+  96% {
+    transform: translate3d(.2rem, .2rem, 0) rotate(.8deg) scale(.99);
     z-index: 1;
   }
   100% {
@@ -529,29 +546,34 @@
   }
 }
 
+/* The lower card rises gradually as the outgoing card passes underneath. */
 @keyframes hero-deck-card-back {
-  0%, 34% {
-    transform: translate3d(.65rem, .8rem, 0) rotate(3deg) scale(.96);
+  0%, 32% {
+    transform: translate3d(.55rem, .8rem, 0) rotate(3deg) scale(.97);
     z-index: 1;
   }
-  42% {
-    transform: translate3d(.35rem, .45rem, 0) rotate(1.8deg) scale(.975);
+  40% {
+    transform: translate3d(.4rem, .55rem, 0) rotate(2deg) scale(.98);
     z-index: 1;
   }
-  52% {
+  48% {
+    transform: translate3d(.15rem, .2rem, 0) rotate(.8deg) scale(.995);
+    z-index: 1;
+  }
+  55%, 72% {
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     z-index: 2;
   }
-  60%, 86% {
+  82%, 90% {
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     z-index: 2;
   }
-  94% {
-    transform: translate3d(.25rem, .3rem, 0) rotate(1.2deg) scale(.98);
+  96% {
+    transform: translate3d(.25rem, .35rem, 0) rotate(1.5deg) scale(.985);
     z-index: 2;
   }
   100% {
-    transform: translate3d(.65rem, .8rem, 0) rotate(3deg) scale(.96);
+    transform: translate3d(.55rem, .8rem, 0) rotate(3deg) scale(.97);
     z-index: 1;
   }
 }
