@@ -9,7 +9,7 @@
             <?= $csrf() ?>
 
             <div class="field">
-                <label class="field__label" for="login-identifier-input" data-login-identifier-label>رقم الهاتف</label>
+                <label class="field__label" for="login-identifier-input" data-login-identifier-label>البريد أو رقم الهاتف أو اسم المستخدم</label>
                 <div class="login-identifier">
                     <div class="login-identifier__phone" data-login-phone-controls>
                         <label class="sr-only" for="login-country-code">الدولة</label>
