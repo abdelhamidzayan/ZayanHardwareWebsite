@@ -23,12 +23,13 @@ $authPage = $authPage ?? false;
             <span class="brand__name"><?= $e($appName) ?></span>
         </a>
 
-        <?php if (!$authPage) : ?>
-            <nav class="guest-header__actions" aria-label="الحساب">
-                <a class="btn btn--ghost" href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a>
-                <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/register">إنشاء حساب</a>
-            </nav>
-        <?php endif; ?>
+        <nav class="guest-header__actions" aria-label="روابط الموقع">
+            <a class="guest-header__help" href="<?= $e($baseUrl) ?>/#steps-title">المساعدة</a>
+            <?php if (!$authPage) : ?>
+                <a class="btn btn--ghost" href="<?= $e($baseUrl) ?>/login"><span class="guest-header__label-full">تسجيل الدخول</span><span class="guest-header__label-mobile">دخول</span></a>
+                <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/register"><span class="guest-header__label-full">إنشاء حساب</span><span class="guest-header__label-mobile">حساب جديد</span></a>
+            <?php endif; ?>
+        </nav>
     </div>
 </header>
 

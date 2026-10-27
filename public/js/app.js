@@ -138,3 +138,89 @@
     });
   });
 })();
+
+
+/* ---------- Login identifier: phone with country code or email ---------- */
+(() => {
+  'use strict';
+
+  const form = document.querySelector('[data-login-identifier-form]');
+  if (!form) return;
+
+  const wrapper = form.querySelector('.login-identifier');
+  const visibleInput = form.querySelector('[data-login-visible-input]');
+  const hiddenInput = form.querySelector('#identifier');
+  const countrySelect = form.querySelector('[data-login-country]');
+  const phoneControls = form.querySelector('[data-login-phone-controls]');
+  const label = form.querySelector('[data-login-identifier-label]');
+  const switchButton = form.querySelector('[data-login-switch]');
+  let mode = 'phone';
+  let phoneValue = '';
+  let emailValue = '';
+
+  const emailIcon = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+  const phoneIcon = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-2.5 1.5a15 15 0 0 0 6 6L16 13l5 2v4c0 1.1-.9 2-2 2C10 21 3 14 3 5c0-1.1.9-2 2-2z"/></svg>';
+
+  const digitsOnly = (value) => value.replace(/\D/g, '');
+
+  const normalizedPhone = () => {
+    const raw = visibleInput.value.trim();
+    const digits = digitsOnly(raw);
+    if (!digits) return '';
+    if (raw.startsWith('+')) return '+' + digits;
+    if (digits.startsWith('00')) return '+' + digits.slice(2);
+
+    const code = digitsOnly(countrySelect.value);
+    if (digits.startsWith(code) && digits.length > code.length + 6) return '+' + digits;
+    return '+' + code + digits.replace(/^0+/, '');
+  };
+
+  const switchMode = () => {
+    if (mode === 'phone') {
+      phoneValue = visibleInput.value;
+      mode = 'email';
+      wrapper.classList.add('is-email');
+      phoneControls.hidden = true;
+      visibleInput.type = 'email';
+      visibleInput.inputMode = 'email';
+      visibleInput.autocomplete = 'email';
+      visibleInput.placeholder = 'البريد الإلكتروني';
+      visibleInput.dataset.rules = 'required email';
+      visibleInput.value = emailValue;
+      label.textContent = 'البريد الإلكتروني';
+      switchButton.innerHTML = phoneIcon;
+      switchButton.setAttribute('aria-label', 'التبديل إلى رقم الهاتف');
+      switchButton.title = 'التبديل إلى رقم الهاتف';
+    } else {
+      emailValue = visibleInput.value;
+      mode = 'phone';
+      wrapper.classList.remove('is-email');
+      phoneControls.hidden = false;
+      visibleInput.type = 'tel';
+      visibleInput.inputMode = 'tel';
+      visibleInput.autocomplete = 'tel-national';
+      visibleInput.placeholder = 'رقم الهاتف';
+      visibleInput.dataset.rules = 'required tel';
+      visibleInput.value = phoneValue;
+      label.textContent = 'رقم الهاتف';
+      switchButton.innerHTML = emailIcon;
+      switchButton.setAttribute('aria-label', 'التبديل إلى البريد الإلكتروني');
+      switchButton.title = 'التبديل إلى البريد الإلكتروني';
+    }
+
+    visibleInput.setAttribute('aria-invalid', 'false');
+    const error = visibleInput.closest('.field')?.querySelector('.field__error');
+    if (error) error.textContent = '';
+    visibleInput.focus();
+  };
+
+  switchButton.addEventListener('click', switchMode);
+  visibleInput.addEventListener('input', () => {
+    if (mode === 'phone') phoneValue = visibleInput.value;
+    else emailValue = visibleInput.value;
+  });
+
+  form.addEventListener('submit', () => {
+    hiddenInput.value = mode === 'email' ? visibleInput.value.trim() : normalizedPhone();
+  });
+})();
