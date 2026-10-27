@@ -628,3 +628,81 @@
     font-size: .82rem;
   }
 }
+
+/* ---------- Public header logo: keep it visible on narrow screens ---------- */
+.guest-header__inner > .brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-inline-size: max-content;
+  gap: .55rem;
+  text-decoration: none;
+}
+.guest .brand__logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 2.75rem;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  overflow: visible;
+  background: #123f78;
+  color: #fff;
+}
+.guest .brand__logo .icon {
+  display: block;
+  inline-size: 1.55rem;
+  block-size: 1.55rem;
+  stroke: currentColor;
+  stroke-width: 1.9;
+}
+.guest .brand__name {
+  display: block;
+  max-inline-size: none;
+  overflow: visible;
+  color: var(--color-ink);
+  font-size: clamp(.9rem, 2.5vw, 1.15rem);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+@media (max-width: 520px) {
+  .guest-header__inner {
+    gap: .5rem;
+    padding-inline: .65rem;
+  }
+  .guest-header__inner > .brand {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    gap: .4rem;
+  }
+  .guest .brand__logo {
+    flex-basis: 2.5rem;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    border-radius: .55rem;
+  }
+  .guest .brand__logo .icon {
+    inline-size: 1.4rem;
+    block-size: 1.4rem;
+  }
+  .guest .brand__name {
+    max-inline-size: min(32vw, 7.5rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: .88rem;
+  }
+  .guest-header__actions {
+    flex: 0 0 auto;
+    gap: .3rem;
+  }
+}
+@media (max-width: 360px) {
+  .guest .brand__logo {
+    flex-basis: 2.3rem;
+    inline-size: 2.3rem;
+    block-size: 2.3rem;
+  }
+  .guest .brand__name { max-inline-size: 26vw; font-size: .78rem; }
+}
+
