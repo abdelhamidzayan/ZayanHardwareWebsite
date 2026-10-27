@@ -4,6 +4,7 @@ $old = $old ?? [];
 $val = fn (string $key): string => $e($old[$key] ?? '');
 $err = fn (string $key): string => $e($errors[$key] ?? '');
 $mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
+$emailParts = explode('@', (string) ($old['email'] ?? ''), 2);
 ?>
 <style>
 .registration-progress{display:flex;align-items:flex-start;gap:0;margin:8px 0 28px;direction:rtl}
@@ -69,10 +70,14 @@ $mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
                                aria-label="رقم الهاتف" <?= $mode === 'phone' ? 'required' : 'disabled' ?>>
                     </div>
                     <div class="contact-control__body" id="email-control" <?= $mode !== 'email' ? 'hidden' : '' ?>>
+                        <input id="email_local" type="text" inputmode="email" autocomplete="off"
+                               placeholder="name" value="<?= $mode === 'email' ? $e($emailParts[0] ?? '') : '' ?>"
+                               aria-label="الجزء قبل علامة @ " <?= $mode === 'email' ? 'required' : 'disabled' ?>>
                         <span class="contact-control__at" aria-hidden="true">@</span>
-                        <input id="email" name="email" type="email" inputmode="email" autocomplete="email"
-                               placeholder="name@example.com" value="<?= $mode === 'email' ? $val('email') : '' ?>"
-                               aria-label="البريد الإلكتروني" <?= $mode === 'email' ? 'required' : 'disabled' ?>>
+                        <input id="email_domain" type="text" inputmode="email" autocomplete="off"
+                               placeholder="example.com" value="<?= $mode === 'email' ? $e($emailParts[1] ?? '') : '' ?>"
+                               aria-label="نطاق البريد الإلكتروني" <?= $mode === 'email' ? 'required' : 'disabled' ?>>
+                        <input id="email" name="email" type="hidden" value="<?= $mode === 'email' ? $val('email') : '' ?>">
                     </div>
                 </div>
                 <p class="field__hint" id="contact-hint">هنضيف كود الدولة تلقائيًا. مثال: 01033771537 في مصر يتحفظ +201033771537.</p>
@@ -115,6 +120,8 @@ $mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
     var emailControl = document.getElementById('email-control');
     var phone = document.getElementById('phone');
     var email = document.getElementById('email');
+    var emailLocal = document.getElementById('email_local');
+    var emailDomain = document.getElementById('email_domain');
     var label = document.getElementById('contact-label');
     var hint = document.getElementById('contact-hint');
     function setMode(next) {
@@ -124,8 +131,10 @@ $mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
         emailControl.hidden = !useEmail;
         phone.disabled = useEmail;
         phone.required = !useEmail;
-        email.disabled = !useEmail;
-        email.required = useEmail;
+        emailLocal.disabled = !useEmail;
+        emailLocal.required = useEmail;
+        emailDomain.disabled = !useEmail;
+        emailDomain.required = useEmail;
         label.textContent = useEmail ? 'البريد الإلكتروني' : 'رقم الهاتف';
         switcher.setAttribute('aria-label', useEmail ? 'التبديل إلى رقم الهاتف' : 'التبديل إلى البريد الإلكتروني');
         icon.innerHTML = useEmail
@@ -138,7 +147,10 @@ $mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
 
     var form = document.getElementById('register-stage-one');
     form.addEventListener('submit', function () {
-        if (mode.value !== 'phone') return;
+        if (mode.value === 'email') {
+            email.value = emailLocal.value.trim() + '@' + emailDomain.value.trim();
+            return;
+        }
         var raw = phone.value.trim().replace(/[\s()\-.]/g, '');
         var code = document.getElementById('country_code').value;
         var digits = raw.replace(/\D/g, '');
