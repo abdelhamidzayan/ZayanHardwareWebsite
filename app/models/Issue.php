@@ -63,6 +63,13 @@ final class Issue extends Model
         return $stmt->fetchAll();
     }
 
+    public static function attachmentById(int $attachmentId): ?array
+    {
+        $stmt = self::db()->prepare('SELECT a.id, a.file_path, a.mime_type, a.file_size, a.issue_id FROM issue_attachments a WHERE a.id = ? LIMIT 1');
+        $stmt->execute([$attachmentId]);
+        return $stmt->fetch() ?: null;
+    }
+
     public static function history(int $issueId): array
     {
         $stmt = self::db()->prepare(
