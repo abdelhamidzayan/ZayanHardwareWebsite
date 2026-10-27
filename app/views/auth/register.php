@@ -1,172 +1,212 @@
 <?php
 $errors = $errors ?? [];
 $old = $old ?? [];
-$val = fn (string $key): string => $e($old[$key] ?? '');
-$err = fn (string $key): string => $e($errors[$key] ?? '');
-$mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
-$emailParts = explode('@', (string) ($old['email'] ?? ''), 2);
-$selectedCountryCode = (string) ($old['country_code'] ?? '+20');
-$phoneDisplay = (string) ($old['phone'] ?? '');
-if ($phoneDisplay !== '' && str_starts_with($phoneDisplay, $selectedCountryCode)) {
-    $phoneDisplay = substr($phoneDisplay, strlen($selectedCountryCode));
-    if ($selectedCountryCode === '+20' && $phoneDisplay !== '' && $phoneDisplay[0] !== '0') $phoneDisplay = '0' . $phoneDisplay;
+$countries = $countries ?? require dirname(__DIR__, 3) . '/config/countries.php';
+$activeStep = (int) ($activeStep ?? 1);
+$val = static fn (string $key): string => $e(is_string($old[$key] ?? null) ? $old[$key] : '');
+$err = static fn (string $key): string => $e(is_string($errors[$key] ?? null) ? $errors[$key] : '');
+$contactType = in_array(($old['contact_type'] ?? ''), ['phone', 'email'], true)
+    ? $old['contact_type']
+    : ((string) ($old['phone_number'] ?? '') !== '' ? 'phone' : 'phone');
+$selectedCountry = isset($countries[$old['country'] ?? 'EG']) ? (string) ($old['country'] ?? 'EG') : 'EG';
+$emailLocal = (string) ($old['email_local'] ?? '');
+$emailDomain = (string) ($old['email_domain'] ?? '');
+if (str_contains($emailLocal, '@')) {
+    $emailParts = explode('@', $emailLocal, 2);
+    $emailLocal = $emailParts[0];
+    if ($emailDomain === '') $emailDomain = $emailParts[1] ?? '';
 }
+$selectedFocus = (string) ($old['device_focus'] ?? '');
+$selectedLevel = (string) ($old['tech_level'] ?? 'fast');
+$selectedExperience = (string) ($old['board_experience'] ?? '');
 ?>
-<style>
-.registration-progress{display:flex;align-items:flex-start;gap:0;margin:8px 0 28px;direction:rtl}
-.registration-progress__step{flex:1;position:relative;text-align:center;color:var(--muted,#8b929b);font-size:12px}
-.registration-progress__step:not(:last-child):before{content:"";position:absolute;top:15px;right:calc(50% + 21px);left:calc(-50% + 21px);height:2px;background:var(--border,#30363d)}
-.registration-progress__number{display:flex;width:32px;height:32px;border-radius:50%;align-items:center;justify-content:center;margin:0 auto 8px;border:1px solid var(--border,#30363d);background:var(--surface,#15191e);font-weight:700}
-.registration-progress__step.is-active{color:var(--text,#f5f5f5);font-weight:700}
-.registration-progress__step.is-active .registration-progress__number{background:#c49a42;border-color:#c49a42;color:#101010}
-.registration-progress__step.is-done .registration-progress__number{border-color:#c49a42;color:#c49a42}
-.contact-control{display:flex;direction:ltr;align-items:stretch;gap:8px}
-.contact-control__switch{width:48px;min-width:48px;border:1px solid var(--border,#30363d);border-radius:10px;background:var(--surface,#15191e);color:inherit;display:grid;place-items:center;cursor:pointer}
-.contact-control__switch svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8}
-.contact-control__body{flex:1;min-width:0;display:flex;direction:ltr;align-items:stretch;border:1px solid var(--border,#30363d);border-radius:10px;overflow:hidden}
-.contact-control__body select,.contact-control__body input{min-width:0;border:0;border-radius:0;background:transparent;color:inherit;padding:12px;font:inherit}
-.contact-control__body select{max-width:112px;border-right:1px solid var(--border,#30363d)}
-.contact-control__body input{flex:1;width:100%;text-align:left;direction:ltr}
-.contact-control__body input:focus,.contact-control__body select:focus{outline:0}
-.contact-control__at{display:flex;align-items:center;padding:0 13px;border-right:1px solid var(--border,#30363d);font-weight:700;color:var(--muted,#8b929b)}
-@media(max-width:420px){.contact-control__body select{max-width:96px;padding:9px 5px}.contact-control__body input{padding:10px 8px}}
-</style>
-<section class="auth">
-    <div class="card auth__card">
-        <div class="registration-progress" aria-label="مراحل إنشاء الحساب">
-            <div class="registration-progress__step is-active" aria-current="step"><span class="registration-progress__number">1</span><span>الحساب</span></div>
-            <div class="registration-progress__step"><span class="registration-progress__number">2</span><span>التخصص</span></div>
-            <div class="registration-progress__step"><span class="registration-progress__number">3</span><span>الملف الشخصي</span></div>
-        </div>
+<section class="auth wizard">
+    <div class="card auth__card wizard__card">
         <h1 class="auth__title">إنشاء حساب فنّي</h1>
-        <p class="auth__sub">ابدأ بالبيانات الأساسية فقط. باقي التفاصيل في خطوات تقدر تتخطاها.</p>
+        <p class="auth__sub">أنشئ حسابك وابدأ مشاركة خبرتك في هاردوير الهواتف.</p>
 
-        <form class="auth__form" method="post" action="<?= $e($baseUrl) ?>/register" novalidate data-validate id="register-stage-one">
+        <ol class="wizard__stepper" aria-label="مراحل إنشاء الحساب">
+            <li class="wizard__stepper-item is-active" data-stepper="1"><span class="wizard__stepper-circle">1</span><span>الحساب</span></li>
+            <li class="wizard__stepper-item" data-stepper="2"><span class="wizard__stepper-circle">2</span><span>تخصصك</span></li>
+            <li class="wizard__stepper-item" data-stepper="3"><span class="wizard__stepper-circle">3</span><span>ملفك</span></li>
+        </ol>
+
+        <form class="auth__form wizard__form" method="post" action="<?= $e($baseUrl) ?>/register" id="registration-wizard" data-register-wizard novalidate>
             <?= $csrf() ?>
-            <input type="hidden" name="contact_mode" id="contact_mode" value="<?= $mode ?>">
+            <input type="hidden" name="contact_type" value="<?= $e($contactType) ?>" data-contact-type>
+            <input type="hidden" name="country" value="<?= $e($selectedCountry) ?>" data-country-value>
 
-            <div class="field">
-                <label class="field__label" for="display_name">الاسم الظاهر</label>
-                <input class="field__input" id="display_name" name="display_name" type="text"
-                       value="<?= $val('display_name') ?>" autocomplete="name" maxlength="60"
-                       data-rules="required" required aria-invalid="<?= isset($errors['display_name']) ? 'true' : 'false' ?>">
-                <p class="field__error" aria-live="polite"><?= $err('display_name') ?></p>
-            </div>
-
-            <div class="field">
-                <label class="field__label" id="contact-label" for="phone">رقم الهاتف</label>
-                <div class="contact-control">
-                    <button class="contact-control__switch" type="button" id="contact-mode-switch"
-                            aria-label="التبديل إلى البريد الإلكتروني" title="التبديل بين الهاتف والبريد الإلكتروني">
-                        <svg id="contact-mode-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 18.5h4"/></svg>
-                    </button>
-                    <div class="contact-control__body" id="phone-control" <?= $mode === 'email' ? 'hidden' : '' ?>>
-                        <select id="country_code" name="country_code" aria-label="كود الدولة">
-                            <option value="+20"<?= ($selectedCountryCode === '+20' ? ' selected' : '') ?>>🇪🇬 +20</option>
-                            <option value="+966"<?= ($selectedCountryCode === '+966' ? ' selected' : '') ?>>🇸🇦 +966</option>
-                            <option value="+971"<?= ($selectedCountryCode === '+971' ? ' selected' : '') ?>>🇦🇪 +971</option>
-                            <option value="+965"<?= ($selectedCountryCode === '+965' ? ' selected' : '') ?>>🇰🇼 +965</option>
-                            <option value="+974"<?= ($selectedCountryCode === '+974' ? ' selected' : '') ?>>🇶🇦 +974</option>
-                            <option value="+962"<?= ($selectedCountryCode === '+962' ? ' selected' : '') ?>>🇯🇴 +962</option>
-                            <option value="+1"<?= ($selectedCountryCode === '+1' ? ' selected' : '') ?>>🇺🇸 +1</option>
-                            <option value="+44"<?= ($selectedCountryCode === '+44' ? ' selected' : '') ?>>🇬🇧 +44</option>
-                        </select>
-                        <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel"
-                               placeholder="010 1234 5678" value="<?= $mode === 'phone' ? $e($phoneDisplay) : '' ?>"
-                               aria-label="رقم الهاتف" <?= $mode === 'phone' ? 'required' : 'disabled' ?>>
-                    </div>
-                    <div class="contact-control__body" id="email-control" <?= $mode !== 'email' ? 'hidden' : '' ?>>
-                        <input id="email_local" name="email_local" type="text" inputmode="email" autocomplete="off"
-                               placeholder="name" value="<?= $mode === 'email' ? $e($emailParts[0] ?? '') : '' ?>"
-                               aria-label="الجزء قبل علامة @ " <?= $mode === 'email' ? 'required' : 'disabled' ?>>
-                        <span class="contact-control__at" aria-hidden="true">@</span>
-                        <input id="email_domain" name="email_domain" type="text" inputmode="email" autocomplete="off"
-                               placeholder="example.com" value="<?= $mode === 'email' ? $e($emailParts[1] ?? '') : '' ?>"
-                               aria-label="نطاق البريد الإلكتروني" <?= $mode === 'email' ? 'required' : 'disabled' ?>>
-                        <input id="email" name="email" type="hidden" value="<?= $mode === 'email' ? $val('email') : '' ?>">
-                    </div>
+            <section class="wizard__step" data-step="1" aria-labelledby="wizard-account-title">
+                <h2 class="wizard__heading" id="wizard-account-title">بيانات حسابك</h2>
+                <div class="field">
+                    <label class="field__label" for="display_name">الاسم الظاهر</label>
+                    <input class="field__input" id="display_name" name="display_name" type="text" value="<?= $val('display_name') ?>"
+                           autocomplete="name" minlength="2" maxlength="60" data-wizard-required required>
+                    <p class="field__error" data-error-for="display_name" aria-live="polite"><?= $err('display_name') ?></p>
                 </div>
-                <p class="field__hint" id="contact-hint">هنضيف كود الدولة تلقائيًا. مثال: 01033771537 في مصر يتحفظ +201033771537.</p>
-                <p class="field__error" aria-live="polite"><?= $err('phone') ?: $err('email') ?: $err('contact') ?></p>
-            </div>
 
-            <div class="field">
-                <label class="field__label" for="password">كلمة المرور</label>
-                <div class="field__password">
-                    <input class="field__input field__input--ltr" id="password" name="password" type="password"
-                           autocomplete="new-password" minlength="10" maxlength="128" data-rules="required min:10" required>
-                    <button class="field__toggle" type="button" data-toggle-password hidden
-                            aria-label="إظهار كلمة المرور" aria-pressed="false">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
+                <div class="field">
+                    <label class="field__label" for="phone_number" data-contact-label><?= $contactType === 'phone' ? 'رقم الهاتف' : 'البريد الإلكتروني' ?></label>
+                    <div class="wizard-contact" dir="ltr">
+                        <button class="wizard-contact__switch" type="button" data-contact-switch aria-label="التبديل إلى البريد الإلكتروني" title="التبديل بين الهاتف والبريد">
+                            <svg data-contact-icon viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 18.5h4"/></svg>
+                        </button>
+
+                        <div class="wizard-contact__phone" data-phone-fields <?= $contactType === 'email' ? 'hidden' : '' ?>>
+                            <button class="country-picker" type="button" data-country-toggle aria-haspopup="listbox" aria-expanded="false">
+                                <span data-country-flag><?= $e($countries[$selectedCountry]['flag']) ?></span>
+                                <span data-country-dial>+<?= $e($countries[$selectedCountry]['dial']) ?></span>
+                                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg>
+                            </button>
+                            <input id="phone_number" name="phone_number" type="tel" inputmode="tel" autocomplete="tel-national"
+                                   placeholder="01012345678" value="<?= $val('phone_number') ?>" data-phone-input <?= $contactType === 'email' ? 'disabled' : 'required' ?>>
+                            <div class="country-list" data-country-list role="listbox" aria-label="اختر الدولة" hidden>
+                                <?php foreach ($countries as $iso => $country) : ?>
+                                    <button type="button" class="country-list__item" role="option" aria-selected="<?= $iso === $selectedCountry ? 'true' : 'false' ?>"
+                                            data-country="<?= $e($iso) ?>" data-dial="<?= $e($country['dial']) ?>" data-flag="<?= $e($country['flag']) ?>">
+                                        <span class="country-list__flag"><?= $e($country['flag']) ?></span>
+                                        <span class="country-list__name"><?= $e($country['name']) ?></span>
+                                        <span class="country-list__iso"><?= $e($iso) ?></span>
+                                        <span class="country-list__dial">+<?= $e($country['dial']) ?></span>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <div class="wizard-contact__email" data-email-fields <?= $contactType !== 'email' ? 'hidden' : '' ?>>
+                            <input id="email_local" name="email_local" type="text" inputmode="email" autocomplete="email" placeholder="name"
+                                   value="<?= $e($emailLocal) ?>" aria-label="الجزء قبل علامة @ " data-email-local <?= $contactType === 'phone' ? 'disabled' : 'required' ?>>
+                            <span class="wizard-contact__at" aria-hidden="true">@</span>
+                            <input id="email_domain" name="email_domain" type="text" inputmode="email" autocomplete="off" placeholder="example.com"
+                                   value="<?= $e($emailDomain) ?>" aria-label="نطاق البريد الإلكتروني" data-email-domain <?= $contactType === 'phone' ? 'disabled' : 'required' ?>>
+                        </div>
+                    </div>
+                    <p class="field__hint" data-contact-hint><?= $contactType === 'phone' ? 'مثال: 01033771537 في مصر يُحفظ +201033771537.' : 'يمكنك لصق البريد الإلكتروني كاملًا في الخانة الأولى.' ?></p>
+                    <p class="field__error" data-error-for="contact" aria-live="polite"><?= $err('contact') ?></p>
                 </div>
-                <p class="field__hint">10 أحرف على الأقل.</p>
-                <p class="field__error" aria-live="polite"><?= $err('password') ?></p>
-            </div>
 
-            <div class="field">
-                <label class="check">
-                    <input type="checkbox" name="terms" value="1" data-rules="required" required<?= ($old['terms'] ?? '') === '1' ? ' checked' : '' ?>>
-                    <span>أوافق على قواعد المنصة وسياسة الخصوصية.</span>
-                </label>
-                <p class="field__error" aria-live="polite"><?= $err('terms') ?></p>
-            </div>
+                <div class="field">
+                    <label class="field__label" for="password">كلمة المرور</label>
+                    <div class="field__password">
+                        <input class="field__input field__input--ltr" id="password" name="password" type="password" autocomplete="new-password"
+                               minlength="10" maxlength="72" data-wizard-required data-password-input required>
+                        <button class="field__toggle" type="button" data-password-toggle aria-label="إظهار كلمة المرور" aria-pressed="false">
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <p class="field__hint">10 أحرف على الأقل.</p>
+                    <p class="field__error" data-error-for="password" aria-live="polite"><?= $err('password') ?></p>
+                </div>
 
-            <button class="btn btn--primary btn--block" type="submit">إنشاء الحساب والمتابعة</button>
+                <div class="wizard__actions wizard__actions--end">
+                    <button class="btn btn--primary" type="button" data-next>التالي</button>
+                </div>
+            </section>
+
+            <section class="wizard__step" data-step="2" aria-labelledby="wizard-specialty-title">
+                <h2 class="wizard__heading" id="wizard-specialty-title">خصص حسابك الفني</h2>
+
+                <div class="field">
+                    <label class="field__label" for="username">اسم المستخدم</label>
+                    <div class="wizard-username">
+                        <span aria-hidden="true">@</span>
+                        <input class="field__input field__input--ltr" id="username" name="username" type="text" autocomplete="username"
+                               minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<?= $val('username') ?>"
+                               data-username-input required>
+                    </div>
+                    <p class="field__hint">يمكنك تغييره لاحقًا من ملفك الشخصي.</p>
+                    <p class="field__status" data-username-status aria-live="polite"><?= $err('username') ?></p>
+                    <div class="wizard-suggestions" data-username-suggestions aria-label="اقتراحات أسماء المستخدمين"></div>
+                    <button class="wizard__text-button" type="button" data-more-suggestions>اقتراحات أخرى</button>
+                </div>
+
+                <fieldset class="field wizard-choice">
+                    <legend class="field__label">مجال تخصصك</legend>
+                    <div class="wizard-choice__grid">
+                        <label class="wizard-choice__card">
+                            <input type="radio" name="device_focus" value="iphone" data-wizard-required <?= $selectedFocus === 'iphone' ? 'checked' : '' ?>>
+                            <span class="wizard-choice__logo wizard-choice__logo--apple" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M16.37 12.2c.02 2.2 1.93 2.93 1.95 2.94-.02.05-.3 1.05-1 2.08-.6.9-1.23 1.8-2.22 1.82-.97.02-1.28-.59-2.39-.59-1.1 0-1.45.57-2.36.61-.95.04-1.67-.98-2.28-1.88-1.25-1.82-2.2-5.15-.92-7.4.64-1.12 1.78-1.83 3.02-1.85.94-.02 1.82.66 2.39.66.56 0 1.62-.82 2.73-.7.46.02 1.76.18 2.6 1.42-.07.04-1.55.9-1.53 2.89ZM14.6 5.9c.5-.6.83-1.44.74-2.27-.72.03-1.59.48-2.1 1.08-.46.53-.86 1.39-.75 2.2.8.06 1.61-.4 2.11-1.01Z"/></svg>
+                            </span>
+                            <strong>iPhone</strong>
+                            <span>أجهزة Apple</span>
+                        </label>
+                        <label class="wizard-choice__card">
+                            <input type="radio" name="device_focus" value="android" data-wizard-required <?= $selectedFocus === 'android' ? 'checked' : '' ?>>
+                            <span class="wizard-choice__logo wizard-choice__logo--android" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M6.2 8.1 4.6 5.3a.5.5 0 0 1 .87-.5l1.65 2.85a9.2 9.2 0 0 1 9.76 0l1.65-2.85a.5.5 0 0 1 .87.5L17.8 8.1a8.2 8.2 0 0 1 2.6 6H3.6a8.2 8.2 0 0 1 2.6-6ZM7.1 10.6a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6Zm9.8 0a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6ZM3.6 15.2h16.8v3.1a1.5 1.5 0 0 1-1.5 1.5h-.8v2.1a1.1 1.1 0 0 1-2.2 0v-2.1h-7v2.1a1.1 1.1 0 0 1-2.2 0v-2.1h-.8a1.5 1.5 0 0 1-1.5-1.5v-3.1Z"/></svg>
+                            </span>
+                            <strong>Android</strong>
+                            <span>أجهزة أندرويد</span>
+                        </label>
+                    </div>
+                    <p class="field__error" data-error-for="device_focus" aria-live="polite"><?= $err('device_focus') ?></p>
+                </fieldset>
+
+                <fieldset class="field wizard-choice">
+                    <legend class="field__label">مستواك</legend>
+                    <div class="wizard-choice__grid">
+                        <label class="wizard-choice__card">
+                            <input type="radio" name="tech_level" value="fast" data-wizard-required <?= $selectedLevel === 'fast' ? 'checked' : '' ?>>
+                            <strong>فني فاست</strong>
+                            <span>مبتدئ</span>
+                        </label>
+                        <label class="wizard-choice__card">
+                            <input type="radio" name="tech_level" value="board" data-wizard-required <?= $selectedLevel === 'board' ? 'checked' : '' ?>>
+                            <strong>فني بورد</strong>
+                            <span>صيانة على مستوى البوردة</span>
+                        </label>
+                    </div>
+                    <p class="field__error" data-error-for="tech_level" aria-live="polite"><?= $err('tech_level') ?></p>
+                </fieldset>
+
+                <div class="field" data-board-experience <?= $selectedLevel === 'board' ? '' : 'hidden' ?>>
+                    <label class="field__label" for="board_experience">سنوات الخبرة</label>
+                    <div class="wizard-experience__title"><span class="wizard-badge">غير مختبر</span></div>
+                    <select class="field__input" id="board_experience" name="board_experience" data-board-select <?= $selectedLevel === 'board' ? 'required' : 'disabled' ?>>
+                        <option value="">اختر سنوات الخبرة</option>
+                        <option value="lt1" <?= $selectedExperience === 'lt1' ? 'selected' : '' ?>>أقل من سنة</option>
+                        <option value="1-3" <?= $selectedExperience === '1-3' ? 'selected' : '' ?>>من سنة إلى 3 سنوات</option>
+                        <option value="3-5" <?= $selectedExperience === '3-5' ? 'selected' : '' ?>>من 3 إلى 5 سنوات</option>
+                        <option value="5-10" <?= $selectedExperience === '5-10' ? 'selected' : '' ?>>من 5 إلى 10 سنوات</option>
+                        <option value="gt10" <?= $selectedExperience === 'gt10' ? 'selected' : '' ?>>أكثر من 10 سنوات</option>
+                    </select>
+                    <p class="field__hint">لم تجتز اختبار المستوى بعد. الاختبار يوثّق مستواك وسيتوفر قريبًا.</p>
+                    <p class="field__error" data-error-for="board_experience" aria-live="polite"><?= $err('board_experience') ?></p>
+                </div>
+
+                <div class="wizard__actions">
+                    <button class="btn btn--secondary" type="button" data-back>رجوع</button>
+                    <button class="btn btn--primary" type="button" data-next>التالي</button>
+                </div>
+            </section>
+
+            <section class="wizard__step" data-step="3" aria-labelledby="wizard-profile-title">
+                <h2 class="wizard__heading" id="wizard-profile-title">ملفك الشخصي</h2>
+                <span class="wizard-coming-soon">قريبًا</span>
+                <div class="wizard-profile-placeholder">
+                    <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+                    <strong>صورتك الشخصية</strong>
+                    <p>إضافة الصورة ستتوفر قريبًا.</p>
+                </div>
+                <div class="field">
+                    <label class="field__label" for="profile_bio">نبذة عنك</label>
+                    <textarea class="field__input" id="profile_bio" rows="3" disabled placeholder="اكتب نبذة قصيرة عن خبرتك"></textarea>
+                </div>
+                <div class="field">
+                    <label class="field__label" for="workshop_name">اسم الورشة</label>
+                    <input class="field__input" id="workshop_name" type="text" disabled placeholder="اسم ورشتك">
+                </div>
+                <p class="field__hint">يمكنك تخطي هذه الخطوة وإكمالها لاحقًا من ملفك الشخصي.</p>
+                <div class="wizard__actions">
+                    <button class="btn btn--secondary" type="button" data-back>رجوع</button>
+                    <button class="btn btn--secondary" type="submit" name="wizard_action" value="skip">تخطي</button>
+                    <button class="btn btn--primary" type="submit" name="wizard_action" value="finish">إنهاء</button>
+                </div>
+            </section>
         </form>
+
+        <p class="wizard__terms">بإنشاء الحساب فإنك توافق على قواعد المنصة وسياسة الخصوصية.</p>
         <p class="auth__switch">لديك حساب؟ <a href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a></p>
     </div>
 </section>
-<script>
-(function () {
-    var mode = document.getElementById('contact_mode');
-    var switcher = document.getElementById('contact-mode-switch');
-    var icon = document.getElementById('contact-mode-icon');
-    var phoneControl = document.getElementById('phone-control');
-    var emailControl = document.getElementById('email-control');
-    var phone = document.getElementById('phone');
-    var email = document.getElementById('email');
-    var emailLocal = document.getElementById('email_local');
-    var emailDomain = document.getElementById('email_domain');
-    var label = document.getElementById('contact-label');
-    var hint = document.getElementById('contact-hint');
-    function setMode(next) {
-        mode.value = next;
-        var useEmail = next === 'email';
-        phoneControl.hidden = useEmail;
-        emailControl.hidden = !useEmail;
-        phone.disabled = useEmail;
-        phone.required = !useEmail;
-        emailLocal.disabled = !useEmail;
-        emailLocal.required = useEmail;
-        emailDomain.disabled = !useEmail;
-        emailDomain.required = useEmail;
-        label.textContent = useEmail ? 'البريد الإلكتروني' : 'رقم الهاتف';
-        switcher.setAttribute('aria-label', useEmail ? 'التبديل إلى رقم الهاتف' : 'التبديل إلى البريد الإلكتروني');
-        icon.innerHTML = useEmail
-            ? '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>'
-            : '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 18.5h4"/>';
-        hint.textContent = useEmail ? 'اكتب بريدك الإلكتروني كاملًا؛ علامة @ جزء من تنسيق الحقل.' : 'هنضيف كود الدولة تلقائيًا. مثال: 01033771537 في مصر يتحفظ +201033771537.';
-    }
-    switcher.addEventListener('click', function () { setMode(mode.value === 'phone' ? 'email' : 'phone'); });
-    setMode(mode.value);
-
-    var form = document.getElementById('register-stage-one');
-    form.addEventListener('submit', function () {
-        if (mode.value === 'email') {
-            email.value = emailLocal.value.trim() + '@' + emailDomain.value.trim();
-            return;
-        }
-        var raw = phone.value.trim().replace(/[\s()\-.]/g, '');
-        var code = document.getElementById('country_code').value;
-        var digits = raw.replace(/\D/g, '');
-        if (raw.indexOf('+') === 0) phone.value = '+' + digits;
-        else if (digits.indexOf('00') === 0) phone.value = '+' + digits.slice(2);
-        else {
-            var country = code.replace(/\D/g, '');
-            if (digits.indexOf(country) === 0 && digits.length > country.length + 6) phone.value = '+' + digits;
-            else phone.value = code + digits.replace(/^0+/, '');
-        }
-    });
-})();
-</script>
