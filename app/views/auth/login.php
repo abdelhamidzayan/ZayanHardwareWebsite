@@ -25,8 +25,8 @@
                         </select>
                     </div>
                     <input class="field__input login-identifier__input" id="login-identifier-input" type="tel"
-                           inputmode="tel" autocomplete="tel-national" placeholder="رقم الهاتف"
-                           autocapitalize="none" spellcheck="false" data-rules="required tel" data-login-visible-input>
+                           inputmode="tel" autocomplete="tel-national" placeholder="البريد أو رقم الهاتف أو اسم المستخدم"
+                           autocapitalize="none" spellcheck="false" data-rules="required" data-login-visible-input>
                     <button class="login-identifier__switch" type="button" data-login-switch
                             aria-label="التبديل إلى البريد الإلكتروني" title="التبديل إلى البريد الإلكتروني">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
