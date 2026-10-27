@@ -11,123 +11,103 @@ final class AuthService
     public const EXPERIENCE = ['lt1', '1-3', '3-5', '5-10', 'gt10'];
 
     /**
-     * Validates and creates a technician account.
-     * @param string[] $specializations allowed specialization slugs
+     * Validates registration fields and creates the account atomically.
      * @return array{errors: array<string,string>, userId: ?int}
      */
-    public static function register(array $input, array $skillDomains = []): array
+    public static function register(array $input): array
     {
-        $displayName = trim((string) preg_replace('/\\s+/u', ' ', self::str($input, 'display_name')));
+        $displayName = trim((string) preg_replace('/\s+/u', ' ', self::str($input, 'display_name')));
         $password = self::str($input, 'password');
-        $contactMode = self::str($input, 'contact_mode') === 'email' ? 'email' : 'phone';
-        $emailInput = self::str($input, 'email');
-        if ($emailInput === '' && self::str($input, 'email_local') !== '' && self::str($input, 'email_domain') !== '') {
-            $emailInput = self::str($input, 'email_local') . '@' . self::str($input, 'email_domain');
+        $phoneRaw = self::str($input, 'phone_number');
+        $contactType = self::str($input, 'contact_type');
+        if (!in_array($contactType, ['phone', 'email'], true)) {
+            $contactType = $phoneRaw !== '' ? 'phone' : 'email';
         }
-        $email = $contactMode === 'email' ? strtolower(trim($emailInput)) : '';
-        $phoneRaw = $contactMode === 'phone' ? self::str($input, 'phone') : '';
-        $countryCode = self::str($input, 'country_code') ?: '+20';
-        if (!in_array($countryCode, ['+20', '+966', '+971', '+965', '+974', '+962', '+1', '+44'], true)) {
-            $countryCode = '+20';
-        }
-        $phone = $phoneRaw !== '' ? self::normalizePhone($phoneRaw, $countryCode) : '';
 
-        $v = new Validator([
-            'display_name' => $displayName,
-            'email' => $email,
-            'phone' => $phone,
-            'password' => $password,
-        ]);
-        $v->required('display_name', 'أدخل الاسم الظاهر')
-          ->length('display_name', 2, 60, 'الاسم من 2 إلى 60 حرفًا');
+        $countries = require dirname(__DIR__, 2) . '/config/countries.php';
+        $country = self::str($input, 'country') ?: 'EG';
+        if (!isset($countries[$country])) $country = 'EG';
+        $dial = (string) $countries[$country]['dial'];
 
-        if ($contactMode === 'email') {
-            $v->required('email', 'أدخل البريد الإلكتروني')
-              ->email('email', 'أدخل بريدًا إلكترونيًا صحيحًا')
-              ->length('email', 3, 190, 'البريد الإلكتروني طويل جدًا');
+        $emailInput = self::str($input, 'email_local');
+        $emailDomain = self::str($input, 'email_domain');
+        if (str_contains($emailInput, '@')) {
+            $email = strtolower(trim($emailInput));
         } else {
-            if ($phone === '') {
-                $v->fail('phone', 'أدخل رقم الهاتف');
-            } elseif (preg_match('/^\\+[0-9]{7,20}$/', $phone) !== 1) {
-                $v->fail('phone', 'أدخل رقم هاتف صحيحًا مع كود الدولة');
+            $email = strtolower(trim($emailInput . ($emailDomain !== '' ? '@' . trim($emailDomain) : '')));
+        }
+        $phone = $contactType === 'phone' ? PhoneNumber::fromParts($dial, $phoneRaw) : null;
+        $emailValue = $contactType === 'email' ? $email : '';
+        $username = strtolower(trim(self::str($input, 'username')));
+        $deviceFocus = self::str($input, 'device_focus');
+        $techLevel = self::str($input, 'tech_level');
+        $boardExperience = self::str($input, 'board_experience');
+        $reserved = ['admin', 'administrator', 'moderator', 'support', 'root', 'system', 'staff', 'zayan', 'hardware', 'hardwaretech'];
+        $errors = [];
+
+        if (mb_strlen($displayName) < 2 || mb_strlen($displayName) > 60) {
+            $errors['display_name'] = 'الاسم من 2 إلى 60 حرفًا';
+        }
+        if ($contactType === 'phone') {
+            if ($phone === null) $errors['contact'] = 'أدخل رقم هاتف صحيحًا';
+            elseif (User::exists('phone', $phone)) $errors['contact'] = 'هذا الرقم مسجّل بالفعل';
+        } else {
+            if ($email === '' || strlen($email) > 190 || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                $errors['contact'] = 'أدخل بريدًا إلكترونيًا صحيحًا';
+            } elseif (User::exists('email', $email)) {
+                $errors['contact'] = 'هذا البريد مسجّل بالفعل';
             }
         }
+        if ($password === '' || mb_strlen($password) < 10) {
+            $errors['password'] = 'كلمة المرور يجب أن تكون 10 أحرف على الأقل';
+        } elseif (strlen($password) > 72) {
+            $errors['password'] = 'كلمة المرور طويلة جدًا (الحد 72 بايت)';
+        }
+        if (preg_match('/^[a-z0-9_]{3,20}$/', $username) !== 1 || in_array($username, $reserved, true)) {
+            $errors['username'] = 'اسم المستخدم من 3 إلى 20 حرفًا، ولا يمكن استخدام هذا الاسم';
+        } elseif (User::exists('username', $username)) {
+            $errors['username'] = 'اسم المستخدم غير متاح';
+        }
+        if (!in_array($deviceFocus, ['iphone', 'android'], true)) {
+            $errors['device_focus'] = 'اختر مجال تخصصك';
+        }
+        if (!in_array($techLevel, ['fast', 'board'], true)) {
+            $errors['tech_level'] = 'اختر مستواك الفني';
+        }
+        if ($techLevel === 'board' && !in_array($boardExperience, self::EXPERIENCE, true)) {
+            $errors['board_experience'] = 'حدد سنوات الخبرة';
+        }
+        if ($techLevel !== 'board') $boardExperience = '';
 
-        $v->required('password', 'أدخل كلمة المرور')
-          ->length('password', 10, 128, 'كلمة المرور لا تقل عن 10 أحرف');
-        if (strlen($password) > 72) {
-            $v->fail('password', 'كلمة المرور طويلة جدًا (الحد 72 بايت)');
-        }
-        if (self::str($input, 'terms') !== '1') {
-            $v->fail('terms', 'يجب الموافقة على القواعد وسياسة الخصوصية للمتابعة');
-        }
+        if ($errors) return ['errors' => $errors, 'userId' => null];
 
-        $errors = $v->errors();
-        if ($email !== '' && !isset($errors['email']) && User::exists('email', $email)) {
-            $errors['email'] = 'هذا البريد مسجّل بالفعل';
-        }
-        if ($phone !== '' && !isset($errors['phone']) && User::phoneExists($phone)) {
-            $errors['phone'] = 'رقم الهاتف مسجّل بالفعل';
-        }
-        if ($errors) {
-            return ['errors' => $errors, 'userId' => null];
-        }
-
-        $username = self::initialUsername($displayName, $email);
         try {
-            $userId = User::create(
-                [
-                    'username' => $username,
-                    'display_name' => $displayName,
-                    'email' => $email !== '' ? $email : null,
-                    'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                ],
-                [
-                    'specialization' => null,
-                    'experience' => null,
-                    'workshop_name' => null,
-                    'phone' => $phone !== '' ? $phone : null,
-                    'device_specializations' => [],
-                    'skill_domains' => [],
-                    'terms_version' => '1.0',
-                    'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
-                ]
-            );
+            $userId = User::create([
+                'username' => $username,
+                'display_name' => $displayName,
+                'email' => $emailValue !== '' ? $emailValue : null,
+                'phone' => $phone,
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            ], [
+                'device_focus' => $deviceFocus,
+                'tech_level' => $techLevel,
+                'board_experience' => $boardExperience !== '' ? $boardExperience : null,
+            ]);
         } catch (\PDOException $e) {
             if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
                 $message = $e->getMessage();
                 if (str_contains($message, 'uq_users_email')) {
-                    return ['errors' => ['email' => 'هذا البريد مسجّل بالفعل'], 'userId' => null];
+                    return ['errors' => ['contact' => 'هذا البريد مسجّل بالفعل'], 'userId' => null];
                 }
-                if (str_contains($message, 'uq_technician_profiles_phone')) {
-                    return ['errors' => ['phone' => 'رقم الهاتف مسجّل بالفعل'], 'userId' => null];
+                if (str_contains($message, 'uq_users_phone')) {
+                    return ['errors' => ['contact' => 'هذا الرقم مسجّل بالفعل'], 'userId' => null];
                 }
-                return ['errors' => ['display_name' => 'تعذر إنشاء الحساب الآن. حاول مرة أخرى.'], 'userId' => null];
+                return ['errors' => ['username' => 'اسم المستخدم غير متاح'], 'userId' => null];
             }
             throw $e;
         }
 
         return ['errors' => [], 'userId' => $userId];
-    }
-
-    private static function normalizePhone(string $raw, string $countryCode): string
-    {
-        $raw = trim($raw);
-        $digits = preg_replace('/\\D+/', '', $raw) ?? '';
-        if ($digits === '') return '';
-        if (str_starts_with($digits, '00')) {
-            return '+' . substr($digits, 2);
-        }
-        if (str_starts_with($raw, '+')) {
-            return '+' . $digits;
-        }
-        $code = preg_replace('/\\D+/', '', $countryCode) ?? '20';
-        if ($code === '') $code = '20';
-        if (str_starts_with($digits, $code) && strlen($digits) > strlen($code) + 6) {
-            return '+' . $digits;
-        }
-        $national = ltrim($digits, '0');
-        return '+' . $code . $national;
     }
 
     private static function initialUsername(string $displayName, string $email): string
@@ -173,33 +153,28 @@ final class AuthService
     }
 
     /**
-     * Checks credentials. Same work whether or not the account exists (no timing hint).
-     * @return array{user: ?array, error: ?string}  error is 'invalid' or 'blocked'
+     * Checks credentials with a dummy hash for missing accounts.
+     * @return array{user: ?array, error: ?string}
      */
     public static function attempt(string $identifier, string $password): array
     {
-        $originalIdentifier = strtolower(trim($identifier));
-        $identifier = $originalIdentifier;
-        if ($identifier !== '' && !str_contains($identifier, '@')) {
-            $identifier = self::normalizePhone($identifier, '+20');
-        }
-        $row = strlen($identifier) <= 190 ? User::findForLogin($identifier) : null;
-        // Keep legacy accounts working if their phone was saved before country-code normalization.
-        if ($row === null && $originalIdentifier !== $identifier && strlen($originalIdentifier) <= 190) {
-            $row = User::findForLogin($originalIdentifier);
+        $identifier = trim($identifier);
+        $row = null;
+        if (strlen($identifier) <= 190) {
+            $row = User::findForLogin($identifier);
+            if ($row === null) {
+                $countries = require dirname(__DIR__, 2) . '/config/countries.php';
+                $phone = PhoneNumber::guess($identifier, array_column($countries, 'dial'));
+                if ($phone !== null) $row = User::findForLogin($phone);
+            }
         }
 
         $valid = password_verify($password, $row['password_hash'] ?? self::dummyHash());
-        if ($row === null || !$valid) {
-            return ['user' => null, 'error' => 'invalid'];
-        }
-        if ($row['account_status'] !== 'active') {
-            return ['user' => null, 'error' => 'blocked'];
-        }
+        if ($row === null || !$valid) return ['user' => null, 'error' => 'invalid'];
+        if ($row['account_status'] !== 'active') return ['user' => null, 'error' => 'blocked'];
         if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {
             $row['new_hash'] = password_hash($password, PASSWORD_DEFAULT);
         }
-
         return ['user' => $row, 'error' => null];
     }
 
