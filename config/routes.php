@@ -14,6 +14,7 @@ return static function (Router $router): void {
     $router->get('/feed', [FeedController::class, 'index']);
 
     $router->get('/issues/{id}', [IssueController::class, 'show']);
+    $router->get('/attachments/{id}', [IssueController::class, 'attachment']);
     $router->post('/issues/{id}/reply', [IssueController::class, 'reply']);
     $router->post('/issues/{id}/edit', [IssueController::class, 'edit']);
     $router->post('/issues/{id}/vote', [IssueController::class, 'vote']);
