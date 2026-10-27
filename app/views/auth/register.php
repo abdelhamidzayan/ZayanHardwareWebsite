@@ -5,6 +5,12 @@ $val = fn (string $key): string => $e($old[$key] ?? '');
 $err = fn (string $key): string => $e($errors[$key] ?? '');
 $mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
 $emailParts = explode('@', (string) ($old['email'] ?? ''), 2);
+$selectedCountryCode = (string) ($old['country_code'] ?? '+20');
+$phoneDisplay = (string) ($old['phone'] ?? '');
+if ($phoneDisplay !== '' && str_starts_with($phoneDisplay, $selectedCountryCode)) {
+    $phoneDisplay = substr($phoneDisplay, strlen($selectedCountryCode));
+    if ($selectedCountryCode === '+20' && $phoneDisplay !== '' && $phoneDisplay[0] !== '0') $phoneDisplay = '0' . $phoneDisplay;
+}
 ?>
 <style>
 .registration-progress{display:flex;align-items:flex-start;gap:0;margin:8px 0 28px;direction:rtl}
@@ -56,7 +62,7 @@ $emailParts = explode('@', (string) ($old['email'] ?? ''), 2);
                     </button>
                     <div class="contact-control__body" id="phone-control" <?= $mode === 'email' ? 'hidden' : '' ?>>
                         <select id="country_code" name="country_code" aria-label="كود الدولة">
-                            <option value="+20"<?= ($old['country_code'] ?? '+20') === '+20' ? ' selected' : '' ?>>🇪🇬 +20</option>
+                            <option value="+20"<?= +($selectedCountryCode === '+20' ? ' selected' : '' ?>>🇪🇬 +20</option>
                             <option value="+966"<?= ($old['country_code'] ?? '+20') === '+966' ? ' selected' : '' ?>>🇸🇦 +966</option>
                             <option value="+971"<?= ($old['country_code'] ?? '+20') === '+971' ? ' selected' : '' ?>>🇦🇪 +971</option>
                             <option value="+965"<?= ($old['country_code'] ?? '+20') === '+965' ? ' selected' : '' ?>>🇰🇼 +965</option>
@@ -66,7 +72,7 @@ $emailParts = explode('@', (string) ($old['email'] ?? ''), 2);
                             <option value="+44"<?= ($old['country_code'] ?? '+20') === '+44' ? ' selected' : '' ?>>🇬🇧 +44</option>
                         </select>
                         <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel"
-                               placeholder="010 1234 5678" value="<?= $mode === 'phone' ? $val('phone') : '' ?>"
+                               placeholder="010 1234 5678" value="<?= $mode === 'phone' ? $e($phoneDisplay) : '' ?>"
                                aria-label="رقم الهاتف" <?= $mode === 'phone' ? 'required' : 'disabled' ?>>
                     </div>
                     <div class="contact-control__body" id="email-control" <?= $mode !== 'email' ? 'hidden' : '' ?>>
