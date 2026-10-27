@@ -57,18 +57,17 @@ final class User extends Model
 
     public static function findProfileByUsername(string $username): ?array
     {
-        $stmt = self::db()->prepare(
-            'SELECT u.id, u.username, u.display_name, u.role, u.account_status, u.created_at,
-                    p.specialization, p.experience, p.workshop_name, p.biography,
-                    (SELECT GROUP_CONCAT(ds.device_type ORDER BY ds.device_type SEPARATOR ',')
-                     FROM user_device_specializations ds WHERE ds.user_id = u.id) AS device_specializations,
-                    (SELECT GROUP_CONCAT(sd.name_ar ORDER BY sd.sort_order SEPARATOR '، ')
-                     FROM user_skill_domains usd JOIN skill_domains sd ON sd.id = usd.skill_domain_id
-                     WHERE usd.user_id = u.id) AS skill_domains
-             FROM users u
-             LEFT JOIN technician_profiles p ON p.user_id = u.id
-             WHERE u.username = ? LIMIT 1'
-        );
+        $sql = "SELECT u.id, u.username, u.display_name, u.role, u.account_status, u.created_at,
+                       p.specialization, p.experience, p.workshop_name, p.biography,
+                       (SELECT GROUP_CONCAT(ds.device_type ORDER BY ds.device_type SEPARATOR ',')
+                        FROM user_device_specializations ds WHERE ds.user_id = u.id) AS device_specializations,
+                       (SELECT GROUP_CONCAT(sd.name_ar ORDER BY sd.sort_order SEPARATOR '، ')
+                        FROM user_skill_domains usd JOIN skill_domains sd ON sd.id = usd.skill_domain_id
+                        WHERE usd.user_id = u.id) AS skill_domains
+                FROM users u
+                LEFT JOIN technician_profiles p ON p.user_id = u.id
+                WHERE u.username = ? LIMIT 1";
+        $stmt = self::db()->prepare($sql);
         $stmt->execute([$username]);
 
         return $stmt->fetch() ?: null;
