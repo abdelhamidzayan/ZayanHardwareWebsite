@@ -36,6 +36,8 @@
   let checkSequence = 0;
   let suggestionOffset = 0;
   let suggestedNames = [];
+  const showIsoFlags = /Win/i.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
+  if (showIsoFlags) form.querySelectorAll('.country-list__flag').forEach((node) => { node.textContent = node.closest('[data-country]')?.dataset.country || node.textContent; });
 
   const toLatinDigits = (value) => value.replace(/[٠-٩۰-۹]/g, (digit) => {
     const arabic = '٠١٢٣٤٥٦٧٨٩';
@@ -103,7 +105,7 @@
 
   const chooseCountry = (button) => {
     countryValue.value = button.dataset.country;
-    countryFlag.textContent = button.dataset.flag || button.dataset.country;
+    countryFlag.textContent = showIsoFlags ? button.dataset.country : (button.dataset.flag || button.dataset.country);
     countryDial.textContent = '+' + button.dataset.dial;
     countryList.querySelectorAll('[data-country]').forEach((item) => {
       item.setAttribute('aria-selected', item === button ? 'true' : 'false');
