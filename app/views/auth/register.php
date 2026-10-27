@@ -17,8 +17,9 @@ $experience = [
 <section class="auth">
     <div class="card auth__card auth__card--wide">
         <div>
+            <p class="auth__sub">المرحلة 1 من 3 · بيانات الحساب الأساسية</p>
             <h1 class="auth__title">إنشاء حساب فنّي</h1>
-            <p class="auth__sub">للفنّيين المتخصصين في هاردوير الهواتف فقط.</p>
+            <p class="auth__sub">ابدأ بحسابك، وبعدها يمكنك استكمال ملفك الفني أو تخطي الخطوات الاختيارية.</p>
         </div>
 
         <form class="auth__form" method="post" action="<?= $e($baseUrl) ?>/register" novalidate data-validate>
@@ -33,11 +34,11 @@ $experience = [
             </div>
 
             <div class="field">
-                <label class="field__label" for="username">اسم المستخدم</label>
+                <label class="field__label" for="username">اسم المستخدم المقترح</label>
                 <input class="field__input field__input--ltr" id="username" name="username" type="text"
                        value="<?= $val('username') ?>" autocomplete="username" autocapitalize="none"
                        spellcheck="false" maxlength="30" data-rules="required username"<?= $invalid('username') ?>>
-                <p class="field__hint">أحرف إنجليزية صغيرة وأرقام و _ فقط.</p>
+                <p class="field__hint">اقترحناه من اسمك الظاهر، وتقدر تعدّله. استخدم الإنجليزية الصغيرة والأرقام و _ فقط.</p>
                 <p class="field__error" aria-live="polite"><?= $err('username') ?></p>
             </div>
 
@@ -64,21 +65,7 @@ $experience = [
                 <p class="field__error" aria-live="polite"><?= $err('password') ?></p>
             </div>
 
-            <fieldset class="field">
-                <legend class="field__label">الأجهزة التي تعمل عليها</legend>
-                <?php $oldDevices = is_array($old['device_specializations'] ?? null) ? $old['device_specializations'] : []; ?>
-                <label class="check">
-                    <input type="checkbox" name="device_specializations[]" value="iphone"<?= in_array('iphone', $oldDevices, true) ? ' checked' : '' ?>>
-                    <span>iPhone</span>
-                </label>
-                <label class="check">
-                    <input type="checkbox" name="device_specializations[]" value="android"<?= in_array('android', $oldDevices, true) ? ' checked' : '' ?>>
-                    <span>Android</span>
-                </label>
-                <p class="field__error" aria-live="polite"><?= $err('device_specializations') ?></p>
-            </fieldset>
-
-            <fieldset class="field">
+<fieldset class="field">
                 <legend class="field__label">مجالات إصلاح البوردة</legend>
                 <?php $oldSkills = is_array($old['skill_domains'] ?? null) ? $old['skill_domains'] : []; ?>
                 <?php foreach ($skillDomains as $category) : ?>
@@ -91,14 +78,7 @@ $experience = [
                 <p class="field__error" aria-live="polite"><?= $err('skill_domains') ?></p>
             </fieldset>
 
-            <div class="field">
-                <label class="field__label" for="workshop">اسم الورشة <span class="field__opt">اختياري</span></label>
-                <input class="field__input" id="workshop" name="workshop" type="text" maxlength="80"
-                       value="<?= $val('workshop') ?>" autocomplete="organization"<?= $invalid('workshop') ?>>
-                <p class="field__error" aria-live="polite"><?= $err('workshop') ?></p>
-            </div>
-
-            <div class="field">
+<div class="field">
                 <label class="field__label" for="phone">رقم الهاتف</label>
                 <input class="field__input field__input--ltr" id="phone" name="phone" type="tel"
                        value="<?= $val('phone') ?>" autocomplete="tel" data-rules="tel"<?= $invalid('phone') ?>>
@@ -115,9 +95,34 @@ $experience = [
                 <p class="field__error" aria-live="polite"><?= $err('terms') ?></p>
             </div>
 
-            <button class="btn btn--primary btn--block" type="submit">إنشاء الحساب</button>
+            <button class="btn btn--primary btn--block" type="submit">إنشاء الحساب والمتابعة</button>
         </form>
 
         <p class="auth__switch">لديك حساب؟ <a href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a></p>
     </div>
 </section>
+
+<script>
+(function () {
+    var displayName = document.getElementById('display_name');
+    var username = document.getElementById('username');
+    if (!displayName || !username) return;
+    var edited = username.value.trim() !== '';
+    username.addEventListener('input', function () { edited = true; });
+    var arabic = {'ا':'a','أ':'a','إ':'e','آ':'a','ب':'b','ت':'t','ث':'th','ج':'g','ح':'h','خ':'kh','د':'d','ذ':'z','ر':'r','ز':'z','س':'s','ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f','ق':'q','ك':'k','ل':'l','م':'m','ن':'n','ه':'h','ة':'a','و':'w','ي':'y','ى':'a','ء':'','ؤ':'w','ئ':'y'};
+    function suggest(value) {
+        var result = '';
+        for (var i = 0; i < value.length; i++) {
+            var ch = value[i].toLowerCase();
+            result += arabic[ch] !== undefined ? arabic[ch] : ch;
+        }
+        result = result.normalize ? result.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : result;
+        return result.replace(/[^a-z0-9_\s-]/g, '').trim().replace(/[\s-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30);
+    }
+    displayName.addEventListener('input', function () {
+        if (!edited) username.value = suggest(displayName.value);
+    });
+    if (!username.value.trim() && displayName.value.trim()) username.value = suggest(displayName.value);
+})();
+</script>
+
