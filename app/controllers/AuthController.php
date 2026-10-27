@@ -124,10 +124,15 @@ final class AuthController extends Controller
     private function registerForm(array $errors = [], int $status = 200): Response
     {
         // Send back what the user typed, except the password and the token.
-        $old = array_filter(
-            array_diff_key($this->request->body, ['password' => 1, '_token' => 1]),
-            'is_string'
-        );
+        $old = array_diff_key($this->request->body, ['password' => 1, '_token' => 1]);
+        foreach ($old as $key => $value) {
+            if (!is_string($value) && !is_array($value)) {
+                unset($old[$key]);
+            }
+            if (is_array($value)) {
+                $old[$key] = array_values(array_filter($value, 'is_string'));
+            }
+        }
 
         return $this->view('auth/register', [
             'title'      => 'إنشاء حساب',
