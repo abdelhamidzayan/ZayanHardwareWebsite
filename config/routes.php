@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 use App\Controllers\AuthController;
+use App\Controllers\AccountController;
+use App\Controllers\AdminUserController;
 use App\Controllers\FeedController;
 use App\Controllers\HomeController;
 use App\Controllers\IssueController;
@@ -28,6 +30,10 @@ return static function (Router $router): void {
     $router->get('/register', [AuthController::class, 'showRegister']);
     $router->post('/register', [AuthController::class, 'register']);
     $router->post('/logout', [AuthController::class, 'logout']);
+    $router->post('/account/deletion-request', [AccountController::class, 'requestDeletion']);
+    $router->get('/admin/users', [AdminUserController::class, 'index']);
+    $router->post('/admin/users/{id}/password-reset', [AdminUserController::class, 'resetPassword']);
+    $router->post('/admin/users/{id}/status', [AdminUserController::class, 'setStatus']);
 
     $router->get('/profile/{username}', [ProfileController::class, 'show']);
 
