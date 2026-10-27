@@ -38,7 +38,7 @@ $specializations = [
             <div class="issue-attachments">
                 <?php foreach ($attachments as $file) : ?>
                     <?php
-                    $attachmentUrl = $baseUrl . '/' . ltrim((string) $file['file_path'], '/');
+                    $attachmentUrl = $baseUrl . '/attachments/' . (int) $file['id'];
                     $mimeType = (string) $file['mime_type'];
                     ?>
                     <?php if (str_starts_with($mimeType, 'image/')) : ?>
