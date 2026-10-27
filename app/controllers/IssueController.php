@@ -11,6 +11,57 @@ use App\Services\AuthService;
 
 final class IssueController extends Controller
 {
+    public function attachment(int $id): Response
+    {
+        if (!AuthService::user()) {
+            return $this->redirect('/login');
+        }
+
+        $attachment = Issue::attachmentById($id);
+        if (!$attachment) {
+            return $this->notFound();
+        }
+
+        $privateRoot = realpath(\\App\\Core\\App::root('storage/private'));
+        if ($privateRoot === false) {
+            return $this->notFound();
+        }
+
+        $storedPath = str_replace('\\\\', '/', (string) $attachment['file_path']);
+        $storedPath = ltrim($storedPath, '/');
+        if (str_starts_with($storedPath, 'storage/private/')) {
+            $storedPath = substr($storedPath, strlen('storage/private/'));
+        }
+        if ($storedPath === '' || str_contains($storedPath, '..')) {
+            return $this->notFound();
+        }
+
+        $target = realpath($privateRoot . DIRECTORY_SEPARATOR . $storedPath);
+        if ($target === false || !str_starts_with($target, $privateRoot . DIRECTORY_SEPARATOR) || !is_file($target)) {
+            return $this->notFound();
+        }
+
+        $finfo = new \\finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($target) ?: 'application/octet-stream';
+        $allowed = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm',
+            'application/pdf',
+        ];
+        if (!in_array($mime, $allowed, true)) {
+            return $this->notFound();
+        }
+
+        return new Response((string) file_get_contents($target), 200, [
+            'Content-Type' => $mime,
+            'Content-Length' => (string) filesize($target),
+            'Content-Disposition' => 'inline; filename="attachment-' . $id . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+        ]);
+    }
+
     public function show(int $id): Response
     {
         $user = AuthService::user();
