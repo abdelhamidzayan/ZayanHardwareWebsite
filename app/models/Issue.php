@@ -31,7 +31,7 @@ final class Issue extends Model
     public static function replies(int $issueId, string $sort): array
     {
         $order = match ($sort) {
-            'experts' => 'CASE WHEN u.role = "expert" THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
+            'experts' => 'CASE WHEN u.role IN ("moderator", "admin") THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
             'reputation' => 'reputation_points DESC, helpful_count DESC, r.created_at DESC',
             'helpful' => 'helpful_count DESC, r.created_at DESC',
             'newest' => 'r.created_at DESC',
