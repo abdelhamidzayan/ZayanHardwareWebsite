@@ -128,6 +128,29 @@ final class IssueController extends Controller
     }
 
 
+
+    public function reviewResult(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        if (!in_array($user['role'] ?? '', ['admin', 'moderator'], true)) {
+            return $this->fail('/issues/' . $id, 'هذه العملية متاحة للإدارة والمشرفين فقط.');
+        }
+        $resultId = filter_var($this->request->input('result_id'), FILTER_VALIDATE_INT);
+        $decision = $this->string('decision');
+        if (!$resultId || $resultId < 1 || !in_array($decision, ['approve', 'reject'], true)) {
+            return $this->fail('/issues/' . $id, 'بيانات المراجعة غير صحيحة.');
+        }
+        try {
+            Issue::reviewResult($id, (int) $resultId, (int) $user['id'], $decision === 'approve');
+            $this->flash('success', $decision === 'approve' ? 'تم اعتماد النتيجة وإضافة نقاط السمعة مرة واحدة.' : 'تم رفض النتيجة. لم تُضف نقاط سمعة.');
+        } catch (\\DomainException) {
+            $this->flash('error', 'النتيجة غير موجودة أو تمت مراجعتها من قبل.');
+        }
+        return $this->redirect('/issues/' . $id);
+    }
+
     public function reopen(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
