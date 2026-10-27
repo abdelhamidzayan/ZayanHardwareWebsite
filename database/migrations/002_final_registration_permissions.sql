@@ -107,6 +107,9 @@ CREATE TABLE IF NOT EXISTS user_skill_ratings (
     CONSTRAINT fk_user_skill_rating_skill FOREIGN KEY (skill_domain_id) REFERENCES skill_domains(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT IGNORE INTO user_skill_ratings (user_id, skill_domain_id, rating)
+SELECT user_id, skill_domain_id, 0 FROM user_skill_domains;
+
 CREATE TABLE IF NOT EXISTS skill_tests (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     skill_domain_id BIGINT UNSIGNED NOT NULL,
