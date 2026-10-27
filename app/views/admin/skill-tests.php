@@ -37,6 +37,11 @@
                     <strong><?= $e($test['title']) ?></strong>
                     <p class="muted"><?= $e($test['skill_name']) ?> · إصدار <?= $e($test['version']) ?> · النجاح <?= $e((string) $test['pass_score']) ?>% · المحاولات <?= (int) $test['max_attempts'] ?> · انتظار <?= (int) $test['cooldown_minutes'] ?> دقيقة</p>
                     <span class="badge"><?= (int) $test['is_active'] === 1 ? 'مفعّل' : 'مسودة' ?></span>
+                    <form method="post" action="<?= $e($baseUrl) ?>/admin/skill-tests/<?= (int) $test['id'] ?>/status" style="margin-top:.5rem">
+                        <?= $csrf() ?>
+                        <input type="hidden" name="is_active" value="<?= (int) $test['is_active'] === 1 ? '0' : '1' ?>">
+                        <button class="btn btn--secondary" type="submit"><?= (int) $test['is_active'] === 1 ? 'إيقاف الاختبار' : 'تفعيل الاختبار' ?></button>
+                    </form>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
