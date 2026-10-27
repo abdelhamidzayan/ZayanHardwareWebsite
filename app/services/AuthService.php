@@ -27,6 +27,9 @@ final class AuthService
         $email = $contactMode === 'email' ? strtolower(trim($emailInput)) : '';
         $phoneRaw = $contactMode === 'phone' ? self::str($input, 'phone') : '';
         $countryCode = self::str($input, 'country_code') ?: '+20';
+        if (!in_array($countryCode, ['+20', '+966', '+971', '+965', '+974', '+962', '+1', '+44'], true)) {
+            $countryCode = '+20';
+        }
         $phone = $phoneRaw !== '' ? self::normalizePhone($phoneRaw, $countryCode) : '';
 
         $v = new Validator([
