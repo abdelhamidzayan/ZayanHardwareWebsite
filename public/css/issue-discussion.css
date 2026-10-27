@@ -55,3 +55,8 @@
 }
 
 .reopen-issue { display:grid; gap:.75rem; }
+
+.issue-result { display:grid; gap:.65rem; border-color:var(--color-border); }
+.issue-result h2 { font-size:var(--text-lg); }
+.issue-result__status { color:var(--color-primary); font-weight:700; }
+.issue-result__actions { display:flex; flex-wrap:wrap; gap:.75rem; }
