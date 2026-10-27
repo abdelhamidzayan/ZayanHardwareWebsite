@@ -74,8 +74,58 @@ final class AdminUserController extends Controller
             return $this->fail('/admin/users', 'حالة الحساب غير مسموحة.');
         }
         $pdo = Database::connection();
-        $stmt = $pdo->prepare("UPDATE users SET account_status = ? WHERE id = ? AND account_status <> 'deleted'");
-        $stmt->execute([$status, $id]);
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("UPDATE users SET account_status = ? WHERE id = ? AND account_status <> 'deleted'");
+            $stmt->execute([$status, $id]);
+            if ($stmt->rowCount() < 1) {
+                $pdo->rollBack();
+                return $this->fail('/admin/users', 'الحساب غير موجود أو لم تتغير حالته.');
+            }
+            if ($status === 'active') {
+                $pdo->prepare("UPDATE account_deletion_requests SET status = 'cancelled', handled_by = ?, note = 'Cancelled by admin' WHERE user_id = ? AND status = 'pending'")
+                    ->execute([(int) $admin['id'], $id]);
+            }
+            $pdo->prepare(
+                'INSERT INTO security_audit_logs (actor_user_id, target_user_id, action, details_json, ip_hash)
+                 VALUES (?, ?, ?, ?, ?)'
+            )->execute([
+                (int) $admin['id'], $id, 'account.status_changed',
+                json_encode(['status' => $status], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
+            $pdo->commit();
+        } catch (\\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+        return $this->fail('/admin/users', 'تم تحديث حالة الحساب وتسجيل العملية.');
+    }
+
+    private function requireAdmin(): bool
+    {
+        return $this->adminOrNull() !== null;
+    }
+
+    private function adminOrNull(): ?array
+    {
+        $user = AuthService::user();
+        return $user !== null && ($user['role'] ?? '') === 'admin' ? $user : null;
+    }
+
+    private function text(string $key): string
+    {
+        $value = $this->request->input($key);
+        return is_string($value) ? $value : '';
+    }
+
+    private function fail(string $path, string $message): Response
+    {
+        $this->flash('info', $message);
+        return $this->redirect($path);
+    }
+}
+
         if ($stmt->rowCount() < 1) return $this->fail('/admin/users', 'الحساب غير موجود أو لم تتغير حالته.');
         $pdo->prepare(
             'INSERT INTO security_audit_logs (actor_user_id, target_user_id, action, details_json, ip_hash)
