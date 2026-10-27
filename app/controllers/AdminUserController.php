@@ -113,6 +113,54 @@ final class AdminUserController extends Controller
         return $this->fail('/admin/users', 'تم تحديث حالة الحساب وتسجيل العملية.');
     }
 
+    public function setRole(int $id): Response
+    {
+        $admin = $this->adminOrNull();
+        if (!$admin) return $this->redirect('/login');
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/admin/users', 'انتهت صلاحية الصفحة.');
+        if ((int) $admin['id'] === $id) return $this->fail('/admin/users', 'لا يمكنك تغيير دور حسابك من هذه الصفحة.');
+
+        $role = $this->text('role');
+        if (!in_array($role, ['member', 'moderator', 'admin'], true)) {
+            return $this->fail('/admin/users', 'الدور المطلوب غير مسموح.');
+        }
+
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('SELECT role FROM users WHERE id = ? AND account_status <> \'deleted\' FOR UPDATE');
+            $stmt->execute([$id]);
+            $oldRole = $stmt->fetchColumn();
+            if ($oldRole === false) throw new \DomainException('user_not_found');
+
+            if ($oldRole === 'admin' && $role !== 'admin') {
+                $admins = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND account_status = 'active'")->fetchColumn();
+                if ($admins <= 1) throw new \DomainException('last_admin');
+            }
+
+            $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $id]);
+            $pdo->prepare(
+                'INSERT INTO security_audit_logs (actor_user_id, target_user_id, action, details_json, ip_hash)
+                 VALUES (?, ?, ?, ?, ?)'
+            )->execute([
+                (int) $admin['id'], $id, 'account.role_changed',
+                json_encode(['from' => $oldRole, 'to' => $role], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($e instanceof \DomainException) {
+                return $this->fail('/admin/users', $e->getMessage() === 'last_admin'
+                    ? 'لا يمكن سحب صلاحية آخر مدير نشط.'
+                    : 'الحساب غير موجود أو محذوف نهائيًا.');
+            }
+            throw $e;
+        }
+
+        return $this->fail('/admin/users', 'تم تحديث دور الحساب وتسجيل العملية.');
+    }
+
     private function adminOrNull(): ?array
     {
         $user = AuthService::user();
