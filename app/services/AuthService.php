@@ -20,7 +20,11 @@ final class AuthService
         $displayName = trim((string) preg_replace('/\\s+/u', ' ', self::str($input, 'display_name')));
         $password = self::str($input, 'password');
         $contactMode = self::str($input, 'contact_mode') === 'email' ? 'email' : 'phone';
-        $email = $contactMode === 'email' ? strtolower(trim(self::str($input, 'email'))) : '';
+        $emailInput = self::str($input, 'email');
+        if ($emailInput === '' && self::str($input, 'email_local') !== '' && self::str($input, 'email_domain') !== '') {
+            $emailInput = self::str($input, 'email_local') . '@' . self::str($input, 'email_domain');
+        }
+        $email = $contactMode === 'email' ? strtolower(trim($emailInput)) : '';
         $phoneRaw = $contactMode === 'phone' ? self::str($input, 'phone') : '';
         $countryCode = self::str($input, 'country_code') ?: '+20';
         $phone = $phoneRaw !== '' ? self::normalizePhone($phoneRaw, $countryCode) : '';
