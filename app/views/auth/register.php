@@ -45,8 +45,9 @@ $experience = [
                 <label class="field__label" for="email">البريد الإلكتروني</label>
                 <input class="field__input field__input--ltr" id="email" name="email" type="email"
                        value="<?= $val('email') ?>" autocomplete="email" autocapitalize="none"
-                       spellcheck="false" data-rules="required email"<?= $invalid('email') ?>>
+                       spellcheck="false" data-rules="email"<?= $invalid('email') ?>>
                 <p class="field__error" aria-live="polite"><?= $err('email') ?></p>
+                <p class="field__hint">يمكنك تركه فارغًا إذا أدخلت رقم الهاتف.</p>
             </div>
 
             <div class="field">
@@ -63,27 +64,32 @@ $experience = [
                 <p class="field__error" aria-live="polite"><?= $err('password') ?></p>
             </div>
 
-            <div class="field">
-                <label class="field__label" for="specialization">التخصص الرئيسي</label>
-                <select class="field__input" id="specialization" name="specialization" data-rules="required"<?= $invalid('specialization') ?>>
-                    <option value="">اختر التخصص</option>
-                    <?php foreach ($categories as $category) : ?>
-                        <option value="<?= $e($category['slug']) ?>"<?= ($old['specialization'] ?? '') === $category['slug'] ? ' selected' : '' ?>><?= $e($category['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <p class="field__error" aria-live="polite"><?= $err('specialization') ?></p>
-            </div>
+            <fieldset class="field">
+                <legend class="field__label">الأجهزة التي تعمل عليها</legend>
+                <?php $oldDevices = is_array($old['device_specializations'] ?? null) ? $old['device_specializations'] : []; ?>
+                <label class="check">
+                    <input type="checkbox" name="device_specializations[]" value="iphone"<?= in_array('iphone', $oldDevices, true) ? ' checked' : '' ?>>
+                    <span>iPhone</span>
+                </label>
+                <label class="check">
+                    <input type="checkbox" name="device_specializations[]" value="android"<?= in_array('android', $oldDevices, true) ? ' checked' : '' ?>>
+                    <span>Android</span>
+                </label>
+                <p class="field__error" aria-live="polite"><?= $err('device_specializations') ?></p>
+            </fieldset>
 
-            <div class="field">
-                <label class="field__label" for="experience">سنوات الخبرة</label>
-                <select class="field__input" id="experience" name="experience" data-rules="required"<?= $invalid('experience') ?>>
-                    <option value="">اختر مدة الخبرة</option>
-                    <?php foreach ($experience as $value => $label) : ?>
-                        <option value="<?= $e($value) ?>"<?= ($old['experience'] ?? '') === $value ? ' selected' : '' ?>><?= $e($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <p class="field__error" aria-live="polite"><?= $err('experience') ?></p>
-            </div>
+            <fieldset class="field">
+                <legend class="field__label">مجالات إصلاح البوردة</legend>
+                <?php $oldSkills = is_array($old['skill_domains'] ?? null) ? $old['skill_domains'] : []; ?>
+                <?php foreach ($skillDomains as $category) : ?>
+                    <label class="check">
+                        <input type="checkbox" name="skill_domains[]" value="<?= $e($category['slug']) ?>"<?= in_array($category['slug'], $oldSkills, true) ? ' checked' : '' ?>>
+                        <span><?= $e($category['name']) ?></span>
+                    </label>
+                <?php endforeach; ?>
+                <p class="field__hint">يمكن اختيار أكثر من مجال، ويمكن تعديل ملفك الفني لاحقًا.</p>
+                <p class="field__error" aria-live="polite"><?= $err('skill_domains') ?></p>
+            </fieldset>
 
             <div class="field">
                 <label class="field__label" for="workshop">اسم الورشة <span class="field__opt">اختياري</span></label>
@@ -93,10 +99,12 @@ $experience = [
             </div>
 
             <div class="field">
-                <label class="field__label" for="phone">رقم الهاتف <span class="field__opt">اختياري</span></label>
+                <label class="field__label" for="phone">رقم الهاتف</label>
                 <input class="field__input field__input--ltr" id="phone" name="phone" type="tel"
                        value="<?= $val('phone') ?>" autocomplete="tel" data-rules="tel"<?= $invalid('phone') ?>>
                 <p class="field__error" aria-live="polite"><?= $err('phone') ?></p>
+                <p class="field__hint">أدخل البريد الإلكتروني أو رقم الهاتف على الأقل.</p>
+                <p class="field__error" aria-live="polite"><?= $err('contact') ?></p>
             </div>
 
             <div class="field">
