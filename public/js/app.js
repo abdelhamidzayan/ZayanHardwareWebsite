@@ -180,7 +180,14 @@
   const emailIcon = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
   const phoneIcon = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-2.5 1.5a15 15 0 0 0 6 6L16 13l5 2v4c0 1.1-.9 2-2 2C10 21 3 14 3 5c0-1.1.9-2 2-2z"/></svg>';
 
-  const digitsOnly = (value) => value.replace(/\D/g, '');
+  const digitsOnly = (value) => value
+    .replace(/[٠-٩۰-۹]/g, (digit) => {
+      const arabic = '٠١٢٣٤٥٦٧٨٩';
+      const persian = '۰۱۲۳۴۵۶۷۸۹';
+      const index = arabic.indexOf(digit);
+      return String(index >= 0 ? index : persian.indexOf(digit));
+    })
+    .replace(/\D/g, '');
 
   const normalizedPhone = () => {
     const raw = visibleInput.value.trim();
@@ -204,9 +211,9 @@
       visibleInput.inputMode = 'email';
       visibleInput.autocomplete = 'email';
       visibleInput.placeholder = 'البريد الإلكتروني';
-      visibleInput.dataset.rules = 'required email';
+      visibleInput.dataset.rules = 'required';
       visibleInput.value = emailValue;
-      label.textContent = 'البريد الإلكتروني';
+      label.textContent = 'البريد أو رقم الهاتف أو اسم المستخدم';
       switchButton.innerHTML = phoneIcon;
       switchButton.setAttribute('aria-label', 'التبديل إلى رقم الهاتف');
       switchButton.title = 'التبديل إلى رقم الهاتف';
@@ -219,9 +226,9 @@
       visibleInput.inputMode = 'tel';
       visibleInput.autocomplete = 'tel-national';
       visibleInput.placeholder = 'رقم الهاتف';
-      visibleInput.dataset.rules = 'required tel';
+      visibleInput.dataset.rules = 'required';
       visibleInput.value = phoneValue;
-      label.textContent = 'رقم الهاتف';
+      label.textContent = 'البريد أو رقم الهاتف أو اسم المستخدم';
       switchButton.innerHTML = emailIcon;
       switchButton.setAttribute('aria-label', 'التبديل إلى البريد الإلكتروني');
       switchButton.title = 'التبديل إلى البريد الإلكتروني';
@@ -261,14 +268,19 @@
   }
 
   form.addEventListener('submit', () => {
-    const value = visibleInput.value;
-    hiddenInput.value = mode === 'email' ? value.trim() : normalizedPhone();
+    const value = visibleInput.value.trim();
+    const digits = digitsOnly(value);
+    const looksLikePhone = /^[+0-9٠-٩۰-۹\s().-]+$/.test(value) && digits.length > 0;
+    if (value.includes('@')) hiddenInput.value = value.toLowerCase();
+    else if (mode === 'email' && !looksLikePhone) hiddenInput.value = value.toLowerCase();
+    else if (looksLikePhone) hiddenInput.value = normalizedPhone();
+    else hiddenInput.value = value.toLowerCase();
 
     // Keep only the identifier, never the password, for the one redirect back to login.
     try {
       sessionStorage.setItem(pendingLoginKey, JSON.stringify({
         mode,
-        value: mode === 'email' ? value : phoneValue,
+        value,
       }));
     } catch (_) {}
   });
