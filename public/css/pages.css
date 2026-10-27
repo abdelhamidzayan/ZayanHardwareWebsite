@@ -1058,3 +1058,15 @@
   .wizard-choice__card { padding-inline: .35rem; }
   .wizard__actions .btn { flex: 1 1 auto; min-inline-size: 0; }
 }
+
+.profile__unverified {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: .4rem;
+  padding: .15rem .45rem;
+  border-radius: 999px;
+  background: #eef0f3;
+  color: #687181;
+  font-size: .7rem;
+  font-weight: 600;
+}
