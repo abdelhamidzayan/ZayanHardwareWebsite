@@ -15,6 +15,7 @@ use App\Core\Router;
 
 return static function (Router $router): void {
     $router->get('/', [HomeController::class, 'index']);
+    $router->get('/help', [PageController::class, 'help']);
     $router->get('/feed', [FeedController::class, 'index']);
 
     $router->get('/issues/{id}', [IssueController::class, 'show']);
