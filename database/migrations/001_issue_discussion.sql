@@ -99,3 +99,17 @@ CREATE TABLE IF NOT EXISTS issue_results (
     CONSTRAINT fk_issue_results_reply FOREIGN KEY (helpful_reply_id) REFERENCES issue_replies(id) ON DELETE SET NULL,
     CONSTRAINT fk_issue_results_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Idempotent reputation ledger: only approved moderation workflows should insert positive events.
+CREATE TABLE IF NOT EXISTS reputation_events (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NOT NULL,
+    event_key VARCHAR(190) NOT NULL,
+    points INT NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_reputation_event_key (event_key),
+    KEY idx_reputation_user (user_id, created_at),
+    CONSTRAINT fk_reputation_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
