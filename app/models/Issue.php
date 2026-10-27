@@ -152,18 +152,18 @@ final class Issue extends Model
             $stmt->execute([$issueId, $ownerId]);
             $status = $stmt->fetchColumn();
             if ($status === false || $status === 'open') {
-                throw new \\DomainException('not_reopenable');
+                throw new \DomainException('not_reopenable');
             }
             $stmt = $pdo->prepare("SELECT review_status FROM issue_results WHERE issue_id = ? ORDER BY created_at DESC LIMIT 1");
             $stmt->execute([$issueId]);
             $review = $stmt->fetchColumn();
             if ($review === false || $review === 'pending') {
-                throw new \\DomainException('result_pending_review');
+                throw new \DomainException('result_pending_review');
             }
             $pdo->prepare("UPDATE issues SET status = 'open', closed_at = NULL, updated_at = UTC_TIMESTAMP() WHERE id = ?")
                 ->execute([$issueId]);
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
