@@ -101,6 +101,32 @@ final class AdminSkillTestController extends Controller
         return $this->fail('/admin/skill-tests', 'تم حفظ الاختبار كمسودة غير متاحة للأعضاء حتى تفعيله من الإدارة.');
     }
 
+    public function setStatus(int $id): Response
+    {
+        $admin = AuthService::user();
+        if (!$admin || ($admin['role'] ?? '') !== 'admin') return $this->redirect('/login');
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/admin/skill-tests', 'انتهت صلاحية الصفحة.');
+
+        $active = $this->text('is_active');
+        if (!in_array($active, ['0', '1'], true)) return $this->fail('/admin/skill-tests', 'حالة الاختبار غير صحيحة.');
+
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('UPDATE skill_tests SET is_active = ? WHERE id = ?');
+        $stmt->execute([(int) $active, $id]);
+        if ($stmt->rowCount() < 1) return $this->fail('/admin/skill-tests', 'الاختبار غير موجود أو لم تتغير حالته.');
+
+        $pdo->prepare(
+            "INSERT INTO security_audit_logs (actor_user_id, action, details_json, ip_hash)
+             VALUES (?, 'skill_test.status_changed', ?, ?)"
+        )->execute([
+            (int) $admin['id'],
+            json_encode(['test_id' => $id, 'is_active' => (int) $active], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+        ]);
+
+        return $this->fail('/admin/skill-tests', (int) $active === 1 ? 'تم تفعيل الاختبار.' : 'تم إيقاف الاختبار.');
+    }
+
     private function text(string $key): string
     {
         $value = $this->request->input($key);
