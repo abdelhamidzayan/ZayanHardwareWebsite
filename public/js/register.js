@@ -37,7 +37,10 @@
   let suggestionOffset = 0;
   let suggestedNames = [];
   const showIsoFlags = /Win/i.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
-  if (showIsoFlags) form.querySelectorAll('.country-list__flag').forEach((node) => { node.textContent = node.closest('[data-country]')?.dataset.country || node.textContent; });
+  if (showIsoFlags) {
+    countryFlag.textContent = countryValue.value;
+    form.querySelectorAll('.country-list__flag').forEach((node) => { node.textContent = node.closest('[data-country]')?.dataset.country || node.textContent; });
+  }
 
   const toLatinDigits = (value) => value.replace(/[٠-٩۰-۹]/g, (digit) => {
     const arabic = '٠١٢٣٤٥٦٧٨٩';
@@ -252,7 +255,7 @@
     add(first + last);
     add(first + '27');
     add(first + '_204');
-    add(first + 'fix');
+    add(first + '_fix');
     add('tech_' + first);
     add(first + '_hw');
     add(first + '_' + last + '27');
@@ -420,7 +423,7 @@
       setStep(1);
       return;
     }
-    if (event.submitter?.value !== 'skip' && !validUsername(username.value.trim().toLowerCase())) {
+    if (true && !validUsername(username.value.trim().toLowerCase())) {
       event.preventDefault();
       setStep(2);
       username.focus();
