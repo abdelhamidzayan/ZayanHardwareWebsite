@@ -73,6 +73,19 @@ final class User extends Model
         return $stmt->fetch() ?: null;
     }
 
+    public static function skillRatings(int $userId): array
+    {
+        $stmt = self::db()->prepare(
+            'SELECT d.name_ar AS skill_name, r.rating, r.approved_assessments
+             FROM user_skill_ratings r
+             JOIN skill_domains d ON d.id = r.skill_domain_id
+             WHERE r.user_id = ?
+             ORDER BY d.sort_order, d.name_ar'
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
     public static function markLoggedIn(int $id, ?string $newHash = null): void
     {
         if ($newHash !== null) {
