@@ -42,6 +42,7 @@ return static function (Router $router): void {
     $router->get('/admin/users', [AdminUserController::class, 'index']);
     $router->post('/admin/users/{id}/password-reset', [AdminUserController::class, 'resetPassword']);
     $router->post('/admin/users/{id}/status', [AdminUserController::class, 'setStatus']);
+    $router->post('/admin/users/{id}/role', [AdminUserController::class, 'setRole']);
 
     $router->get('/profile/{username}', [ProfileController::class, 'show']);
 
