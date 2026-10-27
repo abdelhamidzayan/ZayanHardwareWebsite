@@ -373,6 +373,7 @@
   root.querySelector('[data-more-suggestions]').addEventListener('click', () => renderSuggestions(true));
 
   username.addEventListener('input', () => {
+    checkSequence += 1;
     clearTimeout(checkTimer);
     usernameStatus.textContent = '';
     usernameStatus.classList.remove('is-error', 'is-available');
