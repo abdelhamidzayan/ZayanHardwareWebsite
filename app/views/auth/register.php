@@ -31,7 +31,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
             <li class="wizard__stepper-item" data-stepper="3"><span class="wizard__stepper-circle">3</span><span>ملفك</span></li>
         </ol>
 
-        <form class="auth__form wizard__form" method="post" action="<?= $e($baseUrl) ?>/register" id="registration-wizard" data-register-wizard novalidate>
+        <form class="auth__form wizard__form" method="post" action="<?= $e($baseUrl) ?>/register" id="registration-wizard" data-register-wizard data-initial-step="<?= $activeStep ?>" novalidate>
             <?= $csrf() ?>
             <input type="hidden" name="contact_type" value="<?= $e($contactType) ?>" data-contact-type>
             <input type="hidden" name="country" value="<?= $e($selectedCountry) ?>" data-country-value>
