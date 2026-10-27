@@ -4,6 +4,9 @@
 
 START TRANSACTION;
 
+-- Expand the role enum first so the data conversion accepts the new member value.
+ALTER TABLE users MODIFY role ENUM('technician','expert','member','moderator','admin') NOT NULL DEFAULT 'member';
+
 -- Normalize legacy roles and account states to the approved model.
 UPDATE users SET role = CASE
     WHEN role IN ('admin', 'moderator') THEN role
