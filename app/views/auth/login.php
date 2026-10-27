@@ -8,7 +8,7 @@
         <form class="auth__form" method="post" action="<?= $e($baseUrl) ?>/login" novalidate data-validate>
             <?= $csrf() ?>
             <div class="field">
-                <label class="field__label" for="identifier">البريد الإلكتروني أو اسم المستخدم</label>
+                <label class="field__label" for="identifier">البريد الإلكتروني أو رقم الهاتف</label>
                 <input class="field__input field__input--ltr" id="identifier" name="identifier" type="text"
                        autocomplete="username" autocapitalize="none" spellcheck="false" data-rules="required">
                 <p class="field__error" aria-live="polite"></p>
