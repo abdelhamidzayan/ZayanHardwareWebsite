@@ -100,7 +100,7 @@ final class User extends Model
                 }
             }
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -123,7 +123,7 @@ final class User extends Model
                 $ratingStmt->execute([$userId, $skill]);
             }
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
