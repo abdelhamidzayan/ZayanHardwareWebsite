@@ -172,7 +172,10 @@ final class AuthService
     public static function attempt(string $identifier, string $password): array
     {
         $identifier = strtolower(trim($identifier));
-        $row        = strlen($identifier) <= 190 ? User::findForLogin($identifier) : null;
+        if ($identifier !== '' && !str_contains($identifier, '@')) {
+            $identifier = self::normalizePhone($identifier, '+20');
+        }
+        $row = strlen($identifier) <= 190 ? User::findForLogin($identifier) : null;
 
         $valid = password_verify($password, $row['password_hash'] ?? self::dummyHash());
         if ($row === null || !$valid) {
