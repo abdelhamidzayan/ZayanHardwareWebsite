@@ -76,7 +76,13 @@ final class App
             @mkdir($dir, 0775, true);
         }
         $line = sprintf("[%s] %s: %s\n", gmdate('c'), strtoupper($level), $message);
-        @file_put_contents($dir . '/app.log', $line, FILE_APPEND | LOCK_EX);
+
+        // Keep a fallback: Apache may run as a different user and be unable to
+        // write to storage/logs even when the directory exists.
+        $written = @file_put_contents($dir . '/app.log', $line, FILE_APPEND | LOCK_EX);
+        if ($written === false) {
+            error_log('[Zayan Hardware] ' . rtrim($line));
+        }
     }
 
     private static function loadEnv(string $file): void
