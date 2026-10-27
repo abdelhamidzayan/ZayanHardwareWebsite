@@ -43,5 +43,8 @@ $authPage = $authPage ?? false;
 </footer>
 
 <script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
+<?php foreach (($scripts ?? []) as $script) : ?>
+    <script src="<?= $e($baseUrl) ?>/js/<?= $e($script) ?>" defer></script>
+<?php endforeach; ?>
 </body>
 </html>
