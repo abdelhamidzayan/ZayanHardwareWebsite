@@ -145,7 +145,7 @@ final class IssueController extends Controller
         try {
             Issue::reviewResult($id, (int) $resultId, (int) $user['id'], $decision === 'approve');
             $this->flash('success', $decision === 'approve' ? 'تم اعتماد النتيجة وإضافة نقاط السمعة مرة واحدة.' : 'تم رفض النتيجة. لم تُضف نقاط سمعة.');
-        } catch (\\DomainException) {
+        } catch (\DomainException) {
             $this->flash('error', 'النتيجة غير موجودة أو تمت مراجعتها من قبل.');
         }
         return $this->redirect('/issues/' . $id);
