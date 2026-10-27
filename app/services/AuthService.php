@@ -171,11 +171,16 @@ final class AuthService
      */
     public static function attempt(string $identifier, string $password): array
     {
-        $identifier = strtolower(trim($identifier));
+        $originalIdentifier = strtolower(trim($identifier));
+        $identifier = $originalIdentifier;
         if ($identifier !== '' && !str_contains($identifier, '@')) {
             $identifier = self::normalizePhone($identifier, '+20');
         }
         $row = strlen($identifier) <= 190 ? User::findForLogin($identifier) : null;
+        // Keep legacy accounts working if their phone was saved before country-code normalization.
+        if ($row === null && $originalIdentifier !== $identifier && strlen($originalIdentifier) <= 190) {
+            $row = User::findForLogin($originalIdentifier);
+        }
 
         $valid = password_verify($password, $row['password_hash'] ?? self::dummyHash());
         if ($row === null || !$valid) {
