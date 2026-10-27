@@ -105,7 +105,7 @@ $specializations = [
                 <article class="card reply-card <?= (int) $reply['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
                     <header class="reply-card__head">
                         <span class="avatar"><?= $e(mb_strtoupper(mb_substr($reply['display_name'], 0, 1))) ?></span>
-                        <div class="reply-card__identity"><strong><?= $e($reply['display_name']) ?></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · <?= $e($reply['created_at']) ?></span></div>
+                        <div class="reply-card__identity"><strong><?= $e($reply['display_name']) ?></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
                         <?php if ($reply['role'] === 'expert') : ?><span class="badge">خبير معتمد</span><?php endif; ?>
                     </header>
                     <div class="reply-card__body" dir="auto"><?= nl2br($e($reply['body'])) ?></div>
