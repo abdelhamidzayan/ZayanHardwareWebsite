@@ -158,7 +158,7 @@ final class AuthService
      */
     public static function attempt(string $identifier, string $password): array
     {
-        $identifier = trim($identifier);
+        $identifier = strtolower(trim($identifier));
         $row = null;
         if (strlen($identifier) <= 190) {
             $row = User::findForLogin($identifier);
