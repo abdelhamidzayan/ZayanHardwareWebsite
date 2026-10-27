@@ -1,6 +1,6 @@
 <div class="page-head">
     <h1 class="page-head__title">إدارة اختبارات المهارات</h1>
-    <p class="muted">الاختبار الجديد يُحفظ كمسودة غير متاحة للأعضاء حتى تفعيله من قاعدة البيانات أو أداة إدارة معتمدة.</p>
+    <p class="muted">الاختبار الجديد يُحفظ كمسودة غير متاحة للأعضاء حتى تفعيله من الإدارة.</p>
 </div>
 <div class="container">
     <section class="card" style="padding:1rem;margin-bottom:1rem">
