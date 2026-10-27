@@ -13,12 +13,14 @@ final class IssueController extends Controller
 {
     public function show(int $id): Response
     {
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+
         $issue = Issue::find($id);
         if (!$issue) return $this->notFound();
         $sort = $this->request->query['sort'] ?? 'relevant';
         $sort = is_string($sort) && in_array($sort, ['relevant', 'experts', 'reputation', 'helpful', 'newest'], true) ? $sort : 'relevant';
-        $user = AuthService::user();
-        $isOwner = $user !== null && (int) $user['id'] === (int) $issue['user_id'];
+        $isOwner = (int) $user['id'] === (int) $issue['user_id'];
 
         return $this->view('issues/show', [
             'title' => $issue['title'],
