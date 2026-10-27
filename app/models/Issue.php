@@ -158,7 +158,7 @@ final class Issue extends Model
             $stmt->execute([$resultId, $issueId]);
             $result = $stmt->fetch();
             if (!$result || $result['review_status'] !== 'pending') {
-                throw new \\DomainException('result_not_pending');
+                throw new \DomainException('result_not_pending');
             }
             $status = $approve ? 'approved' : 'rejected';
             $pdo->prepare('UPDATE issue_results SET review_status = ?, reviewed_by = ?, reviewed_at = UTC_TIMESTAMP() WHERE id = ?')
@@ -169,7 +169,7 @@ final class Issue extends Model
                 )->execute([(int) $result['submitted_by'], 'issue_result:' . $resultId . ':approved']);
             }
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
