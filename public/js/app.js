@@ -145,7 +145,13 @@
   'use strict';
 
   const form = document.querySelector('[data-login-identifier-form]');
-  if (!form) return;
+  const pendingLoginKey = 'zayan-hardware-login-pending';
+
+  // Clear a pending failed-login value when leaving the login page (e.g. after success).
+  if (!form) {
+    try { sessionStorage.removeItem(pendingLoginKey); } catch (_) {}
+    return;
+  }
 
   const wrapper = form.querySelector('.login-identifier');
   const visibleInput = form.querySelector('[data-login-visible-input]');
@@ -220,8 +226,32 @@
     else emailValue = visibleInput.value;
   });
 
+  // Restore the identifier and selected mode after an unsuccessful POST/redirect.
+  try {
+    const pending = sessionStorage.getItem(pendingLoginKey);
+    if (pending) {
+      sessionStorage.removeItem(pendingLoginKey);
+      const previous = JSON.parse(pending);
+      if (previous.mode === 'email') switchMode();
+      visibleInput.value = typeof previous.value === 'string' ? previous.value : '';
+      if (mode === 'email') emailValue = visibleInput.value;
+      else phoneValue = visibleInput.value;
+    }
+  } catch (_) {
+    try { sessionStorage.removeItem(pendingLoginKey); } catch (_) {}
+  }
+
   form.addEventListener('submit', () => {
-    hiddenInput.value = mode === 'email' ? visibleInput.value.trim() : normalizedPhone();
+    const value = visibleInput.value;
+    hiddenInput.value = mode === 'email' ? value.trim() : normalizedPhone();
+
+    // Keep only the identifier, never the password, for the one redirect back to login.
+    try {
+      sessionStorage.setItem(pendingLoginKey, JSON.stringify({
+        mode,
+        value: mode === 'email' ? value : phoneValue,
+      }));
+    } catch (_) {}
   });
 })();
 
