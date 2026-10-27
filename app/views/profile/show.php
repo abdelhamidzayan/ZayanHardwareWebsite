@@ -29,6 +29,19 @@
             <?php if ($profile['workshop'] !== '') : ?>
                 <div><dt>الورشة</dt><dd><?= $e($profile['workshop']) ?></dd></div>
             <?php endif; ?>
+            <?php if ($skillRatings) : ?>
+                <div>
+                    <dt>تقييم المهارات</dt>
+                    <dd>
+                        <?php foreach ($skillRatings as $skillRating) : ?>
+                            <div style="margin:.35rem 0">
+                                <span><?= $e($skillRating['skill_name']) ?>: <?= $e((string) $skillRating['rating']) ?>%</span>
+                                <small class="muted">(<?= (int) $skillRating['approved_assessments'] ?> تقييمات مجتازة)</small>
+                            </div>
+                        <?php endforeach; ?>
+                    </dd>
+                </div>
+            <?php endif; ?>
             <div><dt>تاريخ الانضمام</dt><dd class="tech"><?= $e($profile['joined']) ?></dd></div>
         </dl>
 
