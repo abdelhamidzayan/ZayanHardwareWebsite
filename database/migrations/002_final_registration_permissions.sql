@@ -22,6 +22,13 @@ ALTER TABLE users
     MODIFY role ENUM('member','moderator','admin') NOT NULL DEFAULT 'member',
     MODIFY account_status ENUM('active','suspended','banned','deletion_pending','deleted') NOT NULL DEFAULT 'active';
 
+-- Bootstrap the oldest account as admin only when the database has no admin.
+-- Verify that the oldest account belongs to the trusted platform owner before running this migration.
+UPDATE users
+SET role = 'admin'
+WHERE id = (SELECT id FROM (SELECT id FROM users ORDER BY id ASC LIMIT 1) AS oldest_user)
+  AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin');
+
 -- A contact method may be email OR phone. Phone stays in the profile table,
 -- but must be unique when supplied so it can be used as a login identifier.
 UPDATE technician_profiles SET phone = NULL WHERE phone = '';
@@ -82,6 +89,12 @@ CREATE TABLE IF NOT EXISTS user_skill_domains (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Skill ratings are separate per skill and are derived from approved assessments.
+-- Preserve existing single-skill profile data in the normalized skill-domain tables.
+INSERT IGNORE INTO user_skill_domains (user_id, skill_domain_id)
+SELECT p.user_id, sd.id
+FROM technician_profiles p
+JOIN skill_domains sd ON sd.slug = p.specialization;
+
 CREATE TABLE IF NOT EXISTS user_skill_ratings (
     user_id BIGINT UNSIGNED NOT NULL,
     skill_domain_id BIGINT UNSIGNED NOT NULL,
