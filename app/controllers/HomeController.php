@@ -19,7 +19,7 @@ final class HomeController extends Controller
 
         return $this->view('home/index', [
             'title'        => '',
-            'previewIssue' => DemoData::issues()[0],
+            'previewIssues' => array_slice(DemoData::issues(), 0, 2),
         ], 200, 'guest');
     }
 }
