@@ -32,7 +32,15 @@
             <div><dt>تاريخ الانضمام</dt><dd class="tech"><?= $e($profile['joined']) ?></dd></div>
         </dl>
 
+        <?php if ($currentUser && ($currentUser['role'] ?? '') === 'admin') : ?>
+            <p><a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/admin/users">إدارة الحسابات</a></p>
+        <?php endif; ?>
+
         <?php if ($profile['is_owner']) : ?>
+            <form method="post" action="<?= $e($baseUrl) ?>/account/deletion-request" onsubmit="return confirm('سيتم تعطيل الحساب وإخفاؤه لمدة 30 يومًا قبل الحذف النهائي. هل تريد المتابعة؟')">
+                <?= $csrf() ?>
+                <button class="btn btn--secondary btn--block" type="submit">طلب حذف الحساب</button>
+            </form>
             <form method="post" action="<?= $e($baseUrl) ?>/logout">
                 <?= $csrf() ?>
                 <button class="btn btn--secondary btn--block" type="submit">تسجيل الخروج</button>
