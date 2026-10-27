@@ -116,8 +116,100 @@ final class AuthController extends Controller
         $userId = (int) $result['userId'];
         User::markLoggedIn($userId);
         AuthService::login($userId);
-        $this->flash('success', 'تم إنشاء الحساب وتسجيل دخولك بنجاح. يمكنك استكمال ملفك الفني لاحقًا.');
+        $this->flash('success', 'تم إنشاء الحساب. أكمل إعداد ملفك الفني أو تخطَّ الخطوات الاختيارية.');
 
+        return $this->redirect('/register/stage/2');
+    }
+
+    public function showRegisterStage2(): Response
+    {
+        if (AuthService::user() === null) return $this->redirect('/register');
+        return $this->view('auth/register-stage-2', [
+            'title' => 'إنشاء الحساب - المرحلة 2',
+            'authPage' => true,
+            'errors' => [],
+            'old' => [],
+        ], 200, 'guest');
+    }
+
+    public function saveRegisterStage2(): Response
+    {
+        $user = AuthService::user();
+        if ($user === null) return $this->redirect('/register');
+        if (!Csrf::verify($this->request->input('_token'))) {
+            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+            return $this->redirect('/register/stage/2');
+        }
+        $raw = $this->request->body['device_specializations'] ?? [];
+        $devices = is_array($raw) ? array_values(array_unique(array_filter($raw, 'is_string'))) : [];
+        if (array_diff($devices, ['iphone', 'android'])) {
+            return $this->view('auth/register-stage-2', [
+                'title' => 'إنشاء الحساب - المرحلة 2', 'authPage' => true,
+                'errors' => ['device_specializations' => 'اختيار غير صالح'],
+                'old' => ['device_specializations' => $devices],
+            ], 422, 'guest');
+        }
+        User::saveDeviceSpecializations((int) $user['id'], $devices);
+        return $this->redirect('/register/stage/3');
+    }
+
+    public function skipRegisterStage2(): Response
+    {
+        if (AuthService::user() === null) return $this->redirect('/register');
+        if (!Csrf::verify($this->request->input('_token'))) {
+            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+            return $this->redirect('/register/stage/2');
+        }
+        return $this->redirect('/register/stage/3');
+    }
+
+    public function showRegisterStage3(): Response
+    {
+        if (AuthService::user() === null) return $this->redirect('/register');
+        return $this->view('auth/register-stage-3', [
+            'title' => 'إنشاء الحساب - المرحلة 3',
+            'authPage' => true,
+            'skillDomains' => DemoData::categories(),
+            'errors' => [],
+            'old' => [],
+        ], 200, 'guest');
+    }
+
+    public function saveRegisterStage3(): Response
+    {
+        $user = AuthService::user();
+        if ($user === null) return $this->redirect('/register');
+        if (!Csrf::verify($this->request->input('_token'))) {
+            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+            return $this->redirect('/register/stage/3');
+        }
+        $raw = $this->request->body['skill_domains'] ?? [];
+        $skills = is_array($raw) ? array_values(array_unique(array_filter($raw, 'is_string'))) : [];
+        $allowed = array_column(DemoData::categories(), 'slug');
+        $workshop = trim(is_string($this->request->body['workshop'] ?? null) ? $this->request->body['workshop'] : '');
+        $errors = [];
+        if (array_diff($skills, $allowed)) $errors['skill_domains'] = 'اختيار المجالات الفنية غير صالح';
+        if (mb_strlen($workshop) > 80) $errors['workshop'] = 'اسم الورشة لا يزيد عن 80 حرفًا';
+        if ($errors) {
+            return $this->view('auth/register-stage-3', [
+                'title' => 'إنشاء الحساب - المرحلة 3', 'authPage' => true,
+                'skillDomains' => DemoData::categories(), 'errors' => $errors,
+                'old' => ['skill_domains' => $skills, 'workshop' => $workshop],
+            ], 422, 'guest');
+        }
+        User::saveOptionalSkills((int) $user['id'], $skills, $workshop);
+        $this->flash('success', 'اكتمل إعداد حسابك الفني بنجاح.');
+        return $this->redirect('/feed');
+    }
+
+    public function skipRegisterStage3(): Response
+    {
+        if (AuthService::user() === null) return $this->redirect('/register');
+        if (!Csrf::verify($this->request->input('_token'))) {
+            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+            return $this->redirect('/register/stage/3');
+        }
+        $this->flash('success', 'تم إنشاء حسابك. يمكنك استكمال ملفك الفني لاحقًا.');
         return $this->redirect('/feed');
     }
 
