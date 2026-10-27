@@ -12,7 +12,8 @@ final class Issue extends Model
         $stmt = self::db()->prepare(
             'SELECT i.*, u.username, u.display_name AS author_name, u.role AS author_role,
                     p.specialization,
-                    (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count
+                    (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
+                    (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC LIMIT 1) AS latest_result_review
              FROM issues i
              JOIN users u ON u.id = i.user_id
              LEFT JOIN technician_profiles p ON p.user_id = u.id
@@ -136,6 +137,33 @@ final class Issue extends Model
                 ->execute([$replyId, $issueId]);
             $pdo->commit();
         } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+
+    public static function reopen(int $issueId, int $ownerId): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("SELECT status FROM issues WHERE id = ? AND user_id = ? FOR UPDATE");
+            $stmt->execute([$issueId, $ownerId]);
+            $status = $stmt->fetchColumn();
+            if ($status === false || $status === 'open') {
+                throw new \\DomainException('not_reopenable');
+            }
+            $stmt = $pdo->prepare("SELECT review_status FROM issue_results WHERE issue_id = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$issueId]);
+            $review = $stmt->fetchColumn();
+            if ($review === false || $review === 'pending') {
+                throw new \\DomainException('result_pending_review');
+            }
+            $pdo->prepare("UPDATE issues SET status = 'open', closed_at = NULL, updated_at = UTC_TIMESTAMP() WHERE id = ?")
+                ->execute([$issueId]);
+            $pdo->commit();
+        } catch (\\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
