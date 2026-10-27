@@ -24,6 +24,7 @@ ALTER TABLE users
 
 -- A contact method may be email OR phone. Phone stays in the profile table,
 -- but must be unique when supplied so it can be used as a login identifier.
+UPDATE technician_profiles SET phone = NULL WHERE phone = '';
 ALTER TABLE technician_profiles
     MODIFY specialization VARCHAR(50) NULL,
     MODIFY experience ENUM('lt1','1-3','3-5','5-10','gt10') NULL,
