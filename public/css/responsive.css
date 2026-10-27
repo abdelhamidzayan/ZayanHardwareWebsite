@@ -1,0 +1,64 @@
+/* ==========================================================
+   responsive.css — tablet and desktop
+   Place at: public/css/responsive.css (load last)
+   Mobile (Figma) is the base; breakpoints: 640px and 1024px.
+   ========================================================== */
+
+/* ---------- Tablet: side rail replaces the bottom bar ---------- */
+@media (min-width: 640px) {
+  .app__body {
+    display: grid;
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .app__main {
+    inline-size: 100%;
+    max-inline-size: var(--content-max);
+    margin-inline: auto;
+    padding-block-end: var(--space-8);
+  }
+
+  .bottom-nav {
+    position: sticky;
+    inset-block: 0 auto;
+    inset-inline: auto;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    min-block-size: 0;
+    padding: var(--space-4) var(--space-2);
+    border: 0;
+    background: transparent;
+  }
+
+  .bottom-nav__item { inline-size: 100%; max-inline-size: none; }
+
+  .features { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- Desktop: full menu on the side ---------- */
+@media (min-width: 1024px) {
+  .searchbar { max-inline-size: 40rem; }
+
+  .app__body { grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+  .app__body:has(> .app__aside) { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--aside-width); }
+
+  .bottom-nav { padding: var(--space-5); }
+
+  .bottom-nav__item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    padding-inline: var(--space-4);
+    font-size: var(--text-base);
+  }
+
+  .bottom-nav__item--add .bottom-nav__icon { inline-size: 2.75rem; }
+
+  .app__aside { padding: var(--space-6) var(--space-5); }
+
+  .hero { grid-template-columns: 1.1fr 0.9fr; align-items: center; padding-block: 4rem; }
+  .features { grid-template-columns: repeat(3, 1fr); }
+  .steps { grid-template-columns: repeat(3, 1fr); }
+}

@@ -1,0 +1,235 @@
+/* ==========================================================
+   components.css — reusable components
+   Place at: public/css/components.css (load after app.css)
+   Now: flash messages. Next: cards, badges, buttons, audio player.
+   ========================================================== */
+
+/* ---------- Flash messages ---------- */
+.flash-list { padding-block-start: var(--space-4); }
+
+.flash {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid;
+  border-radius: var(--radius-md);
+}
+
+.flash .icon { margin-block-start: 0.15rem; }
+
+.flash--success {
+  border-color: color-mix(in srgb, var(--color-success) 30%, #fff);
+  background: color-mix(in srgb, var(--color-success) 10%, #fff);
+  color: #166534;
+}
+
+.flash--error {
+  border-color: color-mix(in srgb, var(--color-danger) 30%, #fff);
+  background: color-mix(in srgb, var(--color-danger) 8%, #fff);
+  color: #991b1b;
+}
+
+.flash--info {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+/* ---------- Card ---------- */
+.card {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------- Button ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: 3rem;
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+
+.btn--primary { background: var(--color-primary); color: #fff; }
+.btn--primary:hover { background: var(--color-primary-hover); }
+
+/* ---------- Empty / error state ---------- */
+.empty-state {
+  justify-items: center;
+  padding-block: var(--space-8);
+  text-align: center;
+}
+
+.empty-state__code {
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-primary);
+}
+
+.empty-state__text { color: var(--color-muted); }
+
+/* ---------- Button variants ---------- */
+.btn--secondary { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-ink); }
+.btn--secondary:hover { background: var(--color-field); }
+.btn--ghost { color: var(--color-ink); }
+.btn--ghost:hover { background: var(--color-field); }
+.btn--ghost-light { border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; }
+.btn--ghost-light:hover { background: rgba(255, 255, 255, 0.1); }
+.btn--block { inline-size: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.icon--sm { inline-size: 1rem; block-size: 1rem; }
+
+/* ---------- Avatar, badge, tag ---------- */
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 3rem;
+  block-size: 3rem;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.125rem var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-field);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+/* ---------- Issue card ---------- */
+.issue-card { display: grid; gap: var(--space-4); }
+
+.issue-card__head { display: flex; align-items: center; gap: var(--space-3); }
+.issue-card__who { min-inline-size: 0; }
+
+.issue-card__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+}
+
+.issue-card__meta { font-size: var(--text-sm); color: var(--color-muted); }
+.issue-card__title { margin-block: var(--space-2); font-size: var(--text-xl); }
+.issue-card__excerpt { color: var(--color-muted); }
+/* User text can have its own direction (dir="auto"); keep it aligned with the page. */
+[dir="rtl"] .issue-card__title, [dir="rtl"] .issue-card__excerpt { text-align: right; }
+[dir="ltr"] .issue-card__title, [dir="ltr"] .issue-card__excerpt { text-align: left; }
+
+.issue-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.status { display: inline-flex; align-items: center; gap: var(--space-2); }
+.status::before { content: ""; inline-size: 0.375rem; block-size: 0.375rem; border-radius: 50%; background: currentColor; }
+.status--solved { color: var(--color-primary); }
+
+.issue-card__comments { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 500; }
+
+/* ---------- Audio player ---------- */
+.audio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-field);
+}
+
+.audio__btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--tap-min);
+  block-size: var(--tap-min);
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.audio__btn:hover:not(:disabled) { background: var(--color-primary-hover); }
+.audio__btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.audio__icon--pause { display: none; }
+.audio.is-playing .audio__icon--play { display: none; }
+.audio.is-playing .audio__icon--pause { display: block; }
+
+.audio__wave { flex: 1; min-inline-size: 0; block-size: 2rem; }
+.audio__wave rect { fill: var(--color-wave); }
+.audio__wave rect.is-played { fill: var(--color-primary); }
+[dir="rtl"] .audio__wave { transform: scaleX(-1); }
+
+.audio__time { flex: none; font-size: var(--text-sm); color: var(--color-muted); }
+
+/* ---------- Form fields ---------- */
+.field { display: grid; gap: var(--space-2); }
+.field__label { font-weight: 600; }
+.field__opt { margin-inline-start: var(--space-2); font-size: var(--text-sm); font-weight: 400; color: var(--color-muted); }
+
+.field__input {
+  inline-size: 100%;
+  min-block-size: 3.25rem;
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-field);
+  font-size: var(--text-md);
+}
+
+.field__input:focus { background: var(--color-surface); }
+.field__input--ltr { direction: ltr; text-align: start; }
+.field__input[aria-invalid="true"] { border-color: var(--color-danger); }
+
+.field__hint { font-size: var(--text-sm); color: var(--color-muted); }
+.field__error { font-size: var(--text-sm); color: var(--color-danger); }
+.field__error:empty { display: none; }
+
+.field__password { position: relative; }
+.field__password .field__input { padding-inline: 3.5rem; }
+
+.field__toggle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: grid;
+  place-items: center;
+  inline-size: 3.25rem;
+  color: var(--color-muted);
+}
+
+.check { display: flex; align-items: flex-start; gap: var(--space-3); }
+.check input { flex: none; inline-size: 1.25rem; block-size: 1.25rem; margin-block-start: 0.2rem; accent-color: var(--color-primary); }

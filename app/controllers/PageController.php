@@ -1,0 +1,28 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use App\Core\Controller;
+use App\Core\Response;
+
+final class PageController extends Controller
+{
+    /** Pages from the navigation that are not built yet. */
+    public function soon(): Response
+    {
+        $pages = [
+            '/search'         => ['بحث', 'search'],
+            '/market'         => ['السوق', 'market'],
+            '/issues/create'  => ['إضافة عطل', 'add'],
+            '/notifications'  => ['الإشعارات', 'home'],
+        ];
+        [$title, $active] = $pages[$this->request->path] ?? ['قريبًا', 'home'];
+
+        return $this->view('pages/soon', [
+            'title'      => $title,
+            'active'     => $active,
+            'showHeader' => false,
+        ]);
+    }
+}
