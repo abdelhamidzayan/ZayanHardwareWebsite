@@ -31,7 +31,7 @@ final class Issue extends Model
     public static function replies(int $issueId, string $sort): array
     {
         $order = match ($sort) {
-            'experts' => 'CASE WHEN u.role = "expert" THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
+            'experts' => 'CASE WHEN u.role IN ("moderator", "admin") THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
             'reputation' => 'reputation_points DESC, helpful_count DESC, r.created_at DESC',
             'helpful' => 'helpful_count DESC, r.created_at DESC',
             'newest' => 'r.created_at DESC',
@@ -61,6 +61,13 @@ final class Issue extends Model
         $stmt = self::db()->prepare('SELECT id, file_path, mime_type, file_size FROM issue_attachments WHERE issue_id = ? ORDER BY id');
         $stmt->execute([$issueId]);
         return $stmt->fetchAll();
+    }
+
+    public static function attachmentById(int $attachmentId): ?array
+    {
+        $stmt = self::db()->prepare('SELECT a.id, a.file_path, a.mime_type, a.file_size, a.issue_id FROM issue_attachments a WHERE a.id = ? LIMIT 1');
+        $stmt->execute([$attachmentId]);
+        return $stmt->fetch() ?: null;
     }
 
     public static function history(int $issueId): array

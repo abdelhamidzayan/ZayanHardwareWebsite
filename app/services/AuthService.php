@@ -15,56 +15,68 @@ final class AuthService
      * @param string[] $specializations allowed specialization slugs
      * @return array{errors: array<string,string>, userId: ?int}
      */
-    public static function register(array $input, array $specializations): array
+    public static function register(array $input, array $skillDomains): array
     {
-        $displayName = trim((string) preg_replace('/\s+/u', ' ', self::str($input, 'display_name')));
+        $displayName = trim((string) preg_replace('/\\s+/u', ' ', self::str($input, 'display_name')));
         $username    = strtolower(trim(self::str($input, 'username')));
         $email       = strtolower(trim(self::str($input, 'email')));
         $password    = self::str($input, 'password');
         $workshop    = trim(self::str($input, 'workshop'));
-        $phone       = trim(self::str($input, 'phone'));
+        $phone       = preg_replace('/[\\s-]+/', '', trim(self::str($input, 'phone')));
+        $devicesRaw  = $input['device_specializations'] ?? [];
+        $skillsRaw   = $input['skill_domains'] ?? [];
+        $devices     = is_array($devicesRaw) ? array_values(array_unique(array_filter($devicesRaw, 'is_string'))) : [];
+        $skills      = is_array($skillsRaw) ? array_values(array_unique(array_filter($skillsRaw, 'is_string'))) : [];
 
         $v = new Validator([
-            'display_name'   => $displayName,
-            'username'       => $username,
-            'email'          => $email,
-            'password'       => $password,
-            'specialization' => self::str($input, 'specialization'),
-            'experience'     => self::str($input, 'experience'),
-            'workshop'       => $workshop,
-            'phone'          => $phone,
+            'display_name' => $displayName,
+            'username' => $username,
+            'email' => $email,
+            'phone' => $phone,
+            'password' => $password,
         ]);
 
         $v->required('display_name', 'أدخل الاسم الظاهر')
           ->length('display_name', 2, 60, 'الاسم من 2 إلى 60 حرفًا');
         $v->required('username', 'أدخل اسم المستخدم')
-          ->pattern('username', '/^[a-z0-9_]{3,30}$/', 'من 3 إلى 30 حرفًا: إنجليزية صغيرة وأرقام و _');
-        $v->required('email', 'أدخل البريد الإلكتروني')
-          ->email('email', 'أدخل بريدًا إلكترونيًا صحيحًا')
-          ->length('email', 3, 190, 'البريد الإلكتروني طويل جدًا');
+          ->pattern('username', '/^[a-z0-9_]{3,30}$/', 'من 3 إلى 30 حرفًا: إنجليزية صغيرة وأرقام و _ فقط');
+        if ($email !== '') {
+            $v->email('email', 'أدخل بريدًا إلكترونيًا صحيحًا')
+              ->length('email', 3, 190, 'البريد الإلكتروني طويل جدًا');
+        }
+        if ($phone !== '' && preg_match('/^\\+?[0-9]{7,20}$/', $phone) !== 1) {
+            $v->fail('phone', 'أدخل رقم هاتف صحيحًا');
+        }
+        if ($email === '' && $phone === '') {
+            $v->fail('contact', 'أدخل البريد الإلكتروني أو رقم الهاتف على الأقل');
+        }
         $v->required('password', 'أدخل كلمة المرور')
           ->length('password', 10, 128, 'كلمة المرور لا تقل عن 10 أحرف');
         if (strlen($password) > 72) {
             $v->fail('password', 'كلمة المرور طويلة جدًا (الحد 72 بايت)');
         }
-        $v->in('specialization', $specializations, 'اختر التخصص');
-        $v->in('experience', self::EXPERIENCE, 'اختر مدة الخبرة');
-        if ($workshop !== '') {
-            $v->length('workshop', 1, 80, 'اسم الورشة لا يزيد عن 80 حرفًا');
+        if (!$devices || array_diff($devices, ['iphone', 'android'])) {
+            $v->fail('device_specializations', 'اختر iPhone أو Android أو كليهما');
         }
-        if ($phone !== '') {
-            $v->pattern('phone', '/^\+?[0-9\s-]{7,20}$/', 'أدخل رقم هاتف صحيحًا');
+        if (!$skills || array_diff($skills, $skillDomains)) {
+            $v->fail('skill_domains', 'اختر مجالًا فنيًا واحدًا على الأقل من المجالات المتاحة');
+        }
+        if ($workshop !== '' && mb_strlen($workshop) > 80) {
+            $v->fail('workshop', 'اسم الورشة لا يزيد عن 80 حرفًا');
         }
         if (self::str($input, 'terms') !== '1') {
-            $v->fail('terms', 'يجب الموافقة على القواعد للمتابعة');
+            $v->fail('terms', 'يجب الموافقة على القواعد وسياسة الخصوصية للمتابعة');
         }
 
         $errors = $v->errors();
         if (!isset($errors['username']) && User::exists('username', $username)) {
             $errors['username'] = 'اسم المستخدم مستخدم بالفعل';
         }
-        if (!isset($errors['email']) && User::exists('email', $email)) {
+        if ($email !== '' && !isset($errors['email']) && User::exists('email', $email)) {
             $errors['email'] = 'هذا البريد مسجّل بالفعل';
+        }
+        if ($phone !== '' && !isset($errors['phone']) && User::phoneExists($phone)) {
+            $errors['phone'] = 'رقم الهاتف مسجّل بالفعل';
         }
         if ($errors) {
             return ['errors' => $errors, 'userId' => null];
@@ -73,29 +85,32 @@ final class AuthService
         try {
             $userId = User::create(
                 [
-                    'username'      => $username,
-                    'display_name'  => $displayName,
-                    'email'         => $email,
+                    'username' => $username,
+                    'display_name' => $displayName,
+                    'email' => $email !== '' ? $email : null,
                     'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 ],
                 [
-                    'specialization' => self::str($input, 'specialization'),
-                    'experience'     => self::str($input, 'experience'),
-                    'workshop_name'  => $workshop !== '' ? $workshop : null,
-                    'phone'          => $phone !== '' ? preg_replace('/[\s-]+/', '', $phone) : null,
+                    'specialization' => $skills[0] ?? null,
+                    'experience' => null,
+                    'workshop_name' => $workshop !== '' ? $workshop : null,
+                    'phone' => $phone !== '' ? $phone : null,
+                    'device_specializations' => $devices,
+                    'skill_domains' => $skills,
+                    'terms_version' => '1.0',
+                    'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
                 ]
             );
         } catch (\PDOException $e) {
-            // Two people registering the same name at the same moment.
             if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
-                $emailTaken = str_contains($e->getMessage(), 'uq_users_email');
-
-                return [
-                    'errors' => $emailTaken
-                        ? ['email' => 'هذا البريد مسجّل بالفعل']
-                        : ['username' => 'اسم المستخدم مستخدم بالفعل'],
-                    'userId' => null,
-                ];
+                $message = $e->getMessage();
+                if (str_contains($message, 'uq_users_email')) {
+                    return ['errors' => ['email' => 'هذا البريد مسجّل بالفعل'], 'userId' => null];
+                }
+                if (str_contains($message, 'uq_technician_profiles_phone')) {
+                    return ['errors' => ['phone' => 'رقم الهاتف مسجّل بالفعل'], 'userId' => null];
+                }
+                return ['errors' => ['username' => 'اسم المستخدم مستخدم بالفعل'], 'userId' => null];
             }
             throw $e;
         }
@@ -120,7 +135,7 @@ final class AuthService
         }
 
         $user = User::findById($id);
-        if ($user === null || in_array($user['account_status'], ['suspended', 'banned'], true)) {
+        if ($user === null || $user['account_status'] !== 'active') {
             self::forget();
 
             return null;
@@ -142,7 +157,7 @@ final class AuthService
         if ($row === null || !$valid) {
             return ['user' => null, 'error' => 'invalid'];
         }
-        if (in_array($row['account_status'], ['suspended', 'banned'], true)) {
+        if ($row['account_status'] !== 'active') {
             return ['user' => null, 'error' => 'blocked'];
         }
         if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {

@@ -2,11 +2,15 @@
 declare(strict_types=1);
 
 use App\Controllers\AuthController;
+use App\Controllers\AccountController;
+use App\Controllers\AdminUserController;
+use App\Controllers\AdminSkillTestController;
 use App\Controllers\FeedController;
 use App\Controllers\HomeController;
 use App\Controllers\IssueController;
 use App\Controllers\PageController;
 use App\Controllers\ProfileController;
+use App\Controllers\SkillTestController;
 use App\Core\Router;
 
 return static function (Router $router): void {
@@ -14,6 +18,7 @@ return static function (Router $router): void {
     $router->get('/feed', [FeedController::class, 'index']);
 
     $router->get('/issues/{id}', [IssueController::class, 'show']);
+    $router->get('/attachments/{id}', [IssueController::class, 'attachment']);
     $router->post('/issues/{id}/reply', [IssueController::class, 'reply']);
     $router->post('/issues/{id}/edit', [IssueController::class, 'edit']);
     $router->post('/issues/{id}/vote', [IssueController::class, 'vote']);
@@ -27,6 +32,17 @@ return static function (Router $router): void {
     $router->get('/register', [AuthController::class, 'showRegister']);
     $router->post('/register', [AuthController::class, 'register']);
     $router->post('/logout', [AuthController::class, 'logout']);
+    $router->post('/account/deletion-request', [AccountController::class, 'requestDeletion']);
+    $router->get('/skills/tests', [SkillTestController::class, 'index']);
+    $router->get('/admin/skill-tests', [AdminSkillTestController::class, 'index']);
+    $router->post('/admin/skill-tests', [AdminSkillTestController::class, 'create']);
+    $router->post('/admin/skill-tests/{id}/status', [AdminSkillTestController::class, 'setStatus']);
+    $router->get('/skills/tests/{id}', [SkillTestController::class, 'show']);
+    $router->post('/skills/tests/{id}/submit', [SkillTestController::class, 'submit']);
+    $router->get('/admin/users', [AdminUserController::class, 'index']);
+    $router->post('/admin/users/{id}/password-reset', [AdminUserController::class, 'resetPassword']);
+    $router->post('/admin/users/{id}/status', [AdminUserController::class, 'setStatus']);
+    $router->post('/admin/users/{id}/role', [AdminUserController::class, 'setRole']);
 
     $router->get('/profile/{username}', [ProfileController::class, 'show']);
 

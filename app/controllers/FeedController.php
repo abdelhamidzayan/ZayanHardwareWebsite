@@ -6,11 +6,14 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Response;
 use App\Models\DemoData;
+use App\Services\AuthService;
 
 final class FeedController extends Controller
 {
     public function index(): Response
     {
+        if (!AuthService::user()) return $this->redirect('/login');
+
         $category = $this->request->query['category'] ?? '';
         $slug     = is_string($category) ? strtolower($category) : '';
 
