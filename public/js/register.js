@@ -423,7 +423,7 @@
       setStep(1);
       return;
     }
-    if (true && !validUsername(username.value.trim().toLowerCase())) {
+    if (!validUsername(username.value.trim().toLowerCase())) {
       event.preventDefault();
       setStep(2);
       username.focus();
