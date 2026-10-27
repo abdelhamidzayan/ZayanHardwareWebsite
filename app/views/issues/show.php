@@ -140,12 +140,16 @@ $specializations = [
     </section>
 
 
-        <?php elseif ($isOwner && $closed && $issue['latest_result_review'] !== null && $issue['latest_result_review'] !== 'pending') : ?>
-            <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reopen" class="card reopen-issue">
-                <?= $csrf() ?>
-                <p class="muted">تمت مراجعة النتيجة السابقة. يمكنك فتح النقاش مجددًا لإضافة معلومات تشخيص جديدة.</p>
-                <button class="btn btn--secondary" type="submit">إعادة فتح النقاش</button>
-            </form>
+        <?php endif; ?>
+
+    <?php if ($isOwner && $closed && $issue['latest_result_review'] !== null && $issue['latest_result_review'] !== 'pending') : ?>
+        <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reopen" class="card reopen-issue">
+            <?= $csrf() ?>
+            <p class="muted">تمت مراجعة النتيجة السابقة. يمكنك فتح النقاش مجددًا لإضافة معلومات تشخيص جديدة.</p>
+            <button class="btn btn--secondary" type="submit">إعادة فتح النقاش</button>
+        </form>
+    <?php endif; ?>
+
     <?php if ($isOwner && !$closed) : ?>
         <details class="card close-issue">
             <summary>إنهاء النقاش وتقديم النتيجة</summary>
