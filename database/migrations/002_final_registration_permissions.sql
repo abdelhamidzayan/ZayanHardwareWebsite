@@ -14,7 +14,7 @@ UPDATE users SET role = CASE
 END;
 UPDATE users SET account_status = 'active'
 WHERE account_status = 'pending_verification';
-UPDATE users SET account_status = 'active'
+UPDATE users SET account_status = 'suspended'
 WHERE account_status = 'restricted';
 
 ALTER TABLE users
