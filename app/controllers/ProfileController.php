@@ -44,6 +44,7 @@ final class ProfileController extends Controller
             'title'   => $profile['display_name'],
             'active'  => $isOwner ? 'profile' : '',
             'showHeader' => false,
+            'skillRatings' => User::skillRatings((int) $profile['id']),
             'profile' => [
                 'display_name'   => $profile['display_name'],
                 'username'       => $profile['username'],
