@@ -55,14 +55,14 @@ $mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
                     </button>
                     <div class="contact-control__body" id="phone-control" <?= $mode === 'email' ? 'hidden' : '' ?>>
                         <select id="country_code" name="country_code" aria-label="كود الدولة">
-                            <option value="+20" selected>🇪🇬 +20</option>
-                            <option value="+966">🇸🇦 +966</option>
-                            <option value="+971">🇦🇪 +971</option>
-                            <option value="+965">🇰🇼 +965</option>
-                            <option value="+974">🇶🇦 +974</option>
-                            <option value="+962">🇯🇴 +962</option>
-                            <option value="+1">🇺🇸 +1</option>
-                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+20"<?= ($old['country_code'] ?? '+20') === '+20' ? ' selected' : '' ?>>🇪🇬 +20</option>
+                            <option value="+966"<?= ($old['country_code'] ?? '+20') === '+966' ? ' selected' : '' ?>>🇸🇦 +966</option>
+                            <option value="+971"<?= ($old['country_code'] ?? '+20') === '+971' ? ' selected' : '' ?>>🇦🇪 +971</option>
+                            <option value="+965"<?= ($old['country_code'] ?? '+20') === '+965' ? ' selected' : '' ?>>🇰🇼 +965</option>
+                            <option value="+974"<?= ($old['country_code'] ?? '+20') === '+974' ? ' selected' : '' ?>>🇶🇦 +974</option>
+                            <option value="+962"<?= ($old['country_code'] ?? '+20') === '+962' ? ' selected' : '' ?>>🇯🇴 +962</option>
+                            <option value="+1"<?= ($old['country_code'] ?? '+20') === '+1' ? ' selected' : '' ?>>🇺🇸 +1</option>
+                            <option value="+44"<?= ($old['country_code'] ?? '+20') === '+44' ? ' selected' : '' ?>>🇬🇧 +44</option>
                         </select>
                         <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel"
                                placeholder="010 1234 5678" value="<?= $mode === 'phone' ? $val('phone') : '' ?>"
