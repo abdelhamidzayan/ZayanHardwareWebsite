@@ -127,6 +127,21 @@ final class IssueController extends Controller
         return $this->redirect('/issues/' . $id);
     }
 
+
+    public function reopen(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        try {
+            Issue::reopen($id, (int) $user['id']);
+            $this->flash('success', 'تم فتح النقاش من جديد. يمكنك إضافة آخر تحديث واستقبال ردود جديدة.');
+        } catch (\\DomainException) {
+            $this->flash('error', 'يمكن إعادة فتح النقاش لصاحبه فقط بعد مراجعة النتيجة السابقة من الإدارة.');
+        }
+        return $this->redirect('/issues/' . $id);
+    }
+
     private function string(string $key): string
     {
         $value = $this->request->input($key);
