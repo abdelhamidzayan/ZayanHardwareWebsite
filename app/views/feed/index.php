@@ -1,3 +1,5 @@
+<?php require __DIR__ . '/../partials/featured-home-carousel.php'; ?>
+
 <div class="page-head">
     <h2 class="page-head__title">على الطاولة</h2>
 </div>
