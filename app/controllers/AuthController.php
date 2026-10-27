@@ -245,6 +245,11 @@ final class AuthController extends Controller
         $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $seed);
         $base = strtolower((string) $ascii);
         $base = preg_replace('/[^a-z0-9]+/', '', $base) ?? '';
+        if ($base === '' && is_string($emailSeed) && $emailSeed !== '') {
+            $emailAscii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $emailSeed);
+            $base = strtolower((string) $emailAscii);
+            $base = preg_replace('/[^a-z0-9]+/', '', $base) ?? '';
+        }
         if ($base === '') $base = 'tech';
         $suggestions = [];
         for ($i = 0; $i < 30 && count($suggestions) < 3; $i++) {
@@ -254,7 +259,7 @@ final class AuthController extends Controller
         }
         while (count($suggestions) < 3) {
             $candidate = 'tech' . bin2hex(random_bytes(4));
-            if (!User::exists('username', $candidate)) $suggestions[] = substr($candidate, 0, 20);
+            if (!User::exists('username', $candidate) && !in_array(substr($candidate, 0, 20), $suggestions, true)) $suggestions[] = substr($candidate, 0, 20);
         }
         return $suggestions;
     }
