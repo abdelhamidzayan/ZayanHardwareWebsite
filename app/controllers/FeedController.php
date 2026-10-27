@@ -11,6 +11,8 @@ final class FeedController extends Controller
 {
     public function index(): Response
     {
+        if (!\\App\\Services\\AuthService::user()) return $this->redirect('/login');
+
         $category = $this->request->query['category'] ?? '';
         $slug     = is_string($category) ? strtolower($category) : '';
 
