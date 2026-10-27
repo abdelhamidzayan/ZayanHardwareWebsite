@@ -5,12 +5,34 @@
             <p class="auth__sub">ادخل بحسابك لمتابعة حالاتك وحلولك.</p>
         </div>
 
-        <form class="auth__form" method="post" action="<?= $e($baseUrl) ?>/login" novalidate data-validate>
+        <form class="auth__form" method="post" action="<?= $e($baseUrl) ?>/login" novalidate data-validate data-login-identifier-form>
             <?= $csrf() ?>
+
             <div class="field">
-                <label class="field__label" for="identifier">البريد الإلكتروني أو رقم الهاتف</label>
-                <input class="field__input field__input--ltr" id="identifier" name="identifier" type="text"
-                       autocomplete="username" autocapitalize="none" spellcheck="false" data-rules="required">
+                <label class="field__label" for="login-identifier-input" data-login-identifier-label>رقم الهاتف</label>
+                <div class="login-identifier">
+                    <div class="login-identifier__phone" data-login-phone-controls>
+                        <label class="sr-only" for="login-country-code">الدولة</label>
+                        <select class="login-identifier__country" id="login-country-code" aria-label="كود الدولة" data-login-country>
+                            <option value="+20" selected>🇪🇬 +20</option>
+                            <option value="+966">🇸🇦 +966</option>
+                            <option value="+971">🇦🇪 +971</option>
+                            <option value="+965">🇰🇼 +965</option>
+                            <option value="+974">🇶🇦 +974</option>
+                            <option value="+962">🇯🇴 +962</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+44">🇬🇧 +44</option>
+                        </select>
+                    </div>
+                    <input class="field__input login-identifier__input" id="login-identifier-input" type="tel"
+                           inputmode="tel" autocomplete="tel-national" placeholder="رقم الهاتف"
+                           autocapitalize="none" spellcheck="false" data-rules="required tel" data-login-visible-input>
+                    <button class="login-identifier__switch" type="button" data-login-switch
+                            aria-label="التبديل إلى البريد الإلكتروني" title="التبديل إلى البريد الإلكتروني">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                    </button>
+                </div>
+                <input type="hidden" id="identifier" name="identifier" value="">
                 <p class="field__error" aria-live="polite"></p>
             </div>
 
