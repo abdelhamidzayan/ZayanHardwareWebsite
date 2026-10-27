@@ -24,6 +24,9 @@ $authPage = $authPage ?? false;
         </a>
 
         <nav class="guest-header__actions" aria-label="روابط الموقع">
+            <?php if (!$authPage) : ?>
+                <a class="btn btn--primary guest-header__login" href="<?= $e($baseUrl) ?>/login">دخول</a>
+            <?php endif; ?>
             <a class="guest-header__help" href="<?= $e($baseUrl) ?>/help"<?= (($title ?? '') === 'المساعدة والدعم') ? ' aria-current="page"' : '' ?>>المساعدة</a>
         </nav>
     </div>
