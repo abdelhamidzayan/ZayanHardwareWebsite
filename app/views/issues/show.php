@@ -140,8 +140,6 @@ $specializations = [
     </section>
 
 
-        <?php endif; ?>
-
     <?php if ($isOwner && $closed && $issue['latest_result_review'] !== null && $issue['latest_result_review'] !== 'pending') : ?>
         <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reopen" class="card reopen-issue">
             <?= $csrf() ?>
