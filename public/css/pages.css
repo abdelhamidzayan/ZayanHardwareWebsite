@@ -596,3 +596,35 @@
     transform: translateY(0.65rem) rotate(3deg) scale(0.96);
   }
 }
+
+/* ---------- Public header: blue login action beside help ---------- */
+.guest-header__login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 2.65rem;
+  padding-inline: 1.1rem;
+  border-radius: var(--radius-md);
+  background: #1769d2;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+.guest-header__login:hover {
+  background: #1257b4;
+  color: #fff;
+}
+.guest-header__login:active { transform: translateY(1px); }
+.guest-header__login:focus-visible {
+  outline: 2px solid #1769d2;
+  outline-offset: 3px;
+}
+@media (max-width: 520px) {
+  .guest-header__login {
+    min-block-size: 2.35rem;
+    padding-inline: .75rem;
+    font-size: .82rem;
+  }
+}
