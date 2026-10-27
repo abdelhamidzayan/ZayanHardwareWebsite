@@ -45,7 +45,7 @@ final class Issue extends Model
                 JOIN users u ON u.id = r.user_id
                 LEFT JOIN technician_profiles p ON p.user_id = u.id
                 WHERE r.issue_id = ? AND r.deleted_at IS NULL
-                ORDER BY ' . $order . ' LIMIT 100';
+                ORDER BY ' . $order . ' ';
         $stmt = self::db()->prepare($sql);
         if ($sort === 'relevant') {
             $stmt->execute([$issueId, $issueId]);
