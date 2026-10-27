@@ -160,6 +160,19 @@
   const phoneControls = form.querySelector('[data-login-phone-controls]');
   const label = form.querySelector('[data-login-identifier-label]');
   const switchButton = form.querySelector('[data-login-switch]');
+
+  // A failed-credentials notice describes the previous submission, not the edited form.
+  const clearInvalidCredentialsNotice = () => {
+    document.querySelectorAll('.flash--error').forEach((notice) => {
+      const message = notice.querySelector('p')?.textContent?.trim();
+      if (message === 'بيانات الدخول غير صحيحة.') {
+        const list = notice.closest('.flash-list');
+        notice.remove();
+        if (list && !list.querySelector('.flash')) list.remove();
+      }
+    });
+  };
+
   let mode = 'phone';
   let phoneValue = '';
   let emailValue = '';
@@ -220,7 +233,13 @@
     visibleInput.focus();
   };
 
-  switchButton.addEventListener('click', switchMode);
+  switchButton.addEventListener('click', () => {
+    clearInvalidCredentialsNotice();
+    switchMode();
+  });
+
+  // Any edit means the previous invalid-credentials message is now stale.
+  form.addEventListener('input', clearInvalidCredentialsNotice);
   visibleInput.addEventListener('input', () => {
     if (mode === 'phone') phoneValue = visibleInput.value;
     else emailValue = visibleInput.value;
