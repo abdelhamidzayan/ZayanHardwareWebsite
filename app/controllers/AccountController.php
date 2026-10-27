@@ -15,7 +15,7 @@ final class AccountController extends Controller
     {
         if (!Csrf::verify($this->request->input('_token'))) {
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
-            return $this->redirect('/profile/' . $this->username());
+            return $this->redirect('/feed');
         }
 
         $user = AuthService::user();
@@ -51,9 +51,4 @@ final class AccountController extends Controller
         return $this->redirect('/');
     }
 
-    private function username(): string
-    {
-        $user = AuthService::user();
-        return is_array($user) ? (string) $user['username'] : '';
-    }
 }
