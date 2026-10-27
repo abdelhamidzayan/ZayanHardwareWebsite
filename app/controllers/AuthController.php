@@ -142,7 +142,7 @@ final class AuthController extends Controller
         }
         $countries = require dirname(__DIR__, 2) . '/config/countries.php';
         $firstStepErrors = ['display_name', 'contact', 'password'];
-        $activeStep = count(array_intersect(array_keys($errors), $firstStepErrors)) > 0 ? 1 : 2;
+        $activeStep = !$errors || count(array_intersect(array_keys($errors), $firstStepErrors)) > 0 ? 1 : 2;
 
         return $this->view('auth/register', [
             'title' => 'إنشاء حساب',
