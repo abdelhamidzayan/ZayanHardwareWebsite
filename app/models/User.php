@@ -86,6 +86,36 @@ final class User extends Model
         return $stmt->fetchAll();
     }
 
+    /** Save the account's username and core technician specialization from registration stage 2. */
+    public static function saveRegistrationStage2(int $userId, string $username, string $specialization, ?string $experience, array $devices): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('UPDATE users SET username = ? WHERE id = ?')->execute([$username, $userId]);
+            $pdo->prepare('UPDATE technician_profiles SET specialization = ?, experience = ? WHERE user_id = ?')
+                ->execute([$specialization, $experience, $userId]);
+            $pdo->prepare('DELETE FROM user_device_specializations WHERE user_id = ?')->execute([$userId]);
+            $deviceStmt = $pdo->prepare('INSERT INTO user_device_specializations (user_id, device_type) VALUES (?, ?)');
+            foreach (array_unique($devices) as $device) {
+                if (in_array($device, ['iphone', 'android'], true)) {
+                    $deviceStmt->execute([$userId, $device]);
+                }
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /** Save optional profile details; avatar upload is intentionally not implemented yet. */
+    public static function saveOptionalProfile(int $userId, string $workshop, string $biography): void
+    {
+        self::db()->prepare('UPDATE technician_profiles SET workshop_name = ?, biography = ? WHERE user_id = ?')
+            ->execute([$workshop !== '' ? $workshop : null, $biography !== '' ? $biography : null, $userId]);
+    }
+
     /** Replace a user's optional device specializations. */
     public static function saveDeviceSpecializations(int $userId, array $devices): void
     {
