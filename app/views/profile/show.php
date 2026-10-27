@@ -17,6 +17,12 @@
             <?php if ($profile['specialization'] !== '') : ?>
                 <div><dt>التخصص</dt><dd><?= $e($profile['specialization']) ?></dd></div>
             <?php endif; ?>
+            <?php if ($profile['device_specializations'] !== '') : ?>
+                <div><dt>الأجهزة</dt><dd><?= $e(implode('، ', array_map(static fn (string $device): string => $device === 'iphone' ? 'iPhone' : 'Android', array_filter(explode(',', $profile['device_specializations']))))) ?></dd></div>
+            <?php endif; ?>
+            <?php if ($profile['skill_domains'] !== '') : ?>
+                <div><dt>مجالات الإصلاح</dt><dd><?= $e($profile['skill_domains']) ?></dd></div>
+            <?php endif; ?>
             <?php if ($profile['experience'] !== '') : ?>
                 <div><dt>الخبرة</dt><dd><?= $e($profile['experience']) ?></dd></div>
             <?php endif; ?>
