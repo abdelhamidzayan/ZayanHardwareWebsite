@@ -476,52 +476,83 @@
 }
 
 
-/* ---------- Landing preview: animated playing-card stack ---------- */
+/* ---------- Landing preview: natural playing-card stack ---------- */
 .hero__preview {
   display: grid;
   isolation: isolate;
   padding-block: 0.85rem;
+  perspective: 1100px;
 }
 
 .hero__deck-card {
   grid-area: 1 / 1;
   min-inline-size: 0;
-  transform-origin: 50% 12%;
+  transform-origin: 50% 10%;
   backface-visibility: hidden;
   will-change: transform;
 }
 
 .hero__deck-card:nth-child(1) {
   z-index: 2;
-  animation: hero-deck-card-cycle 7.2s ease-in-out infinite;
+  animation: hero-deck-card-front 8s cubic-bezier(.45, 0, .2, 1) infinite;
 }
 
 .hero__deck-card:nth-child(2) {
   z-index: 1;
-  animation: hero-deck-card-cycle 7.2s ease-in-out infinite;
-  animation-delay: -3.6s;
+  animation: hero-deck-card-back 8s cubic-bezier(.45, 0, .2, 1) infinite;
 }
 
-@keyframes hero-deck-card-cycle {
-  0%, 38% {
-    transform: translateY(0) rotate(0deg) scale(1);
+@keyframes hero-deck-card-front {
+  0%, 34% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     z-index: 2;
-    opacity: 1;
   }
-  45% {
-    transform: translateY(0.85rem) rotate(3.5deg) scale(0.96);
-    z-index: 1;
-    opacity: 0.96;
+  42% {
+    transform: translate3d(-0.2rem, 0.45rem, 0) rotate(-1deg) scale(.99);
+    z-index: 2;
   }
-  55%, 90% {
-    transform: translateY(0.65rem) rotate(4deg) scale(0.95);
+  52% {
+    transform: translate3d(1.2rem, 2.1rem, 0) rotate(5deg) scale(.94);
     z-index: 1;
-    opacity: 0.94;
+  }
+  60%, 86% {
+    transform: translate3d(.65rem, .8rem, 0) rotate(3deg) scale(.96);
+    z-index: 1;
+  }
+  94% {
+    transform: translate3d(.15rem, .15rem, 0) rotate(.7deg) scale(.99);
+    z-index: 1;
   }
   100% {
-    transform: translateY(0) rotate(0deg) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     z-index: 2;
-    opacity: 1;
+  }
+}
+
+@keyframes hero-deck-card-back {
+  0%, 34% {
+    transform: translate3d(.65rem, .8rem, 0) rotate(3deg) scale(.96);
+    z-index: 1;
+  }
+  42% {
+    transform: translate3d(.35rem, .45rem, 0) rotate(1.8deg) scale(.975);
+    z-index: 1;
+  }
+  52% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    z-index: 2;
+  }
+  60%, 86% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    z-index: 2;
+  }
+  94% {
+    transform: translate3d(.25rem, .3rem, 0) rotate(1.2deg) scale(.98);
+    z-index: 2;
+  }
+  100% {
+    transform: translate3d(.65rem, .8rem, 0) rotate(3deg) scale(.96);
+    z-index: 1;
   }
 }
 
