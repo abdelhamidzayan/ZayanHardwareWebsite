@@ -50,7 +50,7 @@ final class ProfileController extends Controller
                 'username'       => $profile['username'],
                 'initials'       => $initials,
                 'role_label'     => self::ROLES[$profile['role']] ?? 'فنّي',
-                'specialization' => $topics[$profile['specialization'] ?? ''] ?? '',
+                'specialization' => ['fast' => 'فاست', 'board' => 'بورد'][$profile['specialization'] ?? ''] ?? ($topics[$profile['specialization'] ?? ''] ?? ''),
                 'device_specializations' => (string) ($profile['device_specializations'] ?? ''),
                 'skill_domains' => (string) ($profile['skill_domains'] ?? ''),
                 'experience'     => self::EXPERIENCE[$profile['experience']] ?? '',
