@@ -22,12 +22,12 @@ final class IssueController extends Controller
             return $this->notFound();
         }
 
-        $privateRoot = realpath(\\App\\Core\\App::root('storage/private'));
+        $privateRoot = realpath(\App\Core\App::root('storage/private'));
         if ($privateRoot === false) {
             return $this->notFound();
         }
 
-        $storedPath = str_replace('\\\\', '/', (string) $attachment['file_path']);
+        $storedPath = str_replace('\\', '/', (string) $attachment['file_path']);
         $storedPath = ltrim($storedPath, '/');
         if (str_starts_with($storedPath, 'storage/private/')) {
             $storedPath = substr($storedPath, strlen('storage/private/'));
@@ -41,7 +41,7 @@ final class IssueController extends Controller
             return $this->notFound();
         }
 
-        $finfo = new \\finfo(FILEINFO_MIME_TYPE);
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $mime = $finfo->file($target) ?: 'application/octet-stream';
         $allowed = [
             'image/jpeg', 'image/png', 'image/webp', 'image/gif',
