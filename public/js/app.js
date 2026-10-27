@@ -283,3 +283,27 @@
   show(Math.max(0, current));
   start();
 })();
+
+
+/* ---------- Account dropdown: close on outside click or Escape ---------- */
+(() => {
+  'use strict';
+
+  const menus = document.querySelectorAll('.account-menu');
+  if (!menus.length) return;
+
+  document.addEventListener('click', (event) => {
+    menus.forEach((menu) => {
+      if (!menu.contains(event.target)) menu.open = false;
+    });
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    menus.forEach((menu) => {
+      if (!menu.open) return;
+      menu.open = false;
+      menu.querySelector('.account-menu__trigger')?.focus();
+    });
+  });
+})();
