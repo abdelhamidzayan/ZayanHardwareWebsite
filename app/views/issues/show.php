@@ -75,6 +75,26 @@ $specializations = [
         <?php endif; ?>
     </section>
 
+
+    <?php if ($issue['latest_result_id'] !== null) : ?>
+        <section class="card issue-result">
+            <h2>النتيجة النهائية</h2>
+            <span class="issue-result__status"><?= $e(match ($issue['latest_result_review']) { 'pending' => 'بانتظار مراجعة الإدارة', 'approved' => 'تم اعتماد النتيجة', 'rejected' => 'لم يتم اعتماد النتيجة', default => 'نتيجة مسجلة' }) ?></span>
+            <p><strong>تم الإصلاح؟</strong> <?= (int) $issue['latest_was_repaired'] === 1 ? 'نعم' : 'لا' ?></p>
+            <p><strong>السبب النهائي:</strong><br><?= nl2br($e((string) $issue['latest_final_cause'])) ?></p>
+            <?php if ($issue['latest_repair_action']) : ?><p><strong>إجراء الإصلاح:</strong><br><?= nl2br($e((string) $issue['latest_repair_action'])) ?></p><?php endif; ?>
+            <?php if ($currentUser && in_array($currentUser['role'] ?? '', ['admin', 'moderator'], true) && $issue['latest_result_review'] === 'pending') : ?>
+                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/review-result" class="issue-form">
+                    <?= $csrf() ?><input type="hidden" name="result_id" value="<?= (int) $issue['latest_result_id'] ?>">
+                    <div class="issue-result__actions">
+                        <button class="btn btn--primary" name="decision" value="approve" type="submit">اعتماد النتيجة (+5 سمعة لصاحبها)</button>
+                        <button class="btn btn--secondary" name="decision" value="reject" type="submit">رفض النتيجة</button>
+                    </div>
+                </form>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
+
     <?php if ($issue['accepted_reply_id']) : ?>
         <?php foreach ($replies as $reply) : if ((int) $reply['id'] !== (int) $issue['accepted_reply_id']) continue; ?>
             <section class="card accepted-solution">
