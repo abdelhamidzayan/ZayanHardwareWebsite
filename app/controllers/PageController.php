@@ -9,6 +9,14 @@ use App\Services\AuthService;
 
 final class PageController extends Controller
 {
+    /** Public help and support page. */
+    public function help(): Response
+    {
+        return $this->view('pages/help', [
+            'title' => 'المساعدة والدعم',
+        ], 200, 'guest');
+    }
+
     /** Pages from the navigation that are not built yet. */
     public function soon(): Response
     {
