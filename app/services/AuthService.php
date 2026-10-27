@@ -101,7 +101,7 @@ final class AuthService
                     'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
                 ]
             );
-        } catch (\\PDOException $e) {
+        } catch (\PDOException $e) {
             if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
                 $message = $e->getMessage();
                 if (str_contains($message, 'uq_users_email')) {
