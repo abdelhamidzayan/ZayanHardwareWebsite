@@ -13,7 +13,12 @@ final class Issue extends Model
             'SELECT i.*, u.username, u.display_name AS author_name, u.role AS author_role,
                     p.specialization,
                     (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
-                    (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC LIMIT 1) AS latest_result_review
+                    (SELECT ir.id FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_id,
+                    (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_review,
+                    (SELECT ir.was_repaired FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_was_repaired,
+                    (SELECT ir.final_cause FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_final_cause,
+                    (SELECT ir.repair_action FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_repair_action,
+                    (SELECT ir.submitted_by FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_submitter
              FROM issues i
              JOIN users u ON u.id = i.user_id
              LEFT JOIN technician_profiles p ON p.user_id = u.id
@@ -142,6 +147,33 @@ final class Issue extends Model
         }
     }
 
+
+
+    public static function reviewResult(int $issueId, int $resultId, int $reviewerId, bool $approve): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('SELECT id, submitted_by, review_status FROM issue_results WHERE id = ? AND issue_id = ? FOR UPDATE');
+            $stmt->execute([$resultId, $issueId]);
+            $result = $stmt->fetch();
+            if (!$result || $result['review_status'] !== 'pending') {
+                throw new \\DomainException('result_not_pending');
+            }
+            $status = $approve ? 'approved' : 'rejected';
+            $pdo->prepare('UPDATE issue_results SET review_status = ?, reviewed_by = ?, reviewed_at = UTC_TIMESTAMP() WHERE id = ?')
+                ->execute([$status, $reviewerId, $resultId]);
+            if ($approve) {
+                $pdo->prepare(
+                    "INSERT IGNORE INTO reputation_events (user_id, event_key, points, reason) VALUES (?, ?, 5, 'Approved helpful issue result')"
+                )->execute([(int) $result['submitted_by'], 'issue_result:' . $resultId . ':approved']);
+            }
+            $pdo->commit();
+        } catch (\\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
 
     public static function reopen(int $issueId, int $ownerId): void
     {
