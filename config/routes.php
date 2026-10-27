@@ -31,6 +31,12 @@ return static function (Router $router): void {
     $router->post('/login', [AuthController::class, 'login']);
     $router->get('/register', [AuthController::class, 'showRegister']);
     $router->post('/register', [AuthController::class, 'register']);
+    $router->get('/register/stage/2', [AuthController::class, 'showRegisterStage2']);
+    $router->post('/register/stage/2', [AuthController::class, 'saveRegisterStage2']);
+    $router->post('/register/stage/2/skip', [AuthController::class, 'skipRegisterStage2']);
+    $router->get('/register/stage/3', [AuthController::class, 'showRegisterStage3']);
+    $router->post('/register/stage/3', [AuthController::class, 'saveRegisterStage3']);
+    $router->post('/register/stage/3/skip', [AuthController::class, 'skipRegisterStage3']);
     $router->post('/logout', [AuthController::class, 'logout']);
     $router->post('/account/deletion-request', [AccountController::class, 'requestDeletion']);
     $router->get('/skills/tests', [SkillTestController::class, 'index']);
