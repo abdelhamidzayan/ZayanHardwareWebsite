@@ -138,7 +138,7 @@
     if (at > -1) {
       emailLocal.value = value.slice(0, at);
       const pastedDomain = value.slice(at + 1);
-      if (pastedDomain && !emailDomain.value) emailDomain.value = pastedDomain;
+      if (pastedDomain) emailDomain.value = pastedDomain;
       emailDomain.focus();
       emailDomain.setSelectionRange(emailDomain.value.length, emailDomain.value.length);
     }
@@ -418,7 +418,7 @@
       setStep(1);
       return;
     }
-    if (form.querySelector('[name="wizard_action"]')?.value !== 'skip' && !validUsername(username.value.trim().toLowerCase())) {
+    if (event.submitter?.value !== 'skip' && !validUsername(username.value.trim().toLowerCase())) {
       event.preventDefault();
       setStep(2);
       username.focus();
