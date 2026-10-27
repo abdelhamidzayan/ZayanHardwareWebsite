@@ -37,10 +37,18 @@ $specializations = [
         <?php if ($attachments) : ?>
             <div class="issue-attachments">
                 <?php foreach ($attachments as $file) : ?>
-                    <?php if (str_starts_with((string) $file['mime_type'], 'image/')) : ?>
-                        <a href="<?= $e($baseUrl . '/' . ltrim($file['file_path'], '/')) ?>" target="_blank" rel="noopener"><img src="<?= $e($baseUrl . '/' . ltrim($file['file_path'], '/')) ?>" alt="مرفق فني" loading="lazy"></a>
-                    <?php elseif (str_starts_with((string) $file['mime_type'], 'audio/')) : ?>
-                        <audio controls preload="none" src="<?= $e($baseUrl . '/' . ltrim($file['file_path'], '/'))">المتصفح لا يدعم تشغيل الصوت.</audio>
+                    <?php
+                    $attachmentUrl = $baseUrl . '/' . ltrim((string) $file['file_path'], '/');
+                    $mimeType = (string) $file['mime_type'];
+                    ?>
+                    <?php if (str_starts_with($mimeType, 'image/')) : ?>
+                        <a href="<?= $e($attachmentUrl) ?>" target="_blank" rel="noopener">
+                            <img src="<?= $e($attachmentUrl) ?>" alt="مرفق فني" loading="lazy">
+                        </a>
+                    <?php elseif (str_starts_with($mimeType, 'audio/')) : ?>
+                        <audio controls preload="none" src="<?= $e($attachmentUrl) ?>">
+                            المتصفح لا يدعم تشغيل الصوت.
+                        </audio>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div>
