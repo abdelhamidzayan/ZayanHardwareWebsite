@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Controllers\AuthController;
 use App\Controllers\AccountController;
 use App\Controllers\AdminUserController;
+use App\Controllers\AdminSkillTestController;
 use App\Controllers\FeedController;
 use App\Controllers\HomeController;
 use App\Controllers\IssueController;
@@ -33,6 +34,9 @@ return static function (Router $router): void {
     $router->post('/logout', [AuthController::class, 'logout']);
     $router->post('/account/deletion-request', [AccountController::class, 'requestDeletion']);
     $router->get('/skills/tests', [SkillTestController::class, 'index']);
+    $router->get('/admin/skill-tests', [AdminSkillTestController::class, 'index']);
+    $router->post('/admin/skill-tests', [AdminSkillTestController::class, 'create']);
+    $router->post('/admin/skill-tests/{id}/status', [AdminSkillTestController::class, 'setStatus']);
     $router->get('/skills/tests/{id}', [SkillTestController::class, 'show']);
     $router->post('/skills/tests/{id}/submit', [SkillTestController::class, 'submit']);
     $router->get('/admin/users', [AdminUserController::class, 'index']);
