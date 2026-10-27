@@ -55,11 +55,11 @@ final class AuthService
         if (strlen($password) > 72) {
             $v->fail('password', 'كلمة المرور طويلة جدًا (الحد 72 بايت)');
         }
-        if (!$devices || array_diff($devices, ['iphone', 'android'])) {
-            $v->fail('device_specializations', 'اختر iPhone أو Android أو كليهما');
+        if (array_diff($devices, ['iphone', 'android'])) {
+            $v->fail('device_specializations', 'اختيار الأجهزة غير صالح');
         }
-        if (!$skills || array_diff($skills, $skillDomains)) {
-            $v->fail('skill_domains', 'اختر مجالًا فنيًا واحدًا على الأقل من المجالات المتاحة');
+        if (array_diff($skills, $skillDomains)) {
+            $v->fail('skill_domains', 'اختيار المجالات الفنية غير صالح');
         }
         if ($workshop !== '' && mb_strlen($workshop) > 80) {
             $v->fail('workshop', 'اسم الورشة لا يزيد عن 80 حرفًا');

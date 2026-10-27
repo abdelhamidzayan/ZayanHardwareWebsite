@@ -86,6 +86,49 @@ final class User extends Model
         return $stmt->fetchAll();
     }
 
+    /** Replace a user's optional device specializations. */
+    public static function saveDeviceSpecializations(int $userId, array $devices): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM user_device_specializations WHERE user_id = ?')->execute([$userId]);
+            $stmt = $pdo->prepare('INSERT INTO user_device_specializations (user_id, device_type) VALUES (?, ?)');
+            foreach (array_unique($devices) as $device) {
+                if (in_array($device, ['iphone', 'android'], true)) {
+                    $stmt->execute([$userId, $device]);
+                }
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /** Save optional workshop and technical skill domains. */
+    public static function saveOptionalSkills(int $userId, array $skills, string $workshop): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('UPDATE technician_profiles SET workshop_name = ?, specialization = ? WHERE user_id = ?')
+                ->execute([$workshop !== '' ? $workshop : null, $skills[0] ?? null, $userId]);
+            $pdo->prepare('DELETE FROM user_skill_domains WHERE user_id = ?')->execute([$userId]);
+            $pdo->prepare('DELETE FROM user_skill_ratings WHERE user_id = ?')->execute([$userId]);
+            $domainStmt = $pdo->prepare('INSERT INTO user_skill_domains (user_id, skill_domain_id) SELECT ?, id FROM skill_domains WHERE slug = ? AND is_active = 1');
+            $ratingStmt = $pdo->prepare('INSERT IGNORE INTO user_skill_ratings (user_id, skill_domain_id, rating) SELECT ?, id, 0 FROM skill_domains WHERE slug = ? AND is_active = 1');
+            foreach (array_unique($skills) as $skill) {
+                $domainStmt->execute([$userId, $skill]);
+                $ratingStmt->execute([$userId, $skill]);
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public static function markLoggedIn(int $id, ?string $newHash = null): void
     {
         if ($newHash !== null) {
