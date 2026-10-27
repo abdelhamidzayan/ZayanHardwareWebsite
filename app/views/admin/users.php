@@ -20,6 +20,17 @@
                         <?php endif; ?>
                     </div>
                     <?php if ($user['account_status'] !== 'deleted') : ?>
+                        <form method="post" action="<?= $e($baseUrl) ?>/admin/users/<?= (int) $user['id'] ?>/role" class="issue-form">
+                            <?= $csrf() ?>
+                            <label class="field"><span class="field__label">دور الحساب</span>
+                                <select class="field__input" name="role">
+                                    <?php foreach (['member' => 'عضو', 'moderator' => 'مشرف', 'admin' => 'مدير'] as $value => $label) : ?>
+                                        <option value="<?= $e($value) ?>"<?= $user['role'] === $value ? ' selected' : '' ?>><?= $e($label) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <button class="btn btn--secondary" type="submit">حفظ الدور</button>
+                        </form>
                         <form method="post" action="<?= $e($baseUrl) ?>/admin/users/<?= (int) $user['id'] ?>/status" class="issue-form">
                             <?= $csrf() ?>
                             <label class="field"><span class="field__label">حالة الحساب</span>
