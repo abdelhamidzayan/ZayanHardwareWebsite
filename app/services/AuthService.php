@@ -15,63 +15,54 @@ final class AuthService
      * @param string[] $specializations allowed specialization slugs
      * @return array{errors: array<string,string>, userId: ?int}
      */
-    public static function register(array $input, array $skillDomains): array
+    public static function register(array $input, array $skillDomains = []): array
     {
         $displayName = trim((string) preg_replace('/\\s+/u', ' ', self::str($input, 'display_name')));
-        $username    = strtolower(trim(self::str($input, 'username')));
-        $email       = strtolower(trim(self::str($input, 'email')));
-        $password    = self::str($input, 'password');
-        $workshop    = trim(self::str($input, 'workshop'));
-        $phone       = preg_replace('/[\\s-]+/', '', trim(self::str($input, 'phone')));
-        $devicesRaw  = $input['device_specializations'] ?? [];
-        $skillsRaw   = $input['skill_domains'] ?? [];
-        $devices     = is_array($devicesRaw) ? array_values(array_unique(array_filter($devicesRaw, 'is_string'))) : [];
-        $skills      = is_array($skillsRaw) ? array_values(array_unique(array_filter($skillsRaw, 'is_string'))) : [];
+        $password = self::str($input, 'password');
+        $contactMode = self::str($input, 'contact_mode') === 'email' ? 'email' : 'phone';
+        $emailInput = self::str($input, 'email');
+        if ($emailInput === '' && self::str($input, 'email_local') !== '' && self::str($input, 'email_domain') !== '') {
+            $emailInput = self::str($input, 'email_local') . '@' . self::str($input, 'email_domain');
+        }
+        $email = $contactMode === 'email' ? strtolower(trim($emailInput)) : '';
+        $phoneRaw = $contactMode === 'phone' ? self::str($input, 'phone') : '';
+        $countryCode = self::str($input, 'country_code') ?: '+20';
+        if (!in_array($countryCode, ['+20', '+966', '+971', '+965', '+974', '+962', '+1', '+44'], true)) {
+            $countryCode = '+20';
+        }
+        $phone = $phoneRaw !== '' ? self::normalizePhone($phoneRaw, $countryCode) : '';
 
         $v = new Validator([
             'display_name' => $displayName,
-            'username' => $username,
             'email' => $email,
             'phone' => $phone,
             'password' => $password,
         ]);
-
         $v->required('display_name', 'أدخل الاسم الظاهر')
           ->length('display_name', 2, 60, 'الاسم من 2 إلى 60 حرفًا');
-        $v->required('username', 'أدخل اسم المستخدم')
-          ->pattern('username', '/^[a-z0-9_]{3,30}$/', 'من 3 إلى 30 حرفًا: إنجليزية صغيرة وأرقام و _ فقط');
-        if ($email !== '') {
-            $v->email('email', 'أدخل بريدًا إلكترونيًا صحيحًا')
+
+        if ($contactMode === 'email') {
+            $v->required('email', 'أدخل البريد الإلكتروني')
+              ->email('email', 'أدخل بريدًا إلكترونيًا صحيحًا')
               ->length('email', 3, 190, 'البريد الإلكتروني طويل جدًا');
+        } else {
+            if ($phone === '') {
+                $v->fail('phone', 'أدخل رقم الهاتف');
+            } elseif (preg_match('/^\\+[0-9]{7,20}$/', $phone) !== 1) {
+                $v->fail('phone', 'أدخل رقم هاتف صحيحًا مع كود الدولة');
+            }
         }
-        if ($phone !== '' && preg_match('/^\\+?[0-9]{7,20}$/', $phone) !== 1) {
-            $v->fail('phone', 'أدخل رقم هاتف صحيحًا');
-        }
-        if ($email === '' && $phone === '') {
-            $v->fail('contact', 'أدخل البريد الإلكتروني أو رقم الهاتف على الأقل');
-        }
+
         $v->required('password', 'أدخل كلمة المرور')
           ->length('password', 10, 128, 'كلمة المرور لا تقل عن 10 أحرف');
         if (strlen($password) > 72) {
             $v->fail('password', 'كلمة المرور طويلة جدًا (الحد 72 بايت)');
-        }
-        if (array_diff($devices, ['iphone', 'android'])) {
-            $v->fail('device_specializations', 'اختيار الأجهزة غير صالح');
-        }
-        if (array_diff($skills, $skillDomains)) {
-            $v->fail('skill_domains', 'اختيار المجالات الفنية غير صالح');
-        }
-        if ($workshop !== '' && mb_strlen($workshop) > 80) {
-            $v->fail('workshop', 'اسم الورشة لا يزيد عن 80 حرفًا');
         }
         if (self::str($input, 'terms') !== '1') {
             $v->fail('terms', 'يجب الموافقة على القواعد وسياسة الخصوصية للمتابعة');
         }
 
         $errors = $v->errors();
-        if (!isset($errors['username']) && User::exists('username', $username)) {
-            $errors['username'] = 'اسم المستخدم مستخدم بالفعل';
-        }
         if ($email !== '' && !isset($errors['email']) && User::exists('email', $email)) {
             $errors['email'] = 'هذا البريد مسجّل بالفعل';
         }
@@ -82,6 +73,7 @@ final class AuthService
             return ['errors' => $errors, 'userId' => null];
         }
 
+        $username = self::initialUsername($displayName, $email);
         try {
             $userId = User::create(
                 [
@@ -91,12 +83,12 @@ final class AuthService
                     'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 ],
                 [
-                    'specialization' => $skills[0] ?? null,
+                    'specialization' => null,
                     'experience' => null,
-                    'workshop_name' => $workshop !== '' ? $workshop : null,
+                    'workshop_name' => null,
                     'phone' => $phone !== '' ? $phone : null,
-                    'device_specializations' => $devices,
-                    'skill_domains' => $skills,
+                    'device_specializations' => [],
+                    'skill_domains' => [],
                     'terms_version' => '1.0',
                     'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
                 ]
@@ -110,12 +102,48 @@ final class AuthService
                 if (str_contains($message, 'uq_technician_profiles_phone')) {
                     return ['errors' => ['phone' => 'رقم الهاتف مسجّل بالفعل'], 'userId' => null];
                 }
-                return ['errors' => ['username' => 'اسم المستخدم مستخدم بالفعل'], 'userId' => null];
+                return ['errors' => ['display_name' => 'تعذر إنشاء الحساب الآن. حاول مرة أخرى.'], 'userId' => null];
             }
             throw $e;
         }
 
         return ['errors' => [], 'userId' => $userId];
+    }
+
+    private static function normalizePhone(string $raw, string $countryCode): string
+    {
+        $raw = trim($raw);
+        $digits = preg_replace('/\\D+/', '', $raw) ?? '';
+        if ($digits === '') return '';
+        if (str_starts_with($digits, '00')) {
+            return '+' . substr($digits, 2);
+        }
+        if (str_starts_with($raw, '+')) {
+            return '+' . $digits;
+        }
+        $code = preg_replace('/\\D+/', '', $countryCode) ?? '20';
+        if ($code === '') $code = '20';
+        if (str_starts_with($digits, $code) && strlen($digits) > strlen($code) + 6) {
+            return '+' . $digits;
+        }
+        $national = ltrim($digits, '0');
+        return '+' . $code . $national;
+    }
+
+    private static function initialUsername(string $displayName, string $email): string
+    {
+        $seed = $displayName !== '' ? $displayName : strstr($email, '@', true);
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $seed);
+        $base = strtolower((string) $ascii);
+        $base = preg_replace('/[^a-z0-9]+/', '', $base) ?? '';
+        if ($base === '') $base = 'tech';
+        $base = substr($base, 0, 12);
+        for ($i = 0; $i < 12; $i++) {
+            $candidate = $base . random_int(1000, 999999);
+            $candidate = substr($candidate, 0, 20);
+            if (!User::exists('username', $candidate)) return $candidate;
+        }
+        return 'tech' . bin2hex(random_bytes(6));
     }
 
     private static ?array $current = null;
@@ -150,8 +178,16 @@ final class AuthService
      */
     public static function attempt(string $identifier, string $password): array
     {
-        $identifier = strtolower(trim($identifier));
-        $row        = strlen($identifier) <= 190 ? User::findForLogin($identifier) : null;
+        $originalIdentifier = strtolower(trim($identifier));
+        $identifier = $originalIdentifier;
+        if ($identifier !== '' && !str_contains($identifier, '@')) {
+            $identifier = self::normalizePhone($identifier, '+20');
+        }
+        $row = strlen($identifier) <= 190 ? User::findForLogin($identifier) : null;
+        // Keep legacy accounts working if their phone was saved before country-code normalization.
+        if ($row === null && $originalIdentifier !== $identifier && strlen($originalIdentifier) <= 190) {
+            $row = User::findForLogin($originalIdentifier);
+        }
 
         $valid = password_verify($password, $row['password_hash'] ?? self::dummyHash());
         if ($row === null || !$valid) {

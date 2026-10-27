@@ -1,61 +1,100 @@
 <?php
 $errors = $errors ?? [];
-$old    = $old ?? [];
-
-$val     = fn (string $key): string => $e($old[$key] ?? '');
-$err     = fn (string $key): string => $e($errors[$key] ?? '');
-$invalid = fn (string $key): string => isset($errors[$key]) ? ' aria-invalid="true"' : '';
-
-$experience = [
-    'lt1'  => 'أقل من سنة',
-    '1-3'  => 'من 1 إلى 3 سنوات',
-    '3-5'  => 'من 3 إلى 5 سنوات',
-    '5-10' => 'من 5 إلى 10 سنوات',
-    'gt10' => 'أكثر من 10 سنوات',
-];
+$old = $old ?? [];
+$val = fn (string $key): string => $e($old[$key] ?? '');
+$err = fn (string $key): string => $e($errors[$key] ?? '');
+$mode = ($old['contact_mode'] ?? 'phone') === 'email' ? 'email' : 'phone';
+$emailParts = explode('@', (string) ($old['email'] ?? ''), 2);
+$selectedCountryCode = (string) ($old['country_code'] ?? '+20');
+$phoneDisplay = (string) ($old['phone'] ?? '');
+if ($phoneDisplay !== '' && str_starts_with($phoneDisplay, $selectedCountryCode)) {
+    $phoneDisplay = substr($phoneDisplay, strlen($selectedCountryCode));
+    if ($selectedCountryCode === '+20' && $phoneDisplay !== '' && $phoneDisplay[0] !== '0') $phoneDisplay = '0' . $phoneDisplay;
+}
 ?>
+<style>
+.registration-progress{display:flex;align-items:flex-start;gap:0;margin:8px 0 28px;direction:rtl}
+.registration-progress__step{flex:1;position:relative;text-align:center;color:var(--muted,#8b929b);font-size:12px}
+.registration-progress__step:not(:last-child):before{content:"";position:absolute;top:15px;right:calc(50% + 21px);left:calc(-50% + 21px);height:2px;background:var(--border,#30363d)}
+.registration-progress__number{display:flex;width:32px;height:32px;border-radius:50%;align-items:center;justify-content:center;margin:0 auto 8px;border:1px solid var(--border,#30363d);background:var(--surface,#15191e);font-weight:700}
+.registration-progress__step.is-active{color:var(--text,#f5f5f5);font-weight:700}
+.registration-progress__step.is-active .registration-progress__number{background:#c49a42;border-color:#c49a42;color:#101010}
+.registration-progress__step.is-done .registration-progress__number{border-color:#c49a42;color:#c49a42}
+.contact-control{display:flex;direction:ltr;align-items:stretch;gap:8px}
+.contact-control__switch{width:48px;min-width:48px;border:1px solid var(--border,#30363d);border-radius:10px;background:var(--surface,#15191e);color:inherit;display:grid;place-items:center;cursor:pointer}
+.contact-control__switch svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8}
+.contact-control__body{flex:1;min-width:0;display:flex;direction:ltr;align-items:stretch;border:1px solid var(--border,#30363d);border-radius:10px;overflow:hidden}
+.contact-control__body select,.contact-control__body input{min-width:0;border:0;border-radius:0;background:transparent;color:inherit;padding:12px;font:inherit}
+.contact-control__body select{max-width:112px;border-right:1px solid var(--border,#30363d)}
+.contact-control__body input{flex:1;width:100%;text-align:left;direction:ltr}
+.contact-control__body input:focus,.contact-control__body select:focus{outline:0}
+.contact-control__at{display:flex;align-items:center;padding:0 13px;border-right:1px solid var(--border,#30363d);font-weight:700;color:var(--muted,#8b929b)}
+@media(max-width:420px){.contact-control__body select{max-width:96px;padding:9px 5px}.contact-control__body input{padding:10px 8px}}
+</style>
 <section class="auth">
-    <div class="card auth__card auth__card--wide">
-        <div>
-            <p class="auth__sub">المرحلة 1 من 3 · بيانات الحساب الأساسية</p>
-            <h1 class="auth__title">إنشاء حساب فنّي</h1>
-            <p class="auth__sub">ابدأ بحسابك، وبعدها يمكنك استكمال ملفك الفني أو تخطي الخطوات الاختيارية.</p>
+    <div class="card auth__card">
+        <div class="registration-progress" aria-label="مراحل إنشاء الحساب">
+            <div class="registration-progress__step is-active" aria-current="step"><span class="registration-progress__number">1</span><span>الحساب</span></div>
+            <div class="registration-progress__step"><span class="registration-progress__number">2</span><span>التخصص</span></div>
+            <div class="registration-progress__step"><span class="registration-progress__number">3</span><span>الملف الشخصي</span></div>
         </div>
+        <h1 class="auth__title">إنشاء حساب فنّي</h1>
+        <p class="auth__sub">ابدأ بالبيانات الأساسية فقط. باقي التفاصيل في خطوات تقدر تتخطاها.</p>
 
-        <form class="auth__form" method="post" action="<?= $e($baseUrl) ?>/register" novalidate data-validate>
+        <form class="auth__form" method="post" action="<?= $e($baseUrl) ?>/register" novalidate data-validate id="register-stage-one">
             <?= $csrf() ?>
+            <input type="hidden" name="contact_mode" id="contact_mode" value="<?= $mode ?>">
 
             <div class="field">
                 <label class="field__label" for="display_name">الاسم الظاهر</label>
                 <input class="field__input" id="display_name" name="display_name" type="text"
                        value="<?= $val('display_name') ?>" autocomplete="name" maxlength="60"
-                       data-rules="required"<?= $invalid('display_name') ?>>
+                       data-rules="required" required aria-invalid="<?= isset($errors['display_name']) ? 'true' : 'false' ?>">
                 <p class="field__error" aria-live="polite"><?= $err('display_name') ?></p>
             </div>
 
             <div class="field">
-                <label class="field__label" for="username">اسم المستخدم المقترح</label>
-                <input class="field__input field__input--ltr" id="username" name="username" type="text"
-                       value="<?= $val('username') ?>" autocomplete="username" autocapitalize="none"
-                       spellcheck="false" maxlength="30" data-rules="required username"<?= $invalid('username') ?>>
-                <p class="field__hint">اقترحناه من اسمك الظاهر، وتقدر تعدّله. استخدم الإنجليزية الصغيرة والأرقام و _ فقط.</p>
-                <p class="field__error" aria-live="polite"><?= $err('username') ?></p>
-            </div>
-
-            <div class="field">
-                <label class="field__label" for="email">البريد الإلكتروني</label>
-                <input class="field__input field__input--ltr" id="email" name="email" type="email"
-                       value="<?= $val('email') ?>" autocomplete="email" autocapitalize="none"
-                       spellcheck="false" data-rules="email"<?= $invalid('email') ?>>
-                <p class="field__error" aria-live="polite"><?= $err('email') ?></p>
-                <p class="field__hint">يمكنك تركه فارغًا إذا أدخلت رقم الهاتف.</p>
+                <label class="field__label" id="contact-label" for="phone">رقم الهاتف</label>
+                <div class="contact-control">
+                    <button class="contact-control__switch" type="button" id="contact-mode-switch"
+                            aria-label="التبديل إلى البريد الإلكتروني" title="التبديل بين الهاتف والبريد الإلكتروني">
+                        <svg id="contact-mode-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 18.5h4"/></svg>
+                    </button>
+                    <div class="contact-control__body" id="phone-control" <?= $mode === 'email' ? 'hidden' : '' ?>>
+                        <select id="country_code" name="country_code" aria-label="كود الدولة">
+                            <option value="+20"<?= ($selectedCountryCode === '+20' ? ' selected' : '') ?>>🇪🇬 +20</option>
+                            <option value="+966"<?= ($selectedCountryCode === '+966' ? ' selected' : '') ?>>🇸🇦 +966</option>
+                            <option value="+971"<?= ($selectedCountryCode === '+971' ? ' selected' : '') ?>>🇦🇪 +971</option>
+                            <option value="+965"<?= ($selectedCountryCode === '+965' ? ' selected' : '') ?>>🇰🇼 +965</option>
+                            <option value="+974"<?= ($selectedCountryCode === '+974' ? ' selected' : '') ?>>🇶🇦 +974</option>
+                            <option value="+962"<?= ($selectedCountryCode === '+962' ? ' selected' : '') ?>>🇯🇴 +962</option>
+                            <option value="+1"<?= ($selectedCountryCode === '+1' ? ' selected' : '') ?>>🇺🇸 +1</option>
+                            <option value="+44"<?= ($selectedCountryCode === '+44' ? ' selected' : '') ?>>🇬🇧 +44</option>
+                        </select>
+                        <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel"
+                               placeholder="010 1234 5678" value="<?= $mode === 'phone' ? $e($phoneDisplay) : '' ?>"
+                               aria-label="رقم الهاتف" <?= $mode === 'phone' ? 'required' : 'disabled' ?>>
+                    </div>
+                    <div class="contact-control__body" id="email-control" <?= $mode !== 'email' ? 'hidden' : '' ?>>
+                        <input id="email_local" name="email_local" type="text" inputmode="email" autocomplete="off"
+                               placeholder="name" value="<?= $mode === 'email' ? $e($emailParts[0] ?? '') : '' ?>"
+                               aria-label="الجزء قبل علامة @ " <?= $mode === 'email' ? 'required' : 'disabled' ?>>
+                        <span class="contact-control__at" aria-hidden="true">@</span>
+                        <input id="email_domain" name="email_domain" type="text" inputmode="email" autocomplete="off"
+                               placeholder="example.com" value="<?= $mode === 'email' ? $e($emailParts[1] ?? '') : '' ?>"
+                               aria-label="نطاق البريد الإلكتروني" <?= $mode === 'email' ? 'required' : 'disabled' ?>>
+                        <input id="email" name="email" type="hidden" value="<?= $mode === 'email' ? $val('email') : '' ?>">
+                    </div>
+                </div>
+                <p class="field__hint" id="contact-hint">هنضيف كود الدولة تلقائيًا. مثال: 01033771537 في مصر يتحفظ +201033771537.</p>
+                <p class="field__error" aria-live="polite"><?= $err('phone') ?: $err('email') ?: $err('contact') ?></p>
             </div>
 
             <div class="field">
                 <label class="field__label" for="password">كلمة المرور</label>
                 <div class="field__password">
                     <input class="field__input field__input--ltr" id="password" name="password" type="password"
-                           autocomplete="new-password" data-rules="required min:10"<?= $invalid('password') ?>>
+                           autocomplete="new-password" minlength="10" maxlength="128" data-rules="required min:10" required>
                     <button class="field__toggle" type="button" data-toggle-password hidden
                             aria-label="إظهار كلمة المرور" aria-pressed="false">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -65,31 +104,9 @@ $experience = [
                 <p class="field__error" aria-live="polite"><?= $err('password') ?></p>
             </div>
 
-<fieldset class="field">
-                <legend class="field__label">مجالات إصلاح البوردة</legend>
-                <?php $oldSkills = is_array($old['skill_domains'] ?? null) ? $old['skill_domains'] : []; ?>
-                <?php foreach ($skillDomains as $category) : ?>
-                    <label class="check">
-                        <input type="checkbox" name="skill_domains[]" value="<?= $e($category['slug']) ?>"<?= in_array($category['slug'], $oldSkills, true) ? ' checked' : '' ?>>
-                        <span><?= $e($category['name']) ?></span>
-                    </label>
-                <?php endforeach; ?>
-                <p class="field__hint">يمكن اختيار أكثر من مجال، ويمكن تعديل ملفك الفني لاحقًا.</p>
-                <p class="field__error" aria-live="polite"><?= $err('skill_domains') ?></p>
-            </fieldset>
-
-<div class="field">
-                <label class="field__label" for="phone">رقم الهاتف</label>
-                <input class="field__input field__input--ltr" id="phone" name="phone" type="tel"
-                       value="<?= $val('phone') ?>" autocomplete="tel" data-rules="tel"<?= $invalid('phone') ?>>
-                <p class="field__error" aria-live="polite"><?= $err('phone') ?></p>
-                <p class="field__hint">أدخل البريد الإلكتروني أو رقم الهاتف على الأقل.</p>
-                <p class="field__error" aria-live="polite"><?= $err('contact') ?></p>
-            </div>
-
             <div class="field">
                 <label class="check">
-                    <input type="checkbox" name="terms" value="1" data-rules="required"<?= ($old['terms'] ?? '') === '1' ? ' checked' : '' ?>>
+                    <input type="checkbox" name="terms" value="1" data-rules="required" required<?= ($old['terms'] ?? '') === '1' ? ' checked' : '' ?>>
                     <span>أوافق على قواعد المنصة وسياسة الخصوصية.</span>
                 </label>
                 <p class="field__error" aria-live="polite"><?= $err('terms') ?></p>
@@ -97,32 +114,59 @@ $experience = [
 
             <button class="btn btn--primary btn--block" type="submit">إنشاء الحساب والمتابعة</button>
         </form>
-
         <p class="auth__switch">لديك حساب؟ <a href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a></p>
     </div>
 </section>
-
 <script>
 (function () {
-    var displayName = document.getElementById('display_name');
-    var username = document.getElementById('username');
-    if (!displayName || !username) return;
-    var edited = username.value.trim() !== '';
-    username.addEventListener('input', function () { edited = true; });
-    var arabic = {'ا':'a','أ':'a','إ':'e','آ':'a','ب':'b','ت':'t','ث':'th','ج':'g','ح':'h','خ':'kh','د':'d','ذ':'z','ر':'r','ز':'z','س':'s','ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f','ق':'q','ك':'k','ل':'l','م':'m','ن':'n','ه':'h','ة':'a','و':'w','ي':'y','ى':'a','ء':'','ؤ':'w','ئ':'y'};
-    function suggest(value) {
-        var result = '';
-        for (var i = 0; i < value.length; i++) {
-            var ch = value[i].toLowerCase();
-            result += arabic[ch] !== undefined ? arabic[ch] : ch;
-        }
-        result = result.normalize ? result.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : result;
-        return result.replace(/[^a-z0-9_\s-]/g, '').trim().replace(/[\s-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30);
+    var mode = document.getElementById('contact_mode');
+    var switcher = document.getElementById('contact-mode-switch');
+    var icon = document.getElementById('contact-mode-icon');
+    var phoneControl = document.getElementById('phone-control');
+    var emailControl = document.getElementById('email-control');
+    var phone = document.getElementById('phone');
+    var email = document.getElementById('email');
+    var emailLocal = document.getElementById('email_local');
+    var emailDomain = document.getElementById('email_domain');
+    var label = document.getElementById('contact-label');
+    var hint = document.getElementById('contact-hint');
+    function setMode(next) {
+        mode.value = next;
+        var useEmail = next === 'email';
+        phoneControl.hidden = useEmail;
+        emailControl.hidden = !useEmail;
+        phone.disabled = useEmail;
+        phone.required = !useEmail;
+        emailLocal.disabled = !useEmail;
+        emailLocal.required = useEmail;
+        emailDomain.disabled = !useEmail;
+        emailDomain.required = useEmail;
+        label.textContent = useEmail ? 'البريد الإلكتروني' : 'رقم الهاتف';
+        switcher.setAttribute('aria-label', useEmail ? 'التبديل إلى رقم الهاتف' : 'التبديل إلى البريد الإلكتروني');
+        icon.innerHTML = useEmail
+            ? '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>'
+            : '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 18.5h4"/>';
+        hint.textContent = useEmail ? 'اكتب بريدك الإلكتروني كاملًا؛ علامة @ جزء من تنسيق الحقل.' : 'هنضيف كود الدولة تلقائيًا. مثال: 01033771537 في مصر يتحفظ +201033771537.';
     }
-    displayName.addEventListener('input', function () {
-        if (!edited) username.value = suggest(displayName.value);
+    switcher.addEventListener('click', function () { setMode(mode.value === 'phone' ? 'email' : 'phone'); });
+    setMode(mode.value);
+
+    var form = document.getElementById('register-stage-one');
+    form.addEventListener('submit', function () {
+        if (mode.value === 'email') {
+            email.value = emailLocal.value.trim() + '@' + emailDomain.value.trim();
+            return;
+        }
+        var raw = phone.value.trim().replace(/[\s()\-.]/g, '');
+        var code = document.getElementById('country_code').value;
+        var digits = raw.replace(/\D/g, '');
+        if (raw.indexOf('+') === 0) phone.value = '+' + digits;
+        else if (digits.indexOf('00') === 0) phone.value = '+' + digits.slice(2);
+        else {
+            var country = code.replace(/\D/g, '');
+            if (digits.indexOf(country) === 0 && digits.length > country.length + 6) phone.value = '+' + digits;
+            else phone.value = code + digits.replace(/^0+/, '');
+        }
     });
-    if (!username.value.trim() && displayName.value.trim()) username.value = suggest(displayName.value);
 })();
 </script>
-
