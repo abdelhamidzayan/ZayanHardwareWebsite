@@ -23,7 +23,7 @@ $specializations = [
                 <strong><?= $e($issue['author_name']) ?></strong>
                 <span class="muted"><?= $e($specializations[$issue['specialization'] ?? ''] ?? 'فني هاردوير') ?> · <?= $e($issue['created_at']) ?></span>
             </div>
-            <?php if ($issue['author_role'] === 'expert') : ?><span class="badge">خبير معتمد</span><?php endif; ?>
+            <?php if (in_array($issue['author_role'], ['admin', 'moderator'], true)) : ?><span class="badge">إشراف المنصة</span><?php endif; ?>
         </div>
         <div class="issue-tags">
             <span class="tag tech"><?= $e($issue['device_model']) ?></span>
@@ -134,7 +134,7 @@ $specializations = [
                     <header class="reply-card__head">
                         <span class="avatar"><?= $e(mb_strtoupper(mb_substr($reply['display_name'], 0, 1))) ?></span>
                         <div class="reply-card__identity"><strong><?= $e($reply['display_name']) ?></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
-                        <?php if ($reply['role'] === 'expert') : ?><span class="badge">خبير معتمد</span><?php endif; ?>
+                        <?php if (in_array($reply['role'], ['admin', 'moderator'], true)) : ?><span class="badge">خبير معتمد</span><?php endif; ?>
                     </header>
                     <div class="reply-card__body" dir="auto"><?= nl2br($e($reply['body'])) ?></div>
                     <footer class="reply-card__actions">
