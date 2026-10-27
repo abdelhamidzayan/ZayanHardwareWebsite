@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Controllers\AuthController;
 use App\Controllers\AccountController;
 use App\Controllers\AdminUserController;
+use App\Controllers\AdminFeaturedPostsController;
 use App\Controllers\AdminSkillTestController;
 use App\Controllers\FeedController;
 use App\Controllers\HomeController;
@@ -46,6 +47,8 @@ return static function (Router $router): void {
     $router->post('/admin/skill-tests/{id}/status', [AdminSkillTestController::class, 'setStatus']);
     $router->get('/skills/tests/{id}', [SkillTestController::class, 'show']);
     $router->post('/skills/tests/{id}/submit', [SkillTestController::class, 'submit']);
+    $router->get('/admin', [AdminFeaturedPostsController::class, 'index']);
+    $router->post('/admin/featured-posts/{id}', [AdminFeaturedPostsController::class, 'update']);
     $router->get('/admin/users', [AdminUserController::class, 'index']);
     $router->post('/admin/users/{id}/password-reset', [AdminUserController::class, 'resetPassword']);
     $router->post('/admin/users/{id}/status', [AdminUserController::class, 'setStatus']);
