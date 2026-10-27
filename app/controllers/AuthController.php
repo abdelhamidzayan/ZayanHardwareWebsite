@@ -6,7 +6,6 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
-use App\Models\DemoData;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\RateLimiter;
@@ -81,10 +80,7 @@ final class AuthController extends Controller
 
     public function showRegister(): Response
     {
-        if (AuthService::user() !== null) {
-            return $this->redirect('/feed');
-        }
-
+        if (AuthService::user() !== null) return $this->redirect('/feed');
         return $this->registerForm();
     }
 
@@ -92,198 +88,70 @@ final class AuthController extends Controller
     {
         if (!Csrf::verify($this->request->input('_token'))) {
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
-
             return $this->redirect('/register');
         }
 
         $bucket = 'register:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
         if (RateLimiter::tooMany($bucket, 5, 3600)) {
             $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد قليل.');
-
             return $this->redirect('/register');
         }
         RateLimiter::hit($bucket);
 
-        $result = AuthService::register(
-            $this->request->body,
-            array_column(DemoData::categories(), 'slug') // allowed repair-skill domains
-        );
+        $result = AuthService::register($this->request->body);
+        if ($result['errors']) return $this->registerForm($result['errors'], 422);
 
-        if ($result['errors']) {
-            return $this->registerForm($result['errors'], 422);
-        }
-
-        $userId = (int) $result['userId'];
-        User::markLoggedIn($userId);
-        AuthService::login($userId);
-        $this->flash('success', 'تم إنشاء الحساب. أكمل إعداد ملفك الفني أو تخطَّ الخطوات الاختيارية.');
-
-        return $this->redirect('/register/stage/2');
+        $this->flash('success', 'تم إنشاء حسابك بنجاح. سجّل الدخول للمتابعة.');
+        return $this->redirect('/login');
     }
 
-    public function showRegisterStage2(): Response
+    public function usernames(): Response
     {
-        $user = AuthService::user();
-        if ($user === null) return $this->redirect('/register');
-        return $this->view('auth/register-stage-2', [
-            'title' => 'إنشاء الحساب - المرحلة 2', 'authPage' => true,
-            'user' => $user, 'usernameSuggestions' => $this->usernameSuggestions($user),
-            'errors' => [], 'old' => [],
-        ], 200, 'guest');
-    }
-
-    public function saveRegisterStage2(): Response
-    {
-        $user = AuthService::user();
-        if ($user === null) return $this->redirect('/register');
-        if (!Csrf::verify($this->request->input('_token'))) {
-            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
-            return $this->redirect('/register/stage/2');
+        $bucket = 'register:usernames:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        if (RateLimiter::tooMany($bucket, 90, 60)) {
+            RateLimiter::hit($bucket);
+            return new Response(
+                json_encode(['available' => []], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                429,
+                ['Content-Type' => 'application/json; charset=utf-8', 'Cache-Control' => 'no-store']
+            );
         }
-        $username = strtolower(trim($this->text('username')));
-        $device = $this->text('device_specialization');
-        $level = $this->text('technician_level');
-        $experience = $this->text('experience');
-        $errors = [];
+        RateLimiter::hit($bucket);
 
-        if (preg_match('/^[a-z0-9_]{3,20}$/', $username) !== 1) {
-            $errors['username'] = 'اسم المستخدم من 3 إلى 20 حرفًا: إنجليزية صغيرة وأرقام و _ فقط';
-        } elseif ($username !== $user['username'] && User::exists('username', $username)) {
-            $errors['username'] = 'اسم المستخدم ده مستخدم بالفعل، جرّب اقتراحًا آخر';
-        }
-        if (!in_array($device, ['iphone', 'android'], true)) $errors['device_specialization'] = 'اختار نوع الجهاز اللي بتتخصص فيه';
-        if (!in_array($level, ['fast', 'board'], true)) $errors['technician_level'] = 'اختار مستوى شغلك';
-        $allowedExperience = ['lt1', '1-3', '3-5', '5-10', 'gt10'];
-        if ($level === 'board' && !in_array($experience, $allowedExperience, true)) $errors['experience'] = 'حدد سنوات خبرتك في البورد';
-        if ($level !== 'board') $experience = '';
-
-        if ($errors) {
-            return $this->view('auth/register-stage-2', [
-                'title' => 'إنشاء الحساب - المرحلة 2', 'authPage' => true,
-                'user' => $user, 'usernameSuggestions' => $this->usernameSuggestions($user),
-                'errors' => $errors,
-                'old' => ['username' => $username, 'device_specialization' => $device,
-                    'technician_level' => $level, 'experience' => $experience],
-            ], 422, 'guest');
-        }
-
-        try {
-            User::saveRegistrationStage2((int) $user['id'], $username, $level, $experience !== '' ? $experience : null, [$device]);
-        } catch (\PDOException $e) {
-            if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
-                return $this->view('auth/register-stage-2', [
-                    'title' => 'إنشاء الحساب - المرحلة 2', 'authPage' => true,
-                    'user' => $user, 'usernameSuggestions' => $this->usernameSuggestions($user),
-                    'errors' => ['username' => 'اسم المستخدم مستخدم بالفعل، اختار اقتراحًا آخر'],
-                    'old' => ['username' => $username, 'device_specialization' => $device,
-                        'technician_level' => $level, 'experience' => $experience],
-                ], 422, 'guest');
+        $names = $this->request->query['names'] ?? [];
+        if (!is_array($names)) $names = [];
+        $names = array_slice(array_values(array_unique(array_filter($names, 'is_string'))), 0, 8);
+        $reserved = ['admin', 'administrator', 'moderator', 'support', 'root', 'system', 'staff', 'zayan', 'hardware', 'hardwaretech'];
+        $valid = [];
+        foreach ($names as $name) {
+            $name = strtolower(trim($name));
+            if (preg_match('/^[a-z0-9_]{3,20}$/', $name) === 1 && !in_array($name, $reserved, true)) {
+                $valid[] = $name;
             }
-            throw $e;
         }
-        return $this->redirect('/register/stage/3');
-    }
-
-    public function skipRegisterStage2(): Response
-    {
-        if (AuthService::user() === null) return $this->redirect('/register');
-        if (!Csrf::verify($this->request->input('_token'))) {
-            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
-            return $this->redirect('/register/stage/2');
-        }
-        return $this->redirect('/register/stage/3');
-    }
-
-    public function showRegisterStage3(): Response
-    {
-        if (AuthService::user() === null) return $this->redirect('/register');
-        return $this->view('auth/register-stage-3', [
-            'title' => 'إنشاء الحساب - المرحلة 3', 'authPage' => true,
-            'errors' => [], 'old' => [],
-        ], 200, 'guest');
-    }
-
-    public function saveRegisterStage3(): Response
-    {
-        $user = AuthService::user();
-        if ($user === null) return $this->redirect('/register');
-        if (!Csrf::verify($this->request->input('_token'))) {
-            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
-            return $this->redirect('/register/stage/3');
-        }
-        $workshop = trim($this->text('workshop'));
-        $biography = trim($this->text('biography'));
-        $errors = [];
-        if (mb_strlen($workshop) > 80) $errors['workshop'] = 'اسم الورشة لا يزيد عن 80 حرفًا';
-        if (mb_strlen($biography) > 500) $errors['biography'] = 'النبذة لا تزيد عن 500 حرف';
-        if ($errors) {
-            return $this->view('auth/register-stage-3', [
-                'title' => 'إنشاء الحساب - المرحلة 3', 'authPage' => true,
-                'errors' => $errors, 'old' => ['workshop' => $workshop, 'biography' => $biography],
-            ], 422, 'guest');
-        }
-        User::saveOptionalProfile((int) $user['id'], $workshop, $biography);
-        $this->flash('success', 'اكتمل إعداد حسابك. أهلًا بك في Zayan Hardware.');
-        return $this->redirect('/feed');
-    }
-
-    public function skipRegisterStage3(): Response
-    {
-        if (AuthService::user() === null) return $this->redirect('/register');
-        if (!Csrf::verify($this->request->input('_token'))) {
-            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
-            return $this->redirect('/register/stage/3');
-        }
-        $this->flash('success', 'تم إنشاء حسابك. تقدر تستكمل ملفك الشخصي لاحقًا.');
-        return $this->redirect('/feed');
-    }
-
-    private function usernameSuggestions(array $user): array
-    {
-        $emailSeed = strstr((string) ($user['email'] ?? ''), '@', true);
-        $seed = trim((string) ($user['display_name'] ?? '')) ?: (string) $emailSeed;
-        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $seed);
-        $base = strtolower((string) $ascii);
-        $base = preg_replace('/[^a-z0-9]+/', '', $base) ?? '';
-        if ($base === '' && is_string($emailSeed) && $emailSeed !== '') {
-            $emailAscii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $emailSeed);
-            $base = strtolower((string) $emailAscii);
-            $base = preg_replace('/[^a-z0-9]+/', '', $base) ?? '';
-        }
-        if ($base === '') $base = 'tech';
-        $suggestions = [];
-        for ($i = 0; $i < 30 && count($suggestions) < 3; $i++) {
-            $suffix = (string) random_int(10, 99999);
-            $candidate = substr($base, 0, 20 - strlen($suffix)) . $suffix;
-            if (!User::exists('username', $candidate) && !in_array($candidate, $suggestions, true)) $suggestions[] = $candidate;
-        }
-        while (count($suggestions) < 3) {
-            $candidate = 'tech' . bin2hex(random_bytes(4));
-            if (!User::exists('username', $candidate) && !in_array(substr($candidate, 0, 20), $suggestions, true)) $suggestions[] = substr($candidate, 0, 20);
-        }
-        return $suggestions;
+        $taken = User::existingUsernames($valid);
+        $available = array_values(array_diff($valid, $taken));
+        return Response::json(['available' => $available]);
     }
 
     private function registerForm(array $errors = [], int $status = 200): Response
     {
-        // Send back what the user typed, except the password and the token.
         $old = array_diff_key($this->request->body, ['password' => 1, '_token' => 1]);
         foreach ($old as $key => $value) {
-            if (!is_string($value) && !is_array($value)) {
-                unset($old[$key]);
-            }
-            if (is_array($value)) {
-                $old[$key] = array_values(array_filter($value, 'is_string'));
-            }
+            if (!is_string($value)) unset($old[$key]);
         }
+        $countries = require dirname(__DIR__, 2) . '/config/countries.php';
+        $firstStepErrors = ['display_name', 'contact', 'password'];
+        $activeStep = count(array_intersect(array_keys($errors), $firstStepErrors)) > 0 ? 1 : 2;
 
         return $this->view('auth/register', [
-            'title'      => 'إنشاء حساب',
-            'authPage'   => true,
-            'categories' => DemoData::categories(),
-            'skillDomains' => DemoData::categories(),
-            'errors'     => $errors,
-            'old'        => $old,
+            'title' => 'إنشاء حساب',
+            'authPage' => true,
+            'countries' => $countries,
+            'errors' => $errors,
+            'old' => $old,
+            'activeStep' => $activeStep,
+            'scripts' => ['register.js'],
         ], $status, 'guest');
     }
 
