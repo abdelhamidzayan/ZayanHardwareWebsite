@@ -37,6 +37,7 @@
         <?php endif; ?>
 
         <?php if ($profile['is_owner']) : ?>
+            <p><a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/skills/tests">اختبارات المهارات</a></p>
             <form method="post" action="<?= $e($baseUrl) ?>/account/deletion-request" onsubmit="return confirm('سيتم تعطيل الحساب وإخفاؤه لمدة 30 يومًا قبل الحذف النهائي. هل تريد المتابعة؟')">
                 <?= $csrf() ?>
                 <button class="btn btn--secondary btn--block" type="submit">طلب حذف الحساب</button>
