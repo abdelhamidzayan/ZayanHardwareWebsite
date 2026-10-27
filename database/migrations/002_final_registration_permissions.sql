@@ -26,6 +26,7 @@ ALTER TABLE users
 -- but must be unique when supplied so it can be used as a login identifier.
 ALTER TABLE technician_profiles
     MODIFY specialization VARCHAR(50) NULL,
+    MODIFY experience ENUM('lt1','1-3','3-5','5-10','gt10') NULL,
     ADD UNIQUE KEY uq_technician_profiles_phone (phone);
 
 -- Terms acceptance must be auditable and versioned.
