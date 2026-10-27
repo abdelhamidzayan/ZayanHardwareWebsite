@@ -1,6 +1,7 @@
 <div class="page-head">
     <h1 class="page-head__title">إدارة الحسابات</h1>
     <p class="muted">إجراءات الإدارة تسجّل في سجل الأمان. لا تُعرض كلمات المرور الحالية.</p>
+    <a class="btn btn--secondary" href="<?= $e($baseUrl) ?>/admin/skill-tests">إدارة اختبارات المهارات</a>
 </div>
 <div class="container">
     <?php if (!$users) : ?>
