@@ -6,7 +6,6 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Response;
 use App\Models\DemoData;
-use App\Models\Database;
 use App\Services\AuthService;
 
 final class FeedController extends Controller
@@ -15,24 +14,13 @@ final class FeedController extends Controller
     {
         if (!AuthService::user()) return $this->redirect('/login');
 
-        $category = $this->request->query['category'] ?? '';
-        $slug     = is_string($category) ? strtolower($category) : '';
-
+        // Keep the feed focused on the full stream; category chips were removed from the header.
         $issues = DemoData::issues();
 
-        if ($slug !== '') {
-            $issues = array_values(array_filter(
-                $issues,
-                static fn (array $issue): bool => strtolower($issue['category']) === $slug
-            ));
-        }
-
         return $this->view('feed/index', [
-            'title'          => 'الرئيسية',
-            'active'         => 'home',
-            'categories'     => DemoData::categories(),
-            'activeCategory' => $slug,
-            'issues'         => $issues,
+            'title'  => 'الرئيسية',
+            'active' => 'home',
+            'issues' => $issues,
         ]);
     }
 }
