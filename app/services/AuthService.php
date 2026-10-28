@@ -164,7 +164,7 @@ final class AuthService
             if (str_contains($identifier, '@')) {
                 // Any identifier containing @ is treated only as an email address.
                 $row = User::findForLogin(strtolower($identifier), 'email');
-            } elseif (preg_match('/^[+0-9٠-٩۰-۹().\\s-]+$/u', $identifier) === 1
+            } elseif (preg_match('/^[+0-9٠-٩۰-۹().\s-]+$/u', $identifier) === 1
                 && preg_match_all('/[0-9٠-٩۰-۹]/u', $identifier) >= 7) {
                 // Phone numbers are normalized and checked only against the phone column.
                 $countries = require dirname(__DIR__, 2) . '/config/countries.php';
