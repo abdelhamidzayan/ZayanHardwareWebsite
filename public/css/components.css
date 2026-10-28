@@ -251,3 +251,15 @@
 .content-create__help-fields[hidden] { display: none !important; }
 .content-create__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); }
 @media (max-width: 639px) { .content-create__actions .btn { flex: 1 1 8rem; } }
+
+/* Workbench and personal archive follow the shared card and form patterns. */
+.personal-posts { display: grid; gap: var(--space-4); max-inline-size: 58rem; padding-block-end: var(--space-8); }
+.personal-post { display: grid; gap: var(--space-3); }
+.personal-post__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.personal-post__status { display: inline-flex; align-items: center; padding: .25rem .65rem; border: 1px solid var(--color-border); border-radius: var(--radius-pill); color: var(--color-muted); font-size: var(--text-sm); }
+.personal-post__title { font-size: var(--text-lg); overflow-wrap: anywhere; }
+.personal-post__title a:hover { color: var(--color-primary); }
+.personal-post__meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); color: var(--color-muted); font-size: var(--text-sm); }
+.personal-post__notice { padding: .65rem .8rem; border-radius: var(--radius-sm); background: var(--color-primary-soft); color: var(--color-primary-hover); }
+.personal-posts__filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: var(--space-3); }
+@media (max-width: 639px) { .personal-posts__filters { grid-template-columns: 1fr; } .personal-posts__filters .btn { width: 100%; } }
