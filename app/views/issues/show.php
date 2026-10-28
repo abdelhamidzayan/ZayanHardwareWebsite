@@ -325,6 +325,17 @@ foreach ($replies as $reply) {
     </section>
 
 
+    <?php if ($isOwner) : ?>
+        <details class="card content-delete">
+            <summary>حذف المنشور</summary>
+            <p class="muted">سيختفي المنشور من الـ Feed ومن أرشيفك، لكن لن يتم حذف سجل الردود والنتائج نهائيًا حتى لا تتكسر المراجعات الفنية.</p>
+            <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/delete">
+                <?= $csrf() ?>
+                <button class="btn btn--danger" type="submit">تأكيد إخفاء المنشور</button>
+            </form>
+        </details>
+    <?php endif; ?>
+
     <?php if ($isHelpRequest && $isOwner && $closed && $issue['latest_result_review'] !== null && $issue['latest_result_review'] !== 'pending') : ?>
         <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reopen" class="card reopen-issue">
             <?= $csrf() ?>
