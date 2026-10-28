@@ -158,14 +158,21 @@ final class AuthService
      */
     public static function attempt(string $identifier, string $password): array
     {
-        $identifier = strtolower(trim($identifier));
+        $identifier = trim($identifier);
         $row = null;
-        if (strlen($identifier) <= 190) {
-            $row = User::findForLogin($identifier);
-            if ($row === null) {
+        if ($identifier !== '' && strlen($identifier) <= 190) {
+            if (str_contains($identifier, '@')) {
+                // Any identifier containing @ is treated only as an email address.
+                $row = User::findForLogin(strtolower($identifier), 'email');
+            } elseif (preg_match('/^[+0-9٠-٩۰-۹().\\s-]+$/u', $identifier) === 1
+                && preg_match_all('/[0-9٠-٩۰-۹]/u', $identifier) >= 7) {
+                // Phone numbers are normalized and checked only against the phone column.
                 $countries = require dirname(__DIR__, 2) . '/config/countries.php';
                 $phone = PhoneNumber::guess($identifier, array_column($countries, 'dial'));
-                if ($phone !== null) $row = User::findForLogin($phone);
+                if ($phone !== null) $row = User::findForLogin($phone, 'phone');
+            } else {
+                // Anything without @ that is not a phone number is a username.
+                $row = User::findForLogin(strtolower($identifier), 'username');
             }
         }
 
