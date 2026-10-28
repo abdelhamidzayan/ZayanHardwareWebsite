@@ -140,6 +140,20 @@ final class IssueController extends Controller
         return $this->redirect('/issues/' . $issueId);
     }
 
+    public function deleteIssue(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        try {
+            Issue::deleteIssue($id, (int) $user['id']);
+            $this->flash('success', 'تم إخفاء المنشور من المنصة. تم الاحتفاظ بسجله الفني وروابطه الداخلية.');
+            return $this->redirect('/my-posts');
+        } catch (\\DomainException) {
+            return $this->fail('/issues/' . $id, 'لا تملك صلاحية حذف هذا المنشور أو أنه محذوف بالفعل.');
+        }
+    }
+
     public function show(int $id): Response
     {
         $user = AuthService::user();
