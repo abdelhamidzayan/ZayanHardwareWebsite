@@ -233,7 +233,7 @@ $specializations = [
         </form>
     <?php endif; ?>
 
-    <?php if ($isHelpRequest && $isOwner && !$closed) : ?>
+    <?php if ($isHelpRequest && $isOwner && in_array($issue['status'], ['open', 'in_progress'], true)) : ?>
         <details class="card close-issue">
             <summary>إنهاء النقاش وتقديم النتيجة</summary>
             <p class="muted">لو لم يتم إصلاح العطل، وثّق سبب التعثر ليستفيد الفنيون الآخرون. تأكيد نجاح الإصلاح متاح بعد اعتماد رد فني.</p>
