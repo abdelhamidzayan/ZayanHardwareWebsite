@@ -143,6 +143,7 @@
                         files[index] = previous;
                         syncFiles();
                         renderPreviews();
+                        renderLivePreview();
                     });
                     actions.appendChild(up);
                 }
@@ -158,6 +159,7 @@
                         files[index] = next;
                         syncFiles();
                         renderPreviews();
+                        renderLivePreview();
                     });
                     actions.appendChild(down);
                 }
