@@ -20,6 +20,12 @@ $statusLabels = ['open' => 'مفتوح', 'in_progress' => 'قيد التشخيص
                 <?php foreach ($statusLabels as $value => $label) : ?><option value="<?= $e($value) ?>" <?= $selectedStatus === $value ? 'selected' : '' ?>><?= $e($label) ?></option><?php endforeach; ?>
             </select>
         </label>
+        <label class="field"><span class="field__label">من تاريخ</span>
+            <input class="field__input" type="date" name="from" value="<?= $e($selectedFromDate ?? '') ?>">
+        </label>
+        <label class="field"><span class="field__label">إلى تاريخ</span>
+            <input class="field__input" type="date" name="to" value="<?= $e($selectedToDate ?? '') ?>">
+        </label>
         <button class="btn btn--primary" type="submit">تطبيق الفلاتر</button>
     </form>
     <?php if (!$items) : ?>
