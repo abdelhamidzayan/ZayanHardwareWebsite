@@ -18,6 +18,7 @@ return static function (Router $router): void {
     $router->get('/', [HomeController::class, 'index']);
     $router->get('/help', [PageController::class, 'help']);
     $router->get('/policies', [PageController::class, 'policies']);
+    $router->get('/settings', [PageController::class, 'settings']);
     $router->get('/feed', [FeedController::class, 'index']);
 
     $router->get('/issues/{id}', [IssueController::class, 'show']);
