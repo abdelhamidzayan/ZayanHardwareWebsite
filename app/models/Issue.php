@@ -562,7 +562,7 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('SELECT id, submitted_by, was_repaired, review_status FROM issue_results WHERE id = ? AND issue_id = ? FOR UPDATE');
+            $stmt = $pdo->prepare('SELECT id, submitted_by, was_repaired, helpful_reply_id, review_status FROM issue_results WHERE id = ? AND issue_id = ? FOR UPDATE');
             $stmt->execute([$resultId, $issueId]);
             $result = $stmt->fetch();
             if (!$result || $result['review_status'] !== 'pending') {
@@ -571,10 +571,19 @@ final class Issue extends Model
             $status = $approve ? 'approved' : 'rejected';
             $pdo->prepare('UPDATE issue_results SET review_status = ?, reviewed_by = ?, reviewed_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$status, $reviewerId, $resultId]);
-            if ($approve && (int) $result['was_repaired'] === 1) {
-                $pdo->prepare(
-                    "INSERT IGNORE INTO reputation_events (user_id, event_key, points, reason) VALUES (?, ?, 5, 'Approved helpful issue result')"
-                )->execute([(int) $result['submitted_by'], 'issue_result:' . $resultId . ':approved']);
+
+            // Reward the technician whose reply was used for the confirmed repair,
+            // not the requester who submitted the result. The unique event key makes
+            // this award idempotent if the same review request is retried.
+            if ($approve && (int) $result['was_repaired'] === 1 && $result['helpful_reply_id'] !== null) {
+                $replyStmt = $pdo->prepare('SELECT user_id FROM issue_replies WHERE id = ?');
+                $replyStmt->execute([(int) $result['helpful_reply_id']]);
+                $helperId = $replyStmt->fetchColumn();
+                if ($helperId !== false) {
+                    $pdo->prepare(
+                        "INSERT IGNORE INTO reputation_events (user_id, event_key, points, reason) VALUES (?, ?, 5, 'Approved confirmed repair solution')"
+                    )->execute([(int) $helperId, 'issue_result:' . $resultId . ':approved']);
+                }
             }
             $pdo->commit();
         } catch (\Throwable $e) {
