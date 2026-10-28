@@ -1150,3 +1150,13 @@
 
 .account-menu__item--policy { color: #2563eb; }
 .account-menu__item--policy:hover { color: #1d4ed8; background: #eff6ff; }
+
+/* Multi-select device specialization cards in registration */
+.wizard-choice__card input[type="checkbox"] {
+  position: absolute;
+  inset-block-start: .65rem;
+  inset-inline-start: .65rem;
+  accent-color: #2563eb;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
