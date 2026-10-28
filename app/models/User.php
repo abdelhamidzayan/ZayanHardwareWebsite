@@ -31,16 +31,20 @@ final class User extends Model
         return array_column($stmt->fetchAll(), 'username');
     }
 
-    /** Login lookup by username, email or normalized phone. */
-    public static function findForLogin(string $identifier): ?array
+    /** Login lookup in exactly one identifier column, selected by the caller. */
+    public static function findForLogin(string $identifier, string $type = 'username'): ?array
     {
+        if (!in_array($type, ['username', 'email', 'phone'], true)) {
+            throw new \\InvalidArgumentException('Invalid login identifier type.');
+        }
+
         $stmt = self::db()->prepare(
             'SELECT id, username, password_hash, account_status
              FROM users
-             WHERE username = ? OR email = ? OR phone = ?
+             WHERE ' . $type . ' = ?
              LIMIT 1'
         );
-        $stmt->execute([$identifier, $identifier, $identifier]);
+        $stmt->execute([$identifier]);
         return $stmt->fetch() ?: null;
     }
 
