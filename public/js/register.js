@@ -64,10 +64,17 @@
     const draft = readDraft();
     if (!draft || !Array.isArray(draft.fields)) return;
     restoringDraft = true;
-    draft.fields.forEach((saved, index) => {
-      const field = form.elements[index];
-      if (!field || field.name !== saved.name || field.type !== saved.type) return;
-      if (field.type === 'password' || field.name === '_token' || field.name === 'wizard_action') return;
+    const usedFields = new Set();
+    draft.fields.forEach((saved) => {
+      if (!saved.name || saved.type === 'password' || saved.name === '_token' || saved.name === 'wizard_action') return;
+      const candidates = Array.from(form.elements).filter((field) =>
+        !usedFields.has(field) && field.name === saved.name && field.type === saved.type
+      );
+      const field = (saved.type === 'checkbox' || saved.type === 'radio')
+        ? candidates.find((candidate) => candidate.value === saved.fieldValue) || candidates[0]
+        : candidates[0];
+      if (!field) return;
+      usedFields.add(field);
       if (field.type === 'checkbox' || field.type === 'radio') field.checked = Boolean(saved.checked);
       else if (typeof saved.value === 'string') field.value = saved.value;
     });
@@ -87,6 +94,7 @@
           ? ''
           : (field.type === 'checkbox' || field.type === 'radio' ? '' : String(field.value ?? '')),
         checked: field.type === 'checkbox' || field.type === 'radio' ? Boolean(field.checked) : false,
+        fieldValue: field.type === 'checkbox' || field.type === 'radio' ? String(field.value ?? '') : '',
       }));
       sessionStorage.setItem(draftStorageKey, JSON.stringify({
         savedAt: Date.now(),
@@ -557,7 +565,7 @@
       username.focus();
       return;
     }
-    try { sessionStorage.removeItem(draftStorageKey); } catch (_) {}
+    // Keep the draft until the server confirms registration; validation errors may return to this form.
   });
 
   showContactMode(contactType.value);
