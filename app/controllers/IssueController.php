@@ -269,6 +269,49 @@ final class IssueController extends Controller
         return $this->redirect('/issues/' . $id . '#diagnostic-updates');
     }
 
+    public function editReply(int $id, string $replyId): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $parsedReplyId = filter_var($replyId, FILTER_VALIDATE_INT);
+        $body = trim($this->string('body'));
+        if (!$parsedReplyId || $parsedReplyId < 1 || Issue::replyIssueId((int) $parsedReplyId) !== $id
+            || mb_strlen($body) < 2 || mb_strlen($body) > 5000) {
+            return $this->fail('/issues/' . $id, 'راجع نص التعليق وتأكد أنه تابع لنفس المنشور.');
+        }
+        try {
+            Issue::editReply((int) $parsedReplyId, (int) $user['id'], $body);
+            $this->flash('success', 'تم تعديل تعليقك وحفظ النسخة السابقة في السجل.');
+        } catch (\DomainException) {
+            $this->flash('error', 'يمكنك تعديل تعليقك فقط أثناء استمرار النقاش.');
+        }
+        return $this->redirect('/issues/' . $id . '#reply-' . (int) $parsedReplyId);
+    }
+
+    public function deleteReply(int $id, string $replyId): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $parsedReplyId = filter_var($replyId, FILTER_VALIDATE_INT);
+        if (!$parsedReplyId || $parsedReplyId < 1 || Issue::replyIssueId((int) $parsedReplyId) !== $id) {
+            return $this->fail('/issues/' . $id, 'التعليق غير صحيح.');
+        }
+        try {
+            Issue::deleteReply((int) $parsedReplyId, (int) $user['id']);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'status_changed', 'تم تحديث النقاش',
+                'تم حذف تعليق بواسطة صاحبه. إذا كان هو الحل المعتمد، عاد الطلب إلى قيد التشخيص.',
+                'reply-deleted:' . (int) $parsedReplyId
+            );
+            $this->flash('success', 'تم حذف التعليق من النقاش.');
+        } catch (\DomainException) {
+            $this->flash('error', 'يمكنك حذف تعليقك فقط أثناء استمرار النقاش.');
+        }
+        return $this->redirect('/issues/' . $id . '#discussion');
+    }
+
     public function reply(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
@@ -276,12 +319,33 @@ final class IssueController extends Controller
         if (!$user) return $this->redirect('/login');
         $body = trim($this->string('body'));
         if (mb_strlen($body) < 2 || mb_strlen($body) > 5000) return $this->fail('/issues/' . $id, 'الرد يجب أن يكون بين حرفين و5000 حرف.');
+        $parentRaw = $this->string('parent_reply_id');
+        $parentReplyId = $parentRaw === '' ? null : filter_var($parentRaw, FILTER_VALIDATE_INT);
+        if ($parentRaw !== '' && (!$parentReplyId || $parentReplyId < 1 || Issue::replyIssueId((int) $parentReplyId) !== $id)) {
+            return $this->fail('/issues/' . $id, 'التعليق الذي تحاول الرد عليه غير صحيح.');
+        }
         try {
-            $replyId = Issue::addReply($id, (int) $user['id'], $body);
-            NotificationService::notifyIssueParticipants(
-                $id, (int) $user['id'], 'new_reply', 'رد جديد على طلب المساعدة',
-                $body, 'new-reply:' . $replyId
-            );
+            $parentAuthorId = $parentReplyId ? Issue::replyAuthor((int) $parentReplyId) : null;
+            $replyId = Issue::addReply($id, (int) $user['id'], $body, $parentReplyId ? (int) $parentReplyId : null);
+            if ($parentReplyId && $parentAuthorId) {
+                NotificationService::notify(
+                    $parentAuthorId, (int) $user['id'], $id, $replyId, 'reply_to_comment',
+                    'رد جديد على تعليقك', $body,
+                    '/issues/' . $id . '#reply-' . (int) $parentReplyId,
+                    'reply-to-comment:' . $replyId
+                );
+                $issue = Issue::find($id);
+                if ($issue) NotificationService::notify(
+                    (int) $issue['user_id'], (int) $user['id'], $id, $replyId, 'new_reply',
+                    'رد جديد على طلب المساعدة', $body, '/issues/' . $id . '#discussion',
+                    'new-reply:' . $replyId
+                );
+            } else {
+                NotificationService::notifyIssueParticipants(
+                    $id, (int) $user['id'], 'new_reply', 'رد جديد على طلب المساعدة',
+                    $body, 'new-reply:' . $replyId
+                );
+            }
             $this->flash('success', 'تم نشر ردك الفني.');
         } catch (\DomainException) {
             $this->flash('error', 'النقاش مغلق أو لم يعد متاحًا للرد.');
