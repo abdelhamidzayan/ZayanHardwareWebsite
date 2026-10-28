@@ -1107,15 +1107,14 @@
 }
 
 
-/* ---------- Policy links and policy page ---------- */
+
+/* ---------- Policy links and page: consistent with Help & Support ---------- */
 .guest-header__policy-link,
 .guest-footer__links a,
 .policy-text-link {
-  color: #2563eb;
+  color: var(--color-primary);
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
+  text-decoration: none;
 }
 .guest-header__policy-link {
   display: inline-flex;
@@ -1128,29 +1127,24 @@
 }
 .guest-header__policy-link:hover,
 .guest-footer__links a:hover,
-.policy-text-link:hover { color: #1d4ed8; }
-.guest-header__policy-link[aria-current="page"] { background: #eff6ff; }
+.policy-text-link:hover { color: var(--color-primary); text-decoration: underline; text-underline-offset: .2em; }
+.guest-header__policy-link[aria-current="page"] { background: var(--color-primary-soft); }
 .guest-footer__links { margin-block-start: var(--space-2); }
-.policy-page { max-inline-size: 72rem; margin-inline: auto; padding: var(--space-6) var(--space-5) var(--space-8); }
-.policy-hero { display: grid; gap: var(--space-3); padding: clamp(1.5rem, 5vw, 2.75rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--color-surface), #eff6ff); }
-.policy-hero__eyebrow { color: #2563eb; font-size: var(--text-sm); font-weight: 700; }
-.policy-hero__title { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.35; }
-.policy-hero__intro { max-inline-size: 52rem; color: var(--color-muted); line-height: 1.95; }
-.policy-updated { color: var(--color-muted); font-size: var(--text-sm); }
-.policy-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); margin-block-start: var(--space-5); }
-.policy-card { min-inline-size: 0; padding: clamp(1.1rem, 3vw, 1.6rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
-.policy-card h2 { margin-block-end: var(--space-3); font-size: var(--text-lg); line-height: 1.6; }
-.policy-card p, .policy-card li { color: var(--color-muted); line-height: 1.95; }
-.policy-card p + p { margin-block-start: var(--space-3); }
-.policy-card ul { display: grid; gap: var(--space-2); margin: 0; padding-inline-start: 1.4rem; }
-.policy-card a { color: #2563eb; text-decoration: underline; text-underline-offset: .2em; }
-.policy-note { margin-block-start: var(--space-5); padding: var(--space-4); border-inline-start: 3px solid #2563eb; border-radius: var(--radius-sm); background: #eff6ff; color: var(--color-ink); line-height: 1.9; }
-@media (min-width: 760px) { .policy-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 520px) { .guest-header__policy-link { padding-inline: .35rem; font-size: .72rem; } }
-
-.account-menu__item--policy { color: #2563eb; }
-.account-menu__item--policy:hover { color: #1d4ed8; background: #eff6ff; }
-
+.policy-page .policy-updated { margin: 0; color: var(--color-muted); font-size: var(--text-sm); }
+.policy-page .policy-card { inline-size: 100%; }
+.policy-page .policy-card p,
+.policy-page .policy-card li { color: var(--color-muted); line-height: 1.9; }
+.policy-page .policy-card p + p { margin-block-start: var(--space-3); }
+.policy-page .policy-list { display: grid; gap: var(--space-3); margin: 0; padding-inline-start: 1.4rem; }
+.policy-page .policy-contact { margin-block-start: 0; }
+.policy-page .policy-contact .btn { color: var(--color-ink); }
+.policy-page .policy-contact .btn:hover { color: var(--color-ink); }
+@media (max-width: 520px) {
+  .policy-page { padding-inline: var(--space-4); }
+  .guest-header__policy-link { padding-inline: .35rem; font-size: .72rem; }
+}
+.account-menu__item--policy { color: var(--color-primary); }
+.account-menu__item--policy:hover { color: var(--color-primary); background: var(--color-primary-soft); }
 /* Multi-select device specialization cards in registration */
 .wizard-choice__card input[type="checkbox"] {
   position: absolute;
