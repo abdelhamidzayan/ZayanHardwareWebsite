@@ -7,6 +7,10 @@
  */
 $active     = $active ?? 'home';
 $showHeader = $showHeader ?? true;
+$currentUser = $currentUser ?? \\App\\Services\\AuthService::user();
+if (!isset($unreadCount) && is_array($currentUser) && isset($currentUser['id'])) {
+    $unreadCount = \\App\\Models\\Notification::unreadCount((int) $currentUser['id']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= $e($lang) ?>" dir="<?= $e($dir) ?>">
