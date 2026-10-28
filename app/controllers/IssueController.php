@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Issue;
+use App\Services\NotificationService;
 use App\Services\AuthService;
 
 final class IssueController extends Controller
@@ -213,7 +214,11 @@ final class IssueController extends Controller
             return $this->fail('/issues/' . $id, 'تحديث التشخيص يجب أن يكون بين 3 و5000 حرف.');
         }
         try {
-            Issue::addDiagnosticUpdate($id, (int) $user['id'], $body);
+            $updateId = Issue::addDiagnosticUpdate($id, (int) $user['id'], $body);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'diagnostic_update', 'تحديث جديد للتشخيص',
+                $body, 'diagnostic-update:' . $updateId
+            );
             $this->flash('success', 'تمت إضافة تحديث التشخيص مع حفظ توقيته.');
         } catch (\DomainException) {
             $this->flash('error', 'تحديث التشخيص متاح لصاحب طلب المساعدة فقط ما دام الطلب غير مغلق.');
@@ -233,6 +238,10 @@ final class IssueController extends Controller
         }
         try {
             Issue::confirmRepair($id, (int) $user['id'], $cause, $action);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'repair_confirmed', 'تم تأكيد نجاح الإصلاح',
+                'أكد صاحب الطلب نجاح الإصلاح، وأُغلق طلب المساعدة.', 'repair-confirmed:' . $id
+            );
             $this->flash('success', 'أكدت نجاح الإصلاح. أُغلق الطلب بعد اعتماد الرد وتسجيل النتيجة للمراجعة.');
         } catch (\DomainException) {
             $this->flash('error', 'لا يمكن تأكيد الإصلاح إلا لصاحب الطلب بعد اعتماد رد صالح.');
@@ -249,6 +258,10 @@ final class IssueController extends Controller
         if (mb_strlen($reason) > 2000) return $this->fail('/issues/' . $id, 'سبب عدم نجاح الإصلاح أطول من المسموح.');
         try {
             Issue::rejectRepairConfirmation($id, (int) $user['id'], $reason);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'status_changed', 'الطلب رجع للتشخيص',
+                $reason !== '' ? $reason : 'صاحب الطلب أكد أن الإصلاح لم ينجح بعد.', 'repair-rejected:' . $id . ':' . time()
+            );
             $this->flash('info', 'رجع الطلب إلى قيد التشخيص، ويمكنك إضافة قياسات وتجارب جديدة.');
         } catch (\DomainException) {
             $this->flash('error', 'لا يمكن رفض التأكيد إلا لصاحب الطلب عندما يكون بانتظار تأكيد الإصلاح.');
@@ -264,7 +277,11 @@ final class IssueController extends Controller
         $body = trim($this->string('body'));
         if (mb_strlen($body) < 2 || mb_strlen($body) > 5000) return $this->fail('/issues/' . $id, 'الرد يجب أن يكون بين حرفين و5000 حرف.');
         try {
-            Issue::addReply($id, (int) $user['id'], $body);
+            $replyId = Issue::addReply($id, (int) $user['id'], $body);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'new_reply', 'رد جديد على طلب المساعدة',
+                $body, 'new-reply:' . $replyId
+            );
             $this->flash('success', 'تم نشر ردك الفني.');
         } catch (\DomainException) {
             $this->flash('error', 'النقاش مغلق أو لم يعد متاحًا للرد.');
@@ -319,7 +336,12 @@ final class IssueController extends Controller
         if (!$replyId || $replyId < 1) return $this->fail('/issues/' . $id, 'الرد غير صحيح.');
         try {
             Issue::accept($id, (int) $replyId, (int) $user['id']);
-            $this->flash('success', 'تم اعتماد الحل.');
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'accepted_solution', 'تم اعتماد ردك كحل',
+                'اعتمد صاحب طلب المساعدة أحد الردود كحل مقترح، والطلب بانتظار تأكيد نجاح الإصلاح.',
+                'accepted-solution:' . (int) $replyId
+            );
+            $this->flash('success', 'تم اعتماد الرد. الطلب الآن بانتظار تأكيد نجاح الإصلاح.');
         } catch (\DomainException) {
             $this->flash('error', 'اعتماد الحل متاح لصاحب المنشور فقط، ويجب أن يكون الرد تابعًا لنفس العطل.');
         }
@@ -342,7 +364,11 @@ final class IssueController extends Controller
         }
         try {
             Issue::closeWithResult($id, (int) $user['id'], $repaired, $cause, $action, $replyId ? (int) $replyId : null);
-            $this->flash('success', 'تم إغلاق النقاش وإرسال النتيجة للمراجعة. لن تُضاف نقاط تلقائيًا قبل المراجعة.');
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'status_changed', 'أُغلق طلب المساعدة دون حل',
+                'سجّل صاحب الطلب أن العطل لم يُحل بعد.', 'closed-unresolved:' . $id . ':' . time()
+            );
+            $this->flash('success', 'تم تسجيل أن العطل لم يُحل وإرسال النتيجة للمراجعة.');
         } catch (\DomainException) {
             $this->flash('error', 'لا يمكن إغلاق هذا النقاش. تأكد أنك صاحبه وأنه ما زال مفتوحًا.');
         } catch (\PDOException $e) {
@@ -382,6 +408,10 @@ final class IssueController extends Controller
         if (!$user) return $this->redirect('/login');
         try {
             Issue::reopen($id, (int) $user['id']);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'status_changed', 'أُعيد فتح طلب المساعدة',
+                'أعاد صاحب الطلب فتح النقاش لمتابعة التشخيص.', 'reopened:' . $id . ':' . time()
+            );
             $this->flash('success', 'تم فتح النقاش من جديد. يمكنك إضافة آخر تحديث واستقبال ردود جديدة.');
         } catch (\DomainException) {
             $this->flash('error', 'يمكن إعادة فتح النقاش لصاحبه فقط بعد مراجعة النتيجة السابقة من الإدارة.');
