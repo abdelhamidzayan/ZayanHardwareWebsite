@@ -138,33 +138,6 @@ final class IssueController extends Controller
             $this->flash('success', 'تم نشر المنشور بنجاح.');
         }
         return $this->redirect('/issues/' . $issueId);
-            }
-            foreach ($uploads as $upload) {
-                $filename = bin2hex(random_bytes(16)) . '.' . $upload['ext'];
-                $destination = $targetDir . DIRECTORY_SEPARATOR . $filename;
-                if (!move_uploaded_file($upload['tmp'], $destination)) continue;
-                try {
-                    Issue::addAttachment(
-                        $issueId,
-                        (int) $user['id'],
-                        'issues/' . $issueId . '/' . $filename,
-                        $upload['mime'],
-                        $upload['size']
-                    );
-                    $saved++;
-                } catch (\Throwable $e) {
-                    @unlink($destination);
-                    \App\Core\App::log('error', 'Unable to save issue attachment metadata: ' . $e->getMessage());
-                }
-            }
-        }
-
-        if (count($uploads) > $saved) {
-            $this->flash('info', 'تم نشر المنشور، لكن تعذر حفظ بعض المرفقات. يمكنك إضافتها لاحقًا.');
-        } else {
-            $this->flash('success', 'تم نشر المنشور بنجاح.');
-        }
-        return $this->redirect('/issues/' . $issueId);
     }
 
     public function show(int $id): Response
