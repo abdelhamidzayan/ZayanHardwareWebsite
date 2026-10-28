@@ -466,9 +466,11 @@ final class Issue extends Model
             $stmt = $pdo->prepare("SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('open','in_progress') AND deleted_at IS NULL FOR UPDATE");
             $stmt->execute([$issueId, $ownerId]);
             if (!$stmt->fetchColumn()) throw new \DomainException('not_owner_or_closed');
-            $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL');
+            $stmt = $pdo->prepare('SELECT id, user_id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL');
             $stmt->execute([$replyId, $issueId]);
-            if (!$stmt->fetchColumn()) throw new \DomainException('reply_not_in_issue');
+            $reply = $stmt->fetch();
+            if (!$reply) throw new \DomainException('reply_not_in_issue');
+            if ((int) $reply['user_id'] === $ownerId) throw new \DomainException('cannot_accept_own_reply');
             $pdo->prepare("UPDATE issues SET accepted_reply_id = ?, status = 'awaiting_confirmation', updated_at = UTC_TIMESTAMP() WHERE id = ?")
                 ->execute([$replyId, $issueId]);
             $pdo->commit();
