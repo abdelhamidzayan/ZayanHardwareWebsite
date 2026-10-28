@@ -122,7 +122,7 @@ foreach ($replies as $reply) {
                     <?php foreach ($diagnosticUpdates as $update) : ?>
                         <li class="diagnostic-updates__item">
                             <div><strong><?= $e($update['display_name']) ?></strong><span class="muted"><?= $e($update['created_at']) ?></span></div>
-                            <p dir="auto"><?= \\App\\Services\\ContentEditorService::renderInlineContent((string) $update['body'], $attachments, $baseUrl) ?></p>
+                            <div class="diagnostic-updates__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $update['body'], $attachments, $baseUrl) ?></div>
                         </li>
                     <?php endforeach; ?>
                 </ol>
@@ -169,7 +169,7 @@ foreach ($replies as $reply) {
         <?php foreach ($replies as $reply) : if ((int) $reply['id'] !== (int) $issue['accepted_reply_id']) continue; ?>
             <section class="card accepted-solution">
                 <div class="accepted-solution__heading"><span class="accepted-check">✓</span><strong>الحل المعتمد</strong></div>
-                <p><?= \\App\\Services\\ContentEditorService::renderInlineContent((string) $reply['body'], $attachments, $baseUrl) ?></p>
+                <div class="accepted-solution__body"><?= \App\Services\ContentEditorService::renderInlineContent((string) $reply['body'], $attachments, $baseUrl) ?></div>
                 <span class="muted"><?= $e($reply['display_name']) ?> · <?= $e($reply['created_at']) ?></span>
             </section>
         <?php endforeach; ?>
@@ -270,7 +270,7 @@ foreach ($replies as $reply) {
                                         <span class="avatar"><?= $e(mb_strtoupper(mb_substr($child['display_name'], 0, 1))) ?></span>
                                         <div class="reply-card__identity"><strong><?= $e($child['display_name']) ?></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
                                     </header>
-                                    <div class="reply-card__body" dir="auto"><?= \\App\\Services\\ContentEditorService::renderInlineContent((string) $child['body'], $attachments, $baseUrl) ?></div>
+                                    <div class="reply-card__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $child['body'], $attachments, $baseUrl) ?></div>
                                     <footer class="reply-card__actions">
                                         <?php if ($isHelpRequest && $isOwner && in_array($issue['status'], ['open', 'in_progress'], true) && (int) $child['id'] !== (int) $issue['accepted_reply_id']) : ?>
                                             <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/accept">
