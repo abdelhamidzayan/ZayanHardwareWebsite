@@ -195,11 +195,65 @@ final class IssueController extends Controller
             'issue' => $issue,
             'replies' => Issue::replies($id, $sort),
             'attachments' => Issue::attachments($id),
+            'diagnosticUpdates' => Issue::diagnosticUpdates($id),
             'history' => $isOwner ? Issue::history($id) : [],
             'sort' => $sort,
             'isOwner' => $isOwner,
             'currentUser' => $user,
         ]);
+    }
+
+    public function diagnosticUpdate(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $body = trim($this->string('body'));
+        if (mb_strlen($body) < 3 || mb_strlen($body) > 5000) {
+            return $this->fail('/issues/' . $id, 'تحديث التشخيص يجب أن يكون بين 3 و5000 حرف.');
+        }
+        try {
+            Issue::addDiagnosticUpdate($id, (int) $user['id'], $body);
+            $this->flash('success', 'تمت إضافة تحديث التشخيص مع حفظ توقيته.');
+        } catch (\\DomainException) {
+            $this->flash('error', 'تحديث التشخيص متاح لصاحب طلب المساعدة فقط ما دام الطلب غير مغلق.');
+        }
+        return $this->redirect('/issues/' . $id . '#diagnostic-updates');
+    }
+
+    public function confirmRepair(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $cause = trim($this->string('final_cause'));
+        $action = trim($this->string('repair_action'));
+        if (mb_strlen($cause) < 10 || mb_strlen($cause) > 5000 || mb_strlen($action) < 5 || mb_strlen($action) > 5000) {
+            return $this->fail('/issues/' . $id, 'اكتب السبب النهائي للعطل وإجراء الإصلاح قبل تأكيد نجاحه.');
+        }
+        try {
+            Issue::confirmRepair($id, (int) $user['id'], $cause, $action);
+            $this->flash('success', 'أكدت نجاح الإصلاح. أُغلق الطلب بعد اعتماد الرد وتسجيل النتيجة للمراجعة.');
+        } catch (\\DomainException) {
+            $this->flash('error', 'لا يمكن تأكيد الإصلاح إلا لصاحب الطلب بعد اعتماد رد صالح.');
+        }
+        return $this->redirect('/issues/' . $id);
+    }
+
+    public function rejectRepairConfirmation(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $reason = trim($this->string('reason'));
+        if (mb_strlen($reason) > 2000) return $this->fail('/issues/' . $id, 'سبب عدم نجاح الإصلاح أطول من المسموح.');
+        try {
+            Issue::rejectRepairConfirmation($id, (int) $user['id'], $reason);
+            $this->flash('info', 'رجع الطلب إلى قيد التشخيص، ويمكنك إضافة قياسات وتجارب جديدة.');
+        } catch (\\DomainException) {
+            $this->flash('error', 'لا يمكن رفض التأكيد إلا لصاحب الطلب عندما يكون بانتظار تأكيد الإصلاح.');
+        }
+        return $this->redirect('/issues/' . $id . '#diagnostic-updates');
     }
 
     public function reply(int $id): Response
@@ -278,6 +332,7 @@ final class IssueController extends Controller
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
         $repaired = $this->string('was_repaired') === '1';
+        if ($repaired) return $this->fail('/issues/' . $id, 'لا يمكن تسجيل الإصلاح كمنتهٍ إلا بعد اعتماد رد فني وتأكيد نجاح الإصلاح.');
         $cause = trim($this->string('final_cause'));
         $action = trim($this->string('repair_action'));
         $replyRaw = $this->string('helpful_reply_id');
