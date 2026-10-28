@@ -161,6 +161,25 @@ final class Issue extends Model
         return $stmt->fetch() ?: null;
     }
 
+    public static function participantIds(int $issueId): array
+    {
+        $stmt = self::db()->prepare(
+            'SELECT user_id FROM issues WHERE id = ?
+             UNION
+             SELECT user_id FROM issue_replies WHERE issue_id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$issueId, $issueId]);
+        return array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    public static function replyAuthor(int $replyId): ?int
+    {
+        $stmt = self::db()->prepare('SELECT user_id FROM issue_replies WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$replyId]);
+        $userId = $stmt->fetchColumn();
+        return $userId === false ? null : (int) $userId;
+    }
+
     public static function diagnosticUpdates(int $issueId): array
     {
         $stmt = self::db()->prepare(
@@ -173,7 +192,7 @@ final class Issue extends Model
         return $stmt->fetchAll();
     }
 
-    public static function addDiagnosticUpdate(int $issueId, int $userId, string $body): void
+    public static function addDiagnosticUpdate(int $issueId, int $userId, string $body): int
     {
         $pdo = self::db();
         $pdo->beginTransaction();
@@ -188,6 +207,7 @@ final class Issue extends Model
 
             $pdo->prepare('INSERT INTO issue_diagnostic_updates (issue_id, user_id, body) VALUES (?, ?, ?)')
                 ->execute([$issueId, $userId, $body]);
+            $updateId = (int) $pdo->lastInsertId();
             if ($status === 'open') {
                 $pdo->prepare("UPDATE issues SET status = 'in_progress', updated_at = UTC_TIMESTAMP() WHERE id = ?")
                     ->execute([$issueId]);
@@ -195,6 +215,7 @@ final class Issue extends Model
                 $pdo->prepare('UPDATE issues SET updated_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$issueId]);
             }
             $pdo->commit();
+            return $updateId;
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
@@ -213,13 +234,14 @@ final class Issue extends Model
         return $stmt->fetchAll();
     }
 
-    public static function addReply(int $issueId, int $userId, string $body): void
+    public static function addReply(int $issueId, int $userId, string $body): int
     {
         $stmt = self::db()->prepare("INSERT INTO issue_replies (issue_id, user_id, body) SELECT ?, ?, ? FROM issues WHERE id = ? AND status IN ('open','in_progress')");
         $stmt->execute([$issueId, $userId, $body, $issueId]);
         if ($stmt->rowCount() !== 1) {
             throw new \DomainException('discussion_closed');
         }
+        return (int) self::db()->lastInsertId();
     }
 
     public static function edit(int $issueId, int $userId, string $title, string $description, string $measurements): void
