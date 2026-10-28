@@ -149,7 +149,7 @@ final class IssueController extends Controller
             Issue::deleteIssue($id, (int) $user['id']);
             $this->flash('success', 'تم إخفاء المنشور من المنصة. تم الاحتفاظ بسجله الفني وروابطه الداخلية.');
             return $this->redirect('/my-posts');
-        } catch (\\DomainException) {
+        } catch (\DomainException) {
             return $this->fail('/issues/' . $id, 'لا تملك صلاحية حذف هذا المنشور أو أنه محذوف بالفعل.');
         }
     }
