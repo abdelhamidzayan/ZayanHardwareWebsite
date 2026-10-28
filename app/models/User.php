@@ -198,6 +198,14 @@ final class User extends Model
                 $profile['biography'] ?? null,
                 $profile['workshop_name'] ?? null,
             ]);
+            $deviceStmt = $pdo->prepare('INSERT INTO user_device_specializations (user_id, device_type) VALUES (?, ?)');
+            $devices = $profile['device_focuses'] ?? [$profile['device_focus']];
+            foreach (array_unique($devices) as $device) {
+                if (in_array($device, ['iphone', 'android'], true)) {
+                    $deviceStmt->execute([$id, $device]);
+                }
+            }
+
             $pdo->commit();
             return $id;
         } catch (\Throwable $e) {
