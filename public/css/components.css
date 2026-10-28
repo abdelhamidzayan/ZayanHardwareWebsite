@@ -236,3 +236,18 @@
 
 .check { display: flex; align-items: flex-start; gap: var(--space-3); }
 .check input { flex: none; inline-size: 1.25rem; block-size: 1.25rem; margin-block-start: 0.2rem; accent-color: var(--color-primary); }
+
+/* Content creation: reuse the shared token palette and common form controls. */
+.content-create { max-inline-size: 52rem; padding-block-end: var(--space-8); }
+.content-create__form { gap: var(--space-5); }
+.content-create__types { display: grid; gap: var(--space-3); margin: 0; padding: 0; border: 0; }
+.content-create__types legend { margin-block-end: var(--space-2); }
+.content-create__type { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); cursor: pointer; }
+.content-create__type:has(input:checked) { border-color: var(--color-primary); background: var(--color-primary-soft); box-shadow: 0 0 0 1px var(--color-primary); }
+.content-create__type input { flex: none; margin-block-start: .3rem; accent-color: var(--color-primary); }
+.content-create__type span { display: grid; gap: .2rem; }
+.content-create__type small { color: var(--color-muted); line-height: 1.6; }
+.content-create__help-fields { display: grid; gap: var(--space-4); }
+.content-create__help-fields[hidden] { display: none !important; }
+.content-create__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); }
+@media (max-width: 639px) { .content-create__actions .btn { flex: 1 1 8rem; } }
