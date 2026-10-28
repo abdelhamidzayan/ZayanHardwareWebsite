@@ -20,6 +20,8 @@ return static function (Router $router): void {
     $router->get('/policies', [PageController::class, 'policies']);
     $router->get('/settings', [PageController::class, 'settings']);
     $router->get('/feed', [FeedController::class, 'index']);
+    $router->get('/workbench', [WorkbenchController::class, 'index']);
+    $router->get('/my-posts', [MyPostsController::class, 'index']);
     $router->get('/issues/create', [IssueController::class, 'create']);
     $router->post('/issues/create', [IssueController::class, 'create']);
 
