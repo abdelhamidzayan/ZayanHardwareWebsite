@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Notification;
+use App\Models\Issue;
 use App\Services\AuthService;
 
 final class NotificationController extends Controller
@@ -33,6 +34,9 @@ final class NotificationController extends Controller
 
         $path = Notification::markRead($id, (int) $user['id']);
         if (!is_string($path) || $path === '' || $path[0] !== '/' || str_starts_with($path, '//')) {
+            return $this->redirect('/notifications');
+        }
+        if (preg_match('#^/issues/(\\d+)(?:$|[#?])#', $path, $match) && !Issue::find((int) $match[1])) {
             return $this->redirect('/notifications');
         }
         return $this->redirect($path);
