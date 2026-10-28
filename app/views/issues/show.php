@@ -3,8 +3,9 @@ $contentType = $issue['content_type'] ?? 'help_request';
 $isHelpRequest = $contentType === 'help_request';
 $typeLabel = match ($contentType) { 'technical_post' => 'معلومة فنية', 'discussion' => 'نقاش عام', default => 'طلب مساعدة' };
 $resolved = $issue['status'] === 'resolved';
-$closed = $issue['status'] !== 'open';
-$canReply = $currentUser !== null && !$closed;
+$awaitingConfirmation = $issue['status'] === 'awaiting_confirmation';
+$closed = in_array($issue['status'], ['resolved', 'closed_unresolved'], true);
+$canReply = $currentUser !== null && in_array($issue['status'], ['open', 'in_progress'], true);
 $specializations = [
     'power' => 'Power', 'charging' => 'Charging', 'network' => 'Network',
     'display' => 'Display', 'schematics' => 'Schematics', 'audio' => 'Audio',
@@ -14,7 +15,7 @@ $specializations = [
 <div class="page-head issue-page-head">
     <a class="issue-back" href="<?= $e($baseUrl) ?>/feed">← الرجوع للمنشورات</a>
     <span class="issue-state <?= $isHelpRequest && $resolved ? 'issue-state--resolved' : ($isHelpRequest && $closed ? 'issue-state--closed' : '') ?>">
-        <?= $isHelpRequest ? ($resolved ? 'تم الحل' : ($closed ? 'أُغلق دون حل' : 'نقاش مفتوح')) : $e($typeLabel) ?>
+        <?= $isHelpRequest ? ($resolved ? 'تم الحل' : ($closed ? 'أُغلق دون حل' : ($awaitingConfirmation ? 'بانتظار تأكيد الإصلاح' : ($issue['status'] === 'in_progress' ? 'قيد التشخيص' : 'نقاش مفتوح')))) : $e($typeLabel) ?>
     </span>
 </div>
 
@@ -69,7 +70,7 @@ $specializations = [
             </div>
         <?php endif; ?>
 
-        <?php if ($isOwner && !$closed) : ?>
+        <?php if ($isOwner && in_array($issue['status'], ['open', 'in_progress'], true)) : ?>
             <details class="issue-edit">
                 <summary>تعديل المنشور وإضافة آخر تجربة</summary>
                 <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/edit" class="issue-form">
@@ -90,6 +91,32 @@ $specializations = [
         <?php endif; ?>
     </section>
 
+    <?php if ($isHelpRequest) : ?>
+        <section class="card diagnostic-updates" id="diagnostic-updates">
+            <div class="discussion__head">
+                <div><h2>تحديثات التشخيص</h2><p class="muted">سجل زمني منفصل للتجارب والقياسات الجديدة</p></div>
+            </div>
+            <?php if (empty($diagnosticUpdates)) : ?>
+                <p class="muted">لسه مفيش تحديثات تشخيص منفصلة.</p>
+            <?php else : ?>
+                <ol class="diagnostic-updates__list">
+                    <?php foreach ($diagnosticUpdates as $update) : ?>
+                        <li class="diagnostic-updates__item">
+                            <div><strong><?= $e($update['display_name']) ?></strong><span class="muted"><?= $e($update['created_at']) ?></span></div>
+                            <p dir="auto"><?= nl2br($e($update['body'])) ?></p>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+            <?php if ($isOwner && in_array($issue['status'], ['open', 'in_progress', 'awaiting_confirmation'], true)) : ?>
+                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/diagnostic-updates" class="issue-form">
+                    <?= $csrf() ?>
+                    <label class="field"><span class="field__label">إضافة تجربة أو قياس جديد</span><textarea class="field__input" name="body" minlength="3" maxlength="5000" rows="3" required placeholder="اكتب القياس الجديد أو التغيير الذي ظهر بعد آخر تجربة..."></textarea></label>
+                    <button class="btn btn--secondary" type="submit">إضافة تحديث التشخيص</button>
+                </form>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
 
     <?php if ($issue['latest_result_id'] !== null) : ?>
         <section class="card issue-result">
@@ -118,6 +145,27 @@ $specializations = [
                 <span class="muted"><?= $e($reply['display_name']) ?> · <?= $e($reply['created_at']) ?></span>
             </section>
         <?php endforeach; ?>
+    <?php endif; ?>
+
+    <?php if ($isHelpRequest && $isOwner && $awaitingConfirmation) : ?>
+        <section class="card repair-confirmation">
+            <h2>هل الإصلاح نجح فعلًا؟</h2>
+            <p class="muted">تم اعتماد رد فني. لن يظهر الطلب كـ «تم الحل» إلا بعد تأكيدك نجاح الإصلاح وتوثيق السبب والإجراء.</p>
+            <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/confirm-repair" class="issue-form">
+                <?= $csrf() ?>
+                <label class="field"><span class="field__label">السبب النهائي للعطل</span><textarea class="field__input" name="final_cause" minlength="10" maxlength="5000" rows="3" required></textarea></label>
+                <label class="field"><span class="field__label">إجراء الإصلاح الذي نجح</span><textarea class="field__input" name="repair_action" minlength="5" maxlength="5000" rows="3" required></textarea></label>
+                <button class="btn btn--primary" type="submit">تأكيد نجاح الإصلاح</button>
+            </form>
+            <details class="repair-confirmation__reject">
+                <summary>الإصلاح لم ينجح</summary>
+                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reject-repair" class="issue-form">
+                    <?= $csrf() ?>
+                    <label class="field"><span class="field__label">إيه اللي لسه حاصل؟ (اختياري)</span><textarea class="field__input" name="reason" maxlength="2000" rows="2"></textarea></label>
+                    <button class="btn btn--secondary" type="submit">الرجوع للتشخيص</button>
+                </form>
+            </details>
+        </section>
     <?php endif; ?>
 
     <section class="discussion" id="discussion">
@@ -149,7 +197,7 @@ $specializations = [
                             <?= $csrf() ?><input type="hidden" name="reply_id" value="<?= (int) $reply['id'] ?>">
                             <button class="text-action" type="submit" <?= !$currentUser || (int) $currentUser['id'] === (int) $reply['user_id'] ? 'disabled title="سجّل الدخول لتقييم رد فني آخر"' : '' ?>>♡ مفيد (<?= (int) $reply['helpful_count'] ?>)</button>
                         </form>
-                        <?php if ($isOwner && !$closed && (int) $reply['id'] !== (int) $issue['accepted_reply_id']) : ?>
+                        <?php if ($isHelpRequest && $isOwner && in_array($issue['status'], ['open', 'in_progress'], true) && (int) $reply['id'] !== (int) $issue['accepted_reply_id']) : ?>
                             <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/accept">
                                 <?= $csrf() ?><input type="hidden" name="reply_id" value="<?= (int) $reply['id'] ?>">
                                 <button class="text-action text-action--primary" type="submit">اعتماد الحل</button>
@@ -169,8 +217,10 @@ $specializations = [
             </form>
         <?php elseif (!$currentUser && !$closed) : ?>
             <div class="card login-prompt"><p>سجّل الدخول للمشاركة في حل العطل.</p><a class="btn btn--primary" href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a></div>
+        <?php elseif ($awaitingConfirmation) : ?>
+            <div class="card closed-note">الطلب بانتظار تأكيد صاحب الطلب لنجاح الإصلاح.</div>
         <?php else : ?>
-            <div class="card closed-note"><?= $resolved ? 'تم إغلاق النقاش بعد توثيق الحل.' : 'تم إغلاق النقاش دون حل نهائي.' ?></div>
+            <div class="card closed-note"><?= $resolved ? 'تم إغلاق النقاش بعد تأكيد الإصلاح.' : 'تم إغلاق النقاش دون حل نهائي.' ?></div>
         <?php endif; ?>
     </section>
 
@@ -186,14 +236,13 @@ $specializations = [
     <?php if ($isHelpRequest && $isOwner && !$closed) : ?>
         <details class="card close-issue">
             <summary>إنهاء النقاش وتقديم النتيجة</summary>
-            <p class="muted">لو وصلت للسبب النهائي بنفسك أو لم يتم إصلاح العطل، وثّق النتيجة ليستفيد الفنيون الآخرون. أي نقاط محتملة تخضع للمراجعة ولا تُضاف تلقائيًا.</p>
+            <p class="muted">لو لم يتم إصلاح العطل، وثّق سبب التعثر ليستفيد الفنيون الآخرون. تأكيد نجاح الإصلاح متاح بعد اعتماد رد فني.</p>
             <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/close" class="issue-form">
                 <?= $csrf() ?>
-                <label class="field"><span class="field__label">هل تم إصلاح العطل؟</span><select class="field__input" name="was_repaired" required><option value="1">نعم، تم الإصلاح</option><option value="0">لا، لم يتم الإصلاح</option></select></label>
-                <label class="field"><span class="field__label">السبب النهائي للعطل</span><textarea class="field__input" name="final_cause" minlength="10" maxlength="5000" rows="3" required></textarea></label>
-                <label class="field"><span class="field__label">إجراء الإصلاح</span><textarea class="field__input" name="repair_action" minlength="5" maxlength="5000" rows="3" placeholder="مطلوب لو تم إصلاح العطل"></textarea></label>
+                <input type="hidden" name="was_repaired" value="0">
+                <label class="field"><span class="field__label">سبب عدم الوصول للإصلاح</span><textarea class="field__input" name="final_cause" minlength="10" maxlength="5000" rows="3" required></textarea></label>
                 <label class="field"><span class="field__label">أي رد ساعدك؟ (اختياري)</span><select class="field__input" name="helpful_reply_id"><option value="">لم يتم اختيار رد</option><?php foreach ($replies as $reply) : ?><option value="<?= (int) $reply['id'] ?>"><?= $e(mb_substr($reply['display_name'] . ': ' . $reply['body'], 0, 90)) ?></option><?php endforeach; ?></select></label>
-                <button class="btn btn--primary" type="submit">إرسال النتيجة وإغلاق النقاش</button>
+                <button class="btn btn--primary" type="submit">تسجيل أن العطل لم يُحل</button>
             </form>
         </details>
     <?php endif; ?>
