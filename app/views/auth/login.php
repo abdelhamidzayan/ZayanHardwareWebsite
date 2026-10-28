@@ -1,3 +1,7 @@
+<?php
+$countries = require dirname(__DIR__, 3) . '/config/countries.php';
+$selectedCountry = 'EG';
+?>
 <section class="auth">
     <div class="card auth__card">
         <div>
@@ -9,24 +13,33 @@
             <?= $csrf() ?>
 
             <div class="field">
-                <label class="field__label" for="login-identifier-input" data-login-identifier-label>البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم</label>
-                <div class="login-identifier">
-                    <div class="login-identifier__phone" data-login-phone-controls>
-                        <label class="sr-only" for="login-country-code">الدولة</label>
-                        <select class="login-identifier__country" id="login-country-code" aria-label="كود الدولة" data-login-country>
-                            <option value="+20" selected>🇪🇬 +20</option>
-                            <option value="+966">🇸🇦 +966</option>
-                            <option value="+971">🇦🇪 +971</option>
-                            <option value="+965">🇰🇼 +965</option>
-                            <option value="+974">🇶🇦 +974</option>
-                            <option value="+962">🇯🇴 +962</option>
-                            <option value="+1">🇺🇸 +1</option>
-                            <option value="+44">🇬🇧 +44</option>
-                        </select>
+                <label class="field__label" for="login-identifier-input" data-login-identifier-label>رقم الهاتف أو البريد الإلكتروني أو اسم المستخدم</label>
+                <div class="wizard-contact login-contact" dir="ltr" data-login-contact>
+                    <button class="wizard-contact__switch" type="button" data-login-contact-switch aria-label="التبديل إلى البريد الإلكتروني" title="التبديل بين الهاتف والبريد">
+                        <svg data-login-contact-icon viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 18.5h4"/></svg>
+                    </button>
+
+                    <div class="wizard-contact__phone" data-login-phone-controls>
+                        <button class="country-picker" type="button" data-login-country-toggle aria-haspopup="listbox" aria-expanded="false">
+                            <span data-login-country-flag>🇪🇬</span>
+                            <span data-login-country-dial>+20</span>
+                            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg>
+                        </button>
+                        <input id="login-identifier-input" type="text" inputmode="tel" autocomplete="username"
+                               placeholder="رقم الهاتف أو البريد أو اسم المستخدم" autocapitalize="none" spellcheck="false"
+                               data-rules="required" data-login-visible-input>
+                        <div class="country-list" data-login-country-list role="listbox" aria-label="اختر الدولة" hidden>
+                            <?php foreach ($countries as $iso => $country) : ?>
+                                <button type="button" class="country-list__item" role="option" aria-selected="<?= $iso === $selectedCountry ? 'true' : 'false' ?>"
+                                        data-login-country="<?= $e($iso) ?>" data-dial="<?= $e($country['dial']) ?>" data-flag="<?= $e($country['flag']) ?>">
+                                    <span class="country-list__flag"><?= $e($country['flag']) ?></span>
+                                    <span class="country-list__name"><?= $e($country['name']) ?></span>
+                                    <span class="country-list__iso"><?= $e($iso) ?></span>
+                                    <span class="country-list__dial">+<?= $e($country['dial']) ?></span>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
-                    <input class="field__input login-identifier__input" id="login-identifier-input" type="text"
-                           inputmode="text" autocomplete="username" placeholder="البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم"
-                           autocapitalize="none" spellcheck="false" data-rules="required" data-login-visible-input>
                 </div>
                 <input type="hidden" id="identifier" name="identifier" value="">
                 <p class="field__error" aria-live="polite"></p>
