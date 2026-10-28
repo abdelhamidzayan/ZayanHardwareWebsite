@@ -9,7 +9,7 @@
             <?= $csrf() ?>
 
             <div class="field">
-                <label class="field__label" for="login-identifier-input" data-login-identifier-label>البريد أو رقم الهاتف أو اسم المستخدم</label>
+                <label class="field__label" for="login-identifier-input" data-login-identifier-label>البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم</label>
                 <div class="login-identifier">
                     <div class="login-identifier__phone" data-login-phone-controls>
                         <label class="sr-only" for="login-country-code">الدولة</label>
@@ -24,13 +24,9 @@
                             <option value="+44">🇬🇧 +44</option>
                         </select>
                     </div>
-                    <input class="field__input login-identifier__input" id="login-identifier-input" type="tel"
-                           inputmode="tel" autocomplete="tel-national" placeholder="البريد أو رقم الهاتف أو اسم المستخدم"
+                    <input class="field__input login-identifier__input" id="login-identifier-input" type="text"
+                           inputmode="text" autocomplete="username" placeholder="البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم"
                            autocapitalize="none" spellcheck="false" data-rules="required" data-login-visible-input>
-                    <button class="login-identifier__switch" type="button" data-login-switch
-                            aria-label="التبديل إلى البريد الإلكتروني" title="التبديل إلى البريد الإلكتروني">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-                    </button>
                 </div>
                 <input type="hidden" id="identifier" name="identifier" value="">
                 <p class="field__error" aria-live="polite"></p>
