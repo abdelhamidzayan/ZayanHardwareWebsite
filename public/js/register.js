@@ -384,7 +384,7 @@
     const rotated = candidates.slice(suggestionOffset % candidates.length).concat(candidates.slice(0, suggestionOffset % candidates.length));
     suggestedNames = await requestAvailable(rotated);
     suggestionBox.replaceChildren();
-    suggestedNames.slice(0, 4).forEach((name) => {
+    suggestedNames.slice(0, 3).forEach((name) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'wizard-suggestion';
