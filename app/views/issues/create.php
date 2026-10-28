@@ -50,16 +50,16 @@ $contentType = (string) ($_POST['content_type'] ?? 'help_request');
             </label>
         </div>
 
-        <label class="field">
-            <span class="field__label">التفاصيل</span>
-            <textarea class="field__input" name="description" minlength="10" maxlength="10000" rows="7" required placeholder="اكتب التفاصيل بوضوح، واذكر اللي جربته والنتيجة اللي ظهرت."><?= $e((string) ($_POST['description'] ?? '')) ?></textarea>
-        </label>
-
-        <label class="field">
-            <span class="field__label">صور أو مخططات (اختياري)</span>
-            <input class="field__input" type="file" name="attachments[]" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple>
-            <small class="muted">حتى 8 ملفات، بحد أقصى 8 ميجابايت لكل ملف. الصور وملفات PDF فقط.</small>
-        </label>
+        <?php
+        $editorFieldName = 'description';
+        $editorLabel = 'التفاصيل';
+        $editorPlaceholder = 'اكتب التفاصيل بوضوح، واذكر اللي جربته والنتيجة اللي ظهرت.';
+        $editorValue = (string) ($_POST['description'] ?? '');
+        $editorMaxLength = 10000;
+        $editorRows = 7;
+        $editorRequired = true;
+        require __DIR__ . '/../partials/content-editor.php';
+        ?>
 
         <div class="content-create__actions">
             <a class="btn btn--secondary" href="<?= $e($baseUrl) ?>/feed">إلغاء</a>
