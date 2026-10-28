@@ -393,3 +393,26 @@
     });
   });
 })();
+
+
+/* ---------- Progressive Web App: safe service-worker registration ---------- */
+(() => {
+  'use strict';
+  if (!('serviceWorker' in navigator)) return;
+
+  const appScript = document.querySelector('script[src*="/js/app.js"]');
+  if (!appScript) return;
+
+  const scriptUrl = new URL(appScript.src, window.location.href);
+  const basePath = scriptUrl.pathname.replace(/\\/js\\/app\\.js$/, '').replace(/\\/$/, '');
+  const workerUrl = `${basePath}/service-worker.js` || '/service-worker.js';
+  const scope = `${basePath}/` || '/';
+
+  // Service workers require HTTPS in production (localhost is allowed for development).
+  if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(workerUrl, { scope })
+      .catch((error) => console.warn('Zayan Hardware offline support could not start:', error));
+  }, { once: true });
+})();
