@@ -10,6 +10,7 @@ use App\Controllers\FeedController;
 use App\Controllers\HomeController;
 use App\Controllers\IssueController;
 use App\Controllers\NotificationController;
+use App\Controllers\PushController;
 use App\Controllers\WorkbenchController;
 use App\Controllers\MyPostsController;
 use App\Controllers\PageController;
@@ -43,6 +44,9 @@ return static function (Router $router): void {
     $router->get('/notifications', [NotificationController::class, 'index']);
     $router->post('/notifications/read-all', [NotificationController::class, 'readAll']);
     $router->post('/notifications/{id}/open', [NotificationController::class, 'open']);
+    $router->get('/push/public-key', [PushController::class, 'publicKey']);
+    $router->post('/push/subscribe', [PushController::class, 'subscribe']);
+    $router->post('/push/unsubscribe', [PushController::class, 'unsubscribe']);
 
     $router->get('/login', [AuthController::class, 'showLogin']);
     $router->post('/login', [AuthController::class, 'login']);
