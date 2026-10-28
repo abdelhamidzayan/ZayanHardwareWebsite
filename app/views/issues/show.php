@@ -176,7 +176,7 @@ foreach ($replies as $reply) {
                 <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/review-result" class="issue-form">
                     <?= $csrf() ?><input type="hidden" name="result_id" value="<?= (int) $issue['latest_result_id'] ?>">
                     <div class="issue-result__actions">
-                        <button class="btn btn--primary" name="decision" value="approve" type="submit">اعتماد النتيجة (+5 سمعة لصاحبها)</button>
+                        <button class="btn btn--primary" name="decision" value="approve" type="submit"><?= (int) $issue['latest_was_repaired'] === 1 ? 'اعتماد النتيجة (+5 سمعة)' : 'اعتماد النتيجة' ?></button>
                         <button class="btn btn--secondary" name="decision" value="reject" type="submit">رفض النتيجة</button>
                     </div>
                 </form>
