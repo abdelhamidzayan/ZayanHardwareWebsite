@@ -17,6 +17,14 @@ final class PageController extends Controller
         ], 200, 'guest');
     }
 
+    /** Public policies page for platform rules and privacy information. */
+    public function policies(): Response
+    {
+        return $this->view('pages/policies', [
+            'title' => 'سياسات الموقع',
+        ], 200, 'guest');
+    }
+
     /** Pages from the navigation that are not built yet. */
     public function soon(): Response
     {
