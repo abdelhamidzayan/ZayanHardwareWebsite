@@ -9,6 +9,7 @@
   const base = body.dataset.pwaBase || '';
   const storageKey = 'zayan-hardware:pwa-guide:v1:' + userId;
   const sessionKey = storageKey + ':later';
+  const laterCountKey = storageKey + ':later-count';
   let installPrompt = null;
   let dialog = null;
   let previousFocus = null;
@@ -41,6 +42,25 @@
   const snoozeGuide = () => {
     try { sessionStorage.setItem(sessionKey, '1'); } catch (_) {}
     closeGuide();
+  };
+
+  // Two explicit "Not now" choices permanently dismiss the guide on this browser.
+  const dismissLater = () => {
+    let count = 0;
+    try {
+      count = Number.parseInt(localStorage.getItem(laterCountKey) || '0', 10) || 0;
+      count += 1;
+      localStorage.setItem(laterCountKey, String(count));
+    } catch (_) {
+      try {
+        count = Number.parseInt(sessionStorage.getItem(laterCountKey) || '0', 10) || 0;
+        count += 1;
+        sessionStorage.setItem(laterCountKey, String(count));
+      } catch (__) {}
+    }
+
+    if (count >= 2) markSeen();
+    snoozeGuide();
   };
 
   const platformGuide = () => {
@@ -138,18 +158,13 @@
         </div>
         <span class="pwa-guide__eyebrow">تجربة أسرع للفنيين</span>
         <h2 id="pwa-guide-title">خلّي Zayan Hardware على جهازك</h2>
-        <p class="pwa-guide__intro" id="pwa-guide-description">ثبّت المنصة وافتحها بسهولة من الشاشة الرئيسية أو قائمة التطبيقات، من غير ما تدور على رابط الموقع كل مرة.</p>
-        <div class="pwa-guide__benefits">
-          <div><span class="pwa-guide__check" aria-hidden="true">✓</span><span>وصول أسرع للمنصة</span></div>
-          <div><span class="pwa-guide__check" aria-hidden="true">✓</span><span>واجهة مستقلة تشبه التطبيقات</span></div>
-          <div><span class="pwa-guide__check" aria-hidden="true">✓</span><span>تجربة مناسبة لجهازك</span></div>
-        </div>
+        <p class="pwa-guide__intro" id="pwa-guide-description">ثبّت المنصة وافتحها من أيقونة على جهازك بدل ما تدور على رابط الموقع كل مرة.</p>
         <div class="pwa-guide__instructions">
           <div class="pwa-guide__device"><span class="pwa-guide__device-dot"></span><strong>${guide.label}</strong></div>
           <p>${guide.text}</p>
           <ol>${guide.steps.map(step => '<li>' + step + '</li>').join('')}</ol>
         </div>
-        <p class="pwa-guide__note">التثبيت اختياري، وتقدر تكمل استخدام الموقع عادي حتى لو تخطّيت الخطوة دي.</p>
+        <p class="pwa-guide__note">التثبيت اختياري، والموقع هيشتغل عادي من غيره.</p>
         <div class="pwa-guide__actions">
           <button class="pwa-guide__install" type="button" data-pwa-install hidden>تثبيت التطبيق الآن</button>
           <button class="pwa-guide__done" type="button" data-pwa-done>مش دلوقتي</button>
@@ -160,7 +175,7 @@
     document.body.appendChild(dialog);
     document.addEventListener('keydown', onKeydown);
     dialog.querySelectorAll('[data-pwa-close]').forEach(button => button.addEventListener('click', dismissGuide));
-    dialog.querySelector('[data-pwa-done]').addEventListener('click', snoozeGuide);
+    dialog.querySelector('[data-pwa-done]').addEventListener('click', dismissLater);
     dialog.querySelector('[data-pwa-skip]').addEventListener('click', skipPermanently);
     dialog.addEventListener('click', event => {
       if (event.target === dialog) snoozeGuide();
