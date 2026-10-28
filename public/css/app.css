@@ -331,3 +331,47 @@
 .account-menu__submenu .account-menu__item:hover { color: var(--color-ink); }
 .account-menu__item:link,
 .account-menu__item:visited { text-decoration: none; }
+
+
+/* Account settings shortcuts — consistent with the help page cards. */
+.settings-list {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: 4.5rem;
+  padding: var(--space-4);
+  border: 0;
+  border-block-end: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  text-align: start;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+.settings-row:last-child { border-block-end: 0; }
+.settings-row:hover { background: var(--color-field); text-decoration: none; }
+.settings-row__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.settings-row__icon .icon { inline-size: 1.3rem; block-size: 1.3rem; }
+.settings-row__copy { display: grid; flex: 1; gap: .2rem; min-inline-size: 0; }
+.settings-row__copy strong { font-weight: 600; }
+.settings-row__copy span { color: var(--color-muted); font-size: var(--text-sm); }
+.settings-row__arrow { inline-size: 1.15rem; block-size: 1.15rem; color: var(--color-muted); }
