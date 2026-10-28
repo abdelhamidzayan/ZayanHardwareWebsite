@@ -188,11 +188,15 @@
     const digits = digitsOnly(trimmed);
     return digits.length >= 7 && /^[+0-9٠-٩۰-۹().\s-]+$/.test(trimmed);
   };
+  const looksLikePhone = (value) => {
+    const trimmed = value.trim();
+    return digitsOnly(trimmed).length > 0 && /^[+0-9٠-٩۰-۹().\s-]+$/.test(trimmed);
+  };
 
   const currentMode = () => {
     const value = visibleInput.value.trim();
     if (isEmail(value)) return 'email';
-    if (value && !isPhone(value)) return 'username';
+    if (value && !looksLikePhone(value)) return 'username';
     return manualMode;
   };
 
@@ -200,8 +204,9 @@
     const value = visibleInput.value.trim();
     const mode = currentMode();
     const phoneMode = mode === 'phone';
-    phoneControls.hidden = !phoneMode;
+    phoneControls.hidden = false;
     contact.classList.toggle('login-contact--email', mode === 'email');
+    contact.classList.toggle('login-contact--username', mode === 'username');
     visibleInput.inputMode = mode === 'email' ? 'email' : (phoneMode ? 'tel' : 'text');
     visibleInput.autocomplete = mode === 'email' ? 'email' : (phoneMode ? 'tel-national' : 'username');
     visibleInput.placeholder = mode === 'email' ? 'name@example.com' : (mode === 'username' ? 'اسم المستخدم' : 'رقم الهاتف');
