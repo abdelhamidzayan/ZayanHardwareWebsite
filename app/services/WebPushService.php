@@ -40,11 +40,11 @@ final class WebPushService
                     if (!$report->isSuccess() && $report->isSubscriptionExpired()) {
                         PushSubscription::deleteById((int) $row['id']);
                     }
-                } catch (\\Throwable $e) {
+                } catch (\Throwable $e) {
                     App::log('warning', 'Push delivery failed: ' . $e->getMessage());
                 }
             }
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             App::log('warning', 'Web Push initialization failed: ' . $e->getMessage());
         }
     }
