@@ -116,8 +116,8 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                         <input class="field__input field__input--ltr" id="username" name="username" type="text" autocomplete="username"
                                minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<?= $val('username') ?>"
                                data-username-input required>
+                        <p class="field__status" data-username-status aria-live="polite"><?= $err('username') ?></p>
                     </div>
-                    <p class="field__status" data-username-status aria-live="polite"><?= $err('username') ?></p>
                     <div class="wizard-suggestions" data-username-suggestions aria-label="اقتراحات أسماء المستخدمين"></div>
                 </div>
 
