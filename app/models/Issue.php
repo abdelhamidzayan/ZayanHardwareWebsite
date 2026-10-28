@@ -141,7 +141,7 @@ final class Issue extends Model
             );
             $stmt->execute([$issueId, $userId]);
             $status = $stmt->fetchColumn();
-            if ($status === false) throw new \\DomainException('not_owner_or_closed');
+            if ($status === false) throw new \DomainException('not_owner_or_closed');
 
             $pdo->prepare('INSERT INTO issue_diagnostic_updates (issue_id, user_id, body) VALUES (?, ?, ?)')
                 ->execute([$issueId, $userId, $body]);
@@ -152,7 +152,7 @@ final class Issue extends Model
                 $pdo->prepare('UPDATE issues SET updated_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$issueId]);
             }
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -229,14 +229,14 @@ final class Issue extends Model
         try {
             $stmt = $pdo->prepare("SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('open','in_progress') FOR UPDATE");
             $stmt->execute([$issueId, $ownerId]);
-            if (!$stmt->fetchColumn()) throw new \\DomainException('not_owner_or_closed');
+            if (!$stmt->fetchColumn()) throw new \DomainException('not_owner_or_closed');
             $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL');
             $stmt->execute([$replyId, $issueId]);
-            if (!$stmt->fetchColumn()) throw new \\DomainException('reply_not_in_issue');
+            if (!$stmt->fetchColumn()) throw new \DomainException('reply_not_in_issue');
             $pdo->prepare("UPDATE issues SET accepted_reply_id = ?, status = 'awaiting_confirmation', updated_at = UTC_TIMESTAMP() WHERE id = ?")
                 ->execute([$replyId, $issueId]);
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -255,11 +255,11 @@ final class Issue extends Model
             $stmt->execute([$issueId, $ownerId]);
             $acceptedReplyId = $stmt->fetchColumn();
             if ($acceptedReplyId === false || $acceptedReplyId === null) {
-                throw new \\DomainException('accepted_reply_required');
+                throw new \DomainException('accepted_reply_required');
             }
             $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL');
             $stmt->execute([(int) $acceptedReplyId, $issueId]);
-            if (!$stmt->fetchColumn()) throw new \\DomainException('accepted_reply_unavailable');
+            if (!$stmt->fetchColumn()) throw new \DomainException('accepted_reply_unavailable');
 
             $pdo->prepare(
                 'INSERT INTO issue_results (issue_id, submitted_by, was_repaired, final_cause, repair_action, helpful_reply_id)
@@ -272,7 +272,7 @@ final class Issue extends Model
                  WHERE id = ?"
             )->execute([$ownerId, $issueId]);
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -288,7 +288,7 @@ final class Issue extends Model
                  AND status = 'awaiting_confirmation' FOR UPDATE"
             );
             $stmt->execute([$issueId, $ownerId]);
-            if (!$stmt->fetchColumn()) throw new \\DomainException('not_awaiting_confirmation');
+            if (!$stmt->fetchColumn()) throw new \DomainException('not_awaiting_confirmation');
 
             if ($reason !== '') {
                 $pdo->prepare('INSERT INTO issue_diagnostic_updates (issue_id, user_id, body) VALUES (?, ?, ?)')
@@ -300,7 +300,7 @@ final class Issue extends Model
                     updated_at = UTC_TIMESTAMP() WHERE id = ?"
             )->execute([$issueId]);
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -311,7 +311,7 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('SELECT id, submitted_by, review_status FROM issue_results WHERE id = ? AND issue_id = ? FOR UPDATE');
+            $stmt = $pdo->prepare('SELECT id, submitted_by, was_repaired, review_status FROM issue_results WHERE id = ? AND issue_id = ? FOR UPDATE');
             $stmt->execute([$resultId, $issueId]);
             $result = $stmt->fetch();
             if (!$result || $result['review_status'] !== 'pending') {
@@ -320,7 +320,7 @@ final class Issue extends Model
             $status = $approve ? 'approved' : 'rejected';
             $pdo->prepare('UPDATE issue_results SET review_status = ?, reviewed_by = ?, reviewed_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$status, $reviewerId, $resultId]);
-            if ($approve) {
+            if ($approve && (int) $result['was_repaired'] === 1) {
                 $pdo->prepare(
                     "INSERT IGNORE INTO reputation_events (user_id, event_key, points, reason) VALUES (?, ?, 5, 'Approved helpful issue result')"
                 )->execute([(int) $result['submitted_by'], 'issue_result:' . $resultId . ':approved']);
@@ -361,18 +361,18 @@ final class Issue extends Model
     public static function closeWithResult(int $issueId, int $ownerId, bool $repaired, string $cause, string $action, ?int $helpfulReplyId): void
     {
         if ($repaired) {
-            throw new \\DomainException('repair_requires_accepted_reply_and_confirmation');
+            throw new \DomainException('repair_requires_accepted_reply_and_confirmation');
         }
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare("SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('open','in_progress') FOR UPDATE");
             $stmt->execute([$issueId, $ownerId]);
-            if (!$stmt->fetchColumn()) throw new \\DomainException('not_owner_or_closed');
+            if (!$stmt->fetchColumn()) throw new \DomainException('not_owner_or_closed');
             if ($helpfulReplyId !== null) {
                 $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL');
                 $stmt->execute([$helpfulReplyId, $issueId]);
-                if (!$stmt->fetchColumn()) throw new \\DomainException('reply_not_in_issue');
+                if (!$stmt->fetchColumn()) throw new \DomainException('reply_not_in_issue');
             }
             $pdo->prepare(
                 'INSERT INTO issue_results (issue_id, submitted_by, was_repaired, final_cause, repair_action, helpful_reply_id)
@@ -381,7 +381,7 @@ final class Issue extends Model
             $pdo->prepare("UPDATE issues SET status = 'closed_unresolved', closed_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = ?")
                 ->execute([$issueId]);
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
