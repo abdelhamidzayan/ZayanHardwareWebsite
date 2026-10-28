@@ -303,3 +303,31 @@
   .account-menu__name { display: none; }
   .account-menu__chevron { inline-size: .85rem; block-size: .85rem; }
 }
+
+
+/* Account menu: expandable help submenu with the same neutral link treatment. */
+.account-menu__group { min-inline-size: 0; }
+.account-menu__group > summary { list-style: none; }
+.account-menu__group > summary::-webkit-details-marker { display: none; }
+.account-menu__group-trigger { justify-content: flex-start; }
+.account-menu__group-trigger > span { flex: 1; }
+.account-menu__group-arrow { inline-size: 1rem !important; block-size: 1rem !important; transition: transform .18s ease; }
+.account-menu__group[open] > .account-menu__group-trigger .account-menu__group-arrow { transform: rotate(90deg); }
+.account-menu__submenu {
+  display: grid;
+  gap: .15rem;
+  margin: 0 var(--space-2) var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid var(--color-border);
+}
+.account-menu__submenu .account-menu__item {
+  min-block-size: 2.55rem;
+  padding-inline: var(--space-3);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  outline-offset: -2px;
+}
+.account-menu__submenu .account-menu__item:hover { color: var(--color-ink); }
+.account-menu__item:link,
+.account-menu__item:visited { text-decoration: none; }
