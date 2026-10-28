@@ -33,6 +33,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
 
         <form class="auth__form wizard__form" method="post" action="<?= $e($baseUrl) ?>/register" id="registration-wizard" data-register-wizard data-initial-step="<?= $activeStep ?>" novalidate>
             <?= $csrf() ?>
+            <input type="hidden" name="wizard_action" value="skip" data-profile-action>
             <input type="hidden" name="contact_type" value="<?= $e($contactType) ?>" data-contact-type>
             <input type="hidden" name="country" value="<?= $e($selectedCountry) ?>" data-country-value>
 
@@ -183,7 +184,6 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
 
             <section class="wizard__step" data-step="3" aria-labelledby="wizard-profile-title">
                 <h2 class="wizard__heading" id="wizard-profile-title">ملفك الشخصي</h2>
-                <span class="wizard-coming-soon">قريبًا</span>
                 <div class="wizard-profile-placeholder">
                     <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
                     <strong>صورتك الشخصية</strong>
@@ -191,17 +191,16 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                 </div>
                 <div class="field">
                     <label class="field__label" for="profile_bio">نبذة عنك</label>
-                    <textarea class="field__input" id="profile_bio" rows="3" disabled placeholder="اكتب نبذة قصيرة عن خبرتك"></textarea>
+                    <textarea class="field__input" id="profile_bio" name="profile_bio" rows="3" maxlength="1000" placeholder="اكتب نبذة قصيرة عن خبرتك" data-profile-field><?= $val('profile_bio') ?></textarea>
                 </div>
                 <div class="field">
                     <label class="field__label" for="workshop_name">اسم الورشة</label>
-                    <input class="field__input" id="workshop_name" type="text" disabled placeholder="اسم ورشتك">
+                    <input class="field__input" id="workshop_name" name="workshop_name" type="text" maxlength="100" value="<?= $val('workshop_name') ?>" placeholder="اسم ورشتك" data-profile-field>
                 </div>
                 <p class="field__hint">يمكنك تخطي هذه الخطوة وإكمالها لاحقًا من ملفك الشخصي.</p>
                 <div class="wizard__actions">
                     <button class="btn btn--secondary" type="button" data-back>رجوع</button>
-                    <button class="btn btn--secondary" type="submit">تخطي</button>
-                    <button class="btn btn--primary" type="submit">إنهاء</button>
+                    <button class="btn btn--primary" type="submit" data-profile-submit>تخطي</button>
                 </div>
             </section>
         </form>
