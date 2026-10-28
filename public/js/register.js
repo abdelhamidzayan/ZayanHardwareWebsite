@@ -30,6 +30,9 @@
   const suggestionBox = form.querySelector('[data-username-suggestions]');
   const boardExperienceWrap = form.querySelector('[data-board-experience]');
   const boardExperience = form.querySelector('[data-board-select]');
+  const profileFields = [...form.querySelectorAll('[data-profile-field]')];
+  const profileSubmit = form.querySelector('[data-profile-submit]');
+  const profileAction = form.querySelector('[data-profile-action]');
   const endpoint = form.action.replace(/\/register\/?$/, '/register/usernames');
   let activeStep = Math.min(3, Math.max(1, initialStep));
   let checkTimer = null;
@@ -413,6 +416,18 @@
     }
   });
 
+  const updateProfileSubmit = () => {
+    const hasProfileData = profileFields.some((field) => field.value.trim() !== '');
+    profileSubmit.textContent = hasProfileData ? 'إنهاء' : 'تخطي';
+    profileSubmit.value = hasProfileData ? 'finish' : 'skip';
+    profileAction.value = hasProfileData ? 'finish' : 'skip';
+  };
+
+  profileFields.forEach((field) => {
+    field.addEventListener('input', updateProfileSubmit);
+    field.addEventListener('change', updateProfileSubmit);
+  });
+
   form.addEventListener('submit', (event) => {
     if (activeStep !== 3) {
       event.preventDefault();
@@ -432,6 +447,7 @@
   });
 
   showContactMode(contactType.value);
+  updateProfileSubmit();
   setStep(activeStep);
   if (activeStep === 2) {
     renderSuggestions(false);
