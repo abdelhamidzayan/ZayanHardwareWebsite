@@ -48,6 +48,7 @@ final class ProfileController extends Controller
                 'level_verified' => (int) ($profile['level_verified'] ?? 0),
                 'experience' => $isBoard ? (self::EXPERIENCE[$profile['board_experience'] ?? ''] ?? '') : '',
                 'workshop' => (string) ($profile['workshop_name'] ?? ''),
+                'biography' => (string) ($profile['biography'] ?? ''),
                 'joined' => substr((string) $profile['created_at'], 0, 10),
                 'is_owner' => $isOwner,
             ],
