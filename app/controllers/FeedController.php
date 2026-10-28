@@ -22,6 +22,11 @@ final class FeedController extends Controller
             $issue['initials'] = $name !== '' ? mb_substr($name, 0, 2, 'UTF-8') : '؟';
             $issue['expert'] = ($issue['tech_level'] ?? '') === 'board'
                 || in_array($issue['role'] ?? '', ['admin', 'moderator'], true);
+            $issue['type_label'] = match ($issue['content_type'] ?? 'help_request') {
+                'technical_post' => 'معلومة فنية',
+                'discussion' => 'نقاش عام',
+                default => 'طلب مساعدة',
+            };
             $issue['role'] = match ($issue['role'] ?? '') {
                 'admin' => 'إدارة المنصة',
                 'moderator' => 'مشرف فني',
