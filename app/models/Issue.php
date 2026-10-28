@@ -76,6 +76,49 @@ final class Issue extends Model
         $stmt->execute([$issueId, $userId, $filePath, $mimeType, $fileSize]);
     }
 
+    public static function workbench(int $userId): array
+    {
+        $stmt = self::db()->prepare(
+            "SELECT i.id, i.title, i.device_model, i.category, i.status, i.created_at, i.updated_at,
+                    i.accepted_reply_id,
+                    (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
+                    (SELECT COUNT(*) FROM issue_diagnostic_updates d WHERE d.issue_id = i.id) AS diagnostic_count,
+                    (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_review
+             FROM issues i
+             WHERE i.user_id = ? AND i.content_type = 'help_request'
+             ORDER BY CASE WHEN i.status IN ('open','in_progress','awaiting_confirmation') THEN 0 ELSE 1 END,
+                      i.updated_at DESC, i.id DESC
+             LIMIT 100"
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
+    public static function myPosts(int $userId, string $type = '', string $status = ''): array
+    {
+        $allowedTypes = ['help_request', 'technical_post', 'discussion'];
+        $allowedStatuses = ['open', 'in_progress', 'awaiting_confirmation', 'resolved', 'closed_unresolved'];
+        $where = ['i.user_id = ?'];
+        $params = [$userId];
+        if (in_array($type, $allowedTypes, true)) {
+            $where[] = 'i.content_type = ?';
+            $params[] = $type;
+        }
+        if (in_array($status, $allowedStatuses, true)) {
+            $where[] = 'i.status = ?';
+            $params[] = $status;
+        }
+        $sql = 'SELECT i.id, i.title, i.content_type, i.device_model, i.category, i.status,
+                       i.created_at, i.updated_at,
+                       (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
+                       (SELECT COUNT(*) FROM issue_diagnostic_updates d WHERE d.issue_id = i.id) AS diagnostic_count
+                FROM issues i WHERE ' . implode(' AND ', $where) . '
+                ORDER BY i.updated_at DESC, i.id DESC LIMIT 100';
+        $stmt = self::db()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
     public static function replies(int $issueId, string $sort): array
     {
         $order = match ($sort) {
