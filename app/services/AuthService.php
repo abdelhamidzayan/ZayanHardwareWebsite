@@ -42,6 +42,8 @@ final class AuthService
         $deviceFocus = self::str($input, 'device_focus');
         $techLevel = self::str($input, 'tech_level');
         $boardExperience = self::str($input, 'board_experience');
+        $biography = trim(self::str($input, 'profile_bio'));
+        $workshopName = trim(self::str($input, 'workshop_name'));
         $reserved = ['admin', 'administrator', 'moderator', 'support', 'root', 'system', 'staff', 'zayan', 'hardware', 'hardwaretech'];
         $errors = [];
 
@@ -78,6 +80,8 @@ final class AuthService
             $errors['board_experience'] = 'حدد سنوات الخبرة';
         }
         if ($techLevel !== 'board') $boardExperience = '';
+        if (mb_strlen($biography) > 1000) $errors['profile_bio'] = 'النبذة يجب ألا تتجاوز 1000 حرف';
+        if (mb_strlen($workshopName) > 100) $errors['workshop_name'] = 'اسم الورشة يجب ألا يتجاوز 100 حرف';
 
         if ($errors) return ['errors' => $errors, 'userId' => null];
 
@@ -92,6 +96,8 @@ final class AuthService
                 'device_focus' => $deviceFocus,
                 'tech_level' => $techLevel,
                 'board_experience' => $boardExperience !== '' ? $boardExperience : null,
+                'biography' => $biography !== '' ? $biography : null,
+                'workshop_name' => $workshopName !== '' ? $workshopName : null,
             ]);
         } catch (\PDOException $e) {
             if ((int) ($e->errorInfo[1] ?? 0) === 1062) {
