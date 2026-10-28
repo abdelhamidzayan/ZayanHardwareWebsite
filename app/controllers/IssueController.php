@@ -395,7 +395,7 @@ final class IssueController extends Controller
                     'reply-to-comment:' . $replyId
                 );
                 $issue = Issue::find($id);
-                if ($issue) NotificationService::notify(
+                if ($issue && (int) $issue['user_id'] !== (int) $parentAuthorId) NotificationService::notify(
                     (int) $issue['user_id'], (int) $user['id'], $id, $replyId, 'new_reply',
                     'رد جديد على طلب المساعدة', $resolvedBody, '/issues/' . $id . '#discussion',
                     'new-reply:' . $replyId
