@@ -9,6 +9,8 @@ use App\Controllers\AdminSkillTestController;
 use App\Controllers\FeedController;
 use App\Controllers\HomeController;
 use App\Controllers\IssueController;
+use App\Controllers\WorkbenchController;
+use App\Controllers\MyPostsController;
 use App\Controllers\PageController;
 use App\Controllers\ProfileController;
 use App\Controllers\SkillTestController;
