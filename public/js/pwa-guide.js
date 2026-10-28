@@ -178,22 +178,17 @@
       if (!installPrompt) return;
       const promptEvent = installPrompt;
       installPrompt = null;
+      let accepted = false;
       installButton.disabled = true;
       installButton.textContent = 'جاري فتح التثبيت…';
       try {
         await promptEvent.prompt();
         const choice = await promptEvent.userChoice;
-        if (choice?.outcome === 'accepted') markSeen();
+        accepted = choice?.outcome === 'accepted';
       } catch (_) {
         // The manual instructions remain available if the browser prompt fails.
       } finally {
-        if (installButton.isConnected) {
-          installButton.disabled = false;
-          installButton.textContent = 'جرّب التثبيت مرة أخرى';
-          installButton.hidden = true;
-          doneButton.textContent = 'تمام، فهمت';
-        }
-        if (typeof choice !== 'undefined' && choice?.outcome === 'accepted') {
+        if (accepted) {
           markSeen();
           closeGuide();
         } else {
@@ -224,7 +219,7 @@
     closeGuide();
   });
 
-  if (!getSeen() && !isInstalled()) {
+  if (!getSeen() && !getSnoozed() && !isInstalled()) {
     window.setTimeout(openGuide, 900);
   }
 })();
