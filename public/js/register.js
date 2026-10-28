@@ -41,6 +41,67 @@
   let suggestedNames = [];
   let usernameTouched = false;
   let autoSuggestedUsername = '';
+  const draftStorageKey = 'zayan-hardware:register-draft:v1';
+  const draftMaxAge = 2 * 60 * 60 * 1000;
+  let restoringDraft = false;
+
+  const readDraft = () => {
+    try {
+      const raw = sessionStorage.getItem(draftStorageKey);
+      if (!raw) return null;
+      const draft = JSON.parse(raw);
+      if (!draft || Date.now() - Number(draft.savedAt || 0) > draftMaxAge) {
+        sessionStorage.removeItem(draftStorageKey);
+        return null;
+      }
+      return draft;
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const restoreDraft = () => {
+    const draft = readDraft();
+    if (!draft || !Array.isArray(draft.fields)) return;
+    restoringDraft = true;
+    draft.fields.forEach((saved, index) => {
+      const field = form.elements[index];
+      if (!field || field.name !== saved.name || field.type !== saved.type) return;
+      if (field.type === 'password' || field.name === '_token' || field.name === 'wizard_action') return;
+      if (field.type === 'checkbox' || field.type === 'radio') field.checked = Boolean(saved.checked);
+      else if (typeof saved.value === 'string') field.value = saved.value;
+    });
+    if (Number.isInteger(draft.activeStep)) activeStep = Math.min(3, Math.max(1, draft.activeStep));
+    usernameTouched = Boolean(draft.usernameTouched);
+    autoSuggestedUsername = typeof draft.autoSuggestedUsername === 'string' ? draft.autoSuggestedUsername : '';
+    restoringDraft = false;
+  };
+
+  const saveDraft = () => {
+    if (restoringDraft) return;
+    try {
+      const fields = Array.from(form.elements).map((field) => ({
+        name: field.name || '',
+        type: field.type || '',
+        value: field.type === 'password' || field.name === '_token' || field.name === 'wizard_action'
+          ? ''
+          : (field.type === 'checkbox' || field.type === 'radio' ? '' : String(field.value ?? '')),
+        checked: field.type === 'checkbox' || field.type === 'radio' ? Boolean(field.checked) : false,
+      }));
+      sessionStorage.setItem(draftStorageKey, JSON.stringify({
+        savedAt: Date.now(),
+        activeStep,
+        usernameTouched,
+        autoSuggestedUsername,
+        fields,
+      }));
+    } catch (_) {
+      // If storage is unavailable, the form remains usable normally.
+    }
+  };
+
+  restoreDraft();
+
   const showIsoFlags = /Win/i.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
   if (showIsoFlags) {
     countryFlag.textContent = countryValue.value;
@@ -69,6 +130,7 @@
 
   const setStep = (step) => {
     activeStep = step;
+    saveDraft();
     root.classList.add('wizard--on');
     steps.forEach((section) => {
       const current = Number(section.dataset.step) === step;
@@ -120,6 +182,14 @@
     });
     closeCountryList();
     phoneInput.focus();
+  };
+
+  const syncCountryControl = () => {
+    const selected = countryList.querySelector('[data-country="' + CSS.escape(countryValue.value) + '"]');
+    if (!selected) return;
+    countryFlag.textContent = showIsoFlags ? selected.dataset.country : (selected.dataset.flag || selected.dataset.country);
+    countryDial.textContent = '+' + selected.dataset.dial;
+    countryList.querySelectorAll('[data-country]').forEach((item) => item.setAttribute('aria-selected', item === selected ? 'true' : 'false'));
   };
 
   countryToggle.addEventListener('click', () => {
@@ -482,12 +552,17 @@
       event.preventDefault();
       setStep(2);
       username.focus();
+      return;
     }
+    try { sessionStorage.removeItem(draftStorageKey); } catch (_) {}
   });
 
   showContactMode(contactType.value);
+  syncCountryControl();
   updateProfileSubmit();
   setStep(activeStep);
+  form.addEventListener('input', saveDraft);
+  form.addEventListener('change', saveDraft);
   if (activeStep === 2) {
     renderSuggestions(false);
     if (username.value.trim()) checkUsername();
