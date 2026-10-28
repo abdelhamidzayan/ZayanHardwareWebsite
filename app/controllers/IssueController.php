@@ -202,12 +202,22 @@ final class IssueController extends Controller
             return $this->fail('/issues/' . $id, 'تحديث التشخيص يجب أن يكون بين 3 و5000 حرف.');
         }
         try {
+            $uploads = ContentEditorService::validateUploads($_FILES['attachments'] ?? null, $this->request->input('attachment_tokens', []));
+        } catch (\DomainException $e) {
+            return $this->fail('/issues/' . $id, 'راجع المرفقات: الحد الأقصى 8 ملفات صور أو PDF، كل ملف حتى 8 ميجابايت.');
+        }
+        try {
             $updateId = Issue::addDiagnosticUpdate($id, (int) $user['id'], $body);
+            $stored = ContentEditorService::storeUploads($id, (int) $user['id'], $uploads, $body);
+            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $stored['map']);
+            Issue::updateDiagnosticUpdateContent($updateId, (int) $user['id'], $resolvedBody);
+            ContentEditorService::pruneUnusedInlineMedia($id);
             NotificationService::notifyIssueParticipants(
                 $id, (int) $user['id'], 'diagnostic_update', 'تحديث جديد للتشخيص',
-                $body, 'diagnostic-update:' . $updateId
+                $resolvedBody, 'diagnostic-update:' . $updateId
             );
-            $this->flash('success', 'تمت إضافة تحديث التشخيص مع حفظ توقيته.');
+            $this->flash((int) $stored['failed'] > 0 ? 'info' : 'success',
+                (int) $stored['failed'] > 0 ? 'تمت إضافة التحديث، لكن تعذر حفظ بعض المرفقات.' : 'تمت إضافة تحديث التشخيص مع حفظ توقيته.');
         } catch (\DomainException) {
             $this->flash('error', 'تحديث التشخيص متاح لصاحب طلب المساعدة فقط ما دام الطلب غير مغلق.');
         }
@@ -269,8 +279,18 @@ final class IssueController extends Controller
             return $this->fail('/issues/' . $id, 'راجع نص التعليق وتأكد أنه تابع لنفس المنشور.');
         }
         try {
+            $uploads = ContentEditorService::validateUploads($_FILES['attachments'] ?? null, $this->request->input('attachment_tokens', []));
+        } catch (\DomainException) {
+            return $this->fail('/issues/' . $id, 'راجع المرفقات وحاول مرة أخرى.');
+        }
+        try {
             Issue::editReply((int) $parsedReplyId, (int) $user['id'], $body);
-            $this->flash('success', 'تم تعديل تعليقك وحفظ النسخة السابقة في السجل.');
+            $stored = ContentEditorService::storeUploads($id, (int) $user['id'], $uploads, $body);
+            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $stored['map']);
+            Issue::updateReplyContent((int) $parsedReplyId, (int) $user['id'], $resolvedBody);
+            ContentEditorService::pruneUnusedInlineMedia($id);
+            $this->flash((int) $stored['failed'] > 0 ? 'info' : 'success',
+                (int) $stored['failed'] > 0 ? 'تم تعديل التعليق، لكن تعذر حفظ بعض المرفقات.' : 'تم تعديل تعليقك وحفظ النسخة السابقة في السجل.');
         } catch (\DomainException) {
             $this->flash('error', 'يمكنك تعديل تعليقك فقط أثناء استمرار النقاش.');
         }
@@ -313,89 +333,41 @@ final class IssueController extends Controller
             return $this->fail('/issues/' . $id, 'التعليق الذي تحاول الرد عليه غير صحيح.');
         }
         try {
+            $uploads = ContentEditorService::validateUploads($_FILES['attachments'] ?? null, $this->request->input('attachment_tokens', []));
+        } catch (\DomainException) {
+            return $this->fail('/issues/' . $id, 'راجع المرفقات وحاول مرة أخرى.');
+        }
+        try {
             $parentAuthorId = $parentReplyId ? Issue::replyAuthor((int) $parentReplyId) : null;
             $replyId = Issue::addReply($id, (int) $user['id'], $body, $parentReplyId ? (int) $parentReplyId : null);
+            $stored = ContentEditorService::storeUploads($id, (int) $user['id'], $uploads, $body);
+            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $stored['map']);
+            Issue::updateReplyContent($replyId, (int) $user['id'], $resolvedBody);
+            ContentEditorService::pruneUnusedInlineMedia($id);
+
             if ($parentReplyId && $parentAuthorId) {
                 NotificationService::notify(
                     $parentAuthorId, (int) $user['id'], $id, $replyId, 'reply_to_comment',
-                    'رد جديد على تعليقك', $body,
+                    'رد جديد على تعليقك', $resolvedBody,
                     '/issues/' . $id . '#reply-' . (int) $parentReplyId,
                     'reply-to-comment:' . $replyId
                 );
                 $issue = Issue::find($id);
                 if ($issue) NotificationService::notify(
                     (int) $issue['user_id'], (int) $user['id'], $id, $replyId, 'new_reply',
-                    'رد جديد على طلب المساعدة', $body, '/issues/' . $id . '#discussion',
+                    'رد جديد على طلب المساعدة', $resolvedBody, '/issues/' . $id . '#discussion',
                     'new-reply:' . $replyId
                 );
             } else {
                 NotificationService::notifyIssueParticipants(
                     $id, (int) $user['id'], 'new_reply', 'رد جديد على طلب المساعدة',
-                    $body, 'new-reply:' . $replyId
+                    $resolvedBody, 'new-reply:' . $replyId
                 );
             }
-            $this->flash('success', 'تم نشر ردك الفني.');
+            $this->flash((int) $stored['failed'] > 0 ? 'info' : 'success',
+                (int) $stored['failed'] > 0 ? 'تم نشر الرد، لكن تعذر حفظ بعض المرفقات.' : 'تم نشر ردك الفني.');
         } catch (\DomainException) {
             $this->flash('error', 'النقاش مغلق أو لم يعد متاحًا للرد.');
-        }
-        return $this->redirect('/issues/' . $id . '#discussion');
-    }
-
-    public function edit(int $id): Response
-    {
-        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
-        $user = AuthService::user();
-        if (!$user) return $this->redirect('/login');
-        $title = trim($this->string('title'));
-        $description = trim($this->string('description'));
-        $measurements = trim($this->string('measurements'));
-        if (mb_strlen($title) < 10 || mb_strlen($title) > 180 || mb_strlen($description) < 20 || mb_strlen($description) > 10000 || mb_strlen($measurements) > 5000) {
-            return $this->fail('/issues/' . $id, 'راجع العنوان والوصف والقياسات. يوجد حقل خارج الحدود المسموحة.');
-        }
-        try {
-            Issue::edit($id, (int) $user['id'], $title, $description, $measurements);
-            $this->flash('success', 'تم تحديث المنشور وحفظ النسخة السابقة في سجل التعديلات.');
-        } catch (\DomainException) {
-            $this->flash('error', 'لا تملك صلاحية تعديل هذا المنشور أو أن النقاش مغلق.');
-        }
-        return $this->redirect('/issues/' . $id);
-    }
-
-    public function vote(int $id): Response
-    {
-        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
-        $user = AuthService::user();
-        if (!$user) return $this->redirect('/login');
-        $replyId = filter_var($this->request->input('reply_id'), FILTER_VALIDATE_INT);
-        if (!$replyId || $replyId < 1) return $this->fail('/issues/' . $id, 'الرد غير صحيح.');
-        try {
-            $issue = Issue::find($id);
-            if (!$issue) return $this->notFound();
-            Issue::vote((int) $replyId, (int) $user['id']);
-            $this->flash('success', 'تم تحديث تقييم الإفادة.');
-        } catch (\DomainException) {
-            $this->flash('error', 'لا يمكنك تقييم ردك أو أن الرد غير متاح.');
-        }
-        return $this->redirect('/issues/' . $id . '#discussion');
-    }
-
-    public function accept(int $id): Response
-    {
-        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
-        $user = AuthService::user();
-        if (!$user) return $this->redirect('/login');
-        $replyId = filter_var($this->request->input('reply_id'), FILTER_VALIDATE_INT);
-        if (!$replyId || $replyId < 1) return $this->fail('/issues/' . $id, 'الرد غير صحيح.');
-        try {
-            Issue::accept($id, (int) $replyId, (int) $user['id']);
-            NotificationService::notifyIssueParticipants(
-                $id, (int) $user['id'], 'accepted_solution', 'تم اعتماد ردك كحل',
-                'اعتمد صاحب طلب المساعدة أحد الردود كحل مقترح، والطلب بانتظار تأكيد نجاح الإصلاح.',
-                'accepted-solution:' . (int) $replyId
-            );
-            $this->flash('success', 'تم اعتماد الرد. الطلب الآن بانتظار تأكيد نجاح الإصلاح.');
-        } catch (\DomainException) {
-            $this->flash('error', 'اعتماد الحل متاح لصاحب المنشور فقط، ويجب أن يكون الرد تابعًا لنفس العطل.');
         }
         return $this->redirect('/issues/' . $id . '#discussion');
     }
