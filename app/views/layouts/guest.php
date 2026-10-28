@@ -12,7 +12,7 @@ $authPage = $authPage ?? false;
 <head>
     <?php require __DIR__ . '/head.php'; ?>
 </head>
-<body class="guest">
+<body class="guest" data-pwa-base="<?= $e($baseUrl) ?>">
 
 <header class="guest-header">
     <div class="guest-header__inner">
