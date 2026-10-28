@@ -386,6 +386,8 @@ final class IssueController extends Controller
             $resolvedBody = ContentEditorService::resolveInlineTokens($body, $stored['map']);
             Issue::updateReplyContent($replyId, (int) $user['id'], $resolvedBody);
             ContentEditorService::pruneUnusedInlineMedia($id);
+            $issue = Issue::find($id);
+            $replyTitle = $issue && $issue['content_type'] === 'help_request' ? 'رد جديد على طلب المساعدة' : 'تعليق جديد على مشاركتك';
 
             if ($parentReplyId && $parentAuthorId) {
                 NotificationService::notify(
@@ -394,15 +396,14 @@ final class IssueController extends Controller
                     '/issues/' . $id . '#reply-' . (int) $parentReplyId,
                     'reply-to-comment:' . $replyId
                 );
-                $issue = Issue::find($id);
                 if ($issue && (int) $issue['user_id'] !== (int) $parentAuthorId) NotificationService::notify(
                     (int) $issue['user_id'], (int) $user['id'], $id, $replyId, 'new_reply',
-                    'رد جديد على طلب المساعدة', $resolvedBody, '/issues/' . $id . '#discussion',
+                    $replyTitle, $resolvedBody, '/issues/' . $id . '#discussion',
                     'new-reply:' . $replyId
                 );
             } else {
                 NotificationService::notifyIssueParticipants(
-                    $id, (int) $user['id'], 'new_reply', 'رد جديد على طلب المساعدة',
+                    $id, (int) $user['id'], 'new_reply', $replyTitle,
                     $resolvedBody, 'new-reply:' . $replyId
                 );
             }
