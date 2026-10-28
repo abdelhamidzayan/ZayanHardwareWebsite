@@ -335,10 +335,10 @@
       return false;
     }
 
-    const focus = form.querySelector('input[name="device_focus"]:checked');
-    if (!focus) {
-      setFieldError('device_focus', 'اختر مجال تخصصك');
-      form.querySelector('input[name="device_focus"]')?.focus();
+    const focuses = form.querySelectorAll('input[name="device_focus[]"]:checked');
+    if (!focuses.length) {
+      setFieldError('device_focus', 'اختر مجال تخصصك، ويمكنك اختيار المجالين معًا');
+      form.querySelector('input[name="device_focus[]"]')?.focus();
       return false;
     }
     setFieldError('device_focus', '');
