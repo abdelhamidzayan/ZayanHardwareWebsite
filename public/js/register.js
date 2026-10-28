@@ -78,7 +78,11 @@
       if (field.type === 'checkbox' || field.type === 'radio') field.checked = Boolean(saved.checked);
       else if (typeof saved.value === 'string') field.value = saved.value;
     });
-    if (Number.isInteger(draft.activeStep)) activeStep = Math.min(3, Math.max(1, draft.activeStep));
+    const hasServerErrors = Array.from(form.querySelectorAll('[data-error-for]'))
+      .some((output) => output.textContent.trim() !== '');
+    if (!hasServerErrors && Number.isInteger(draft.activeStep)) {
+      activeStep = Math.min(3, Math.max(1, draft.activeStep));
+    }
     usernameTouched = Boolean(draft.usernameTouched);
     autoSuggestedUsername = typeof draft.autoSuggestedUsername === 'string' ? draft.autoSuggestedUsername : '';
     restoringDraft = false;
