@@ -1,4 +1,7 @@
 <?php
+$contentType = $issue['content_type'] ?? 'help_request';
+$isHelpRequest = $contentType === 'help_request';
+$typeLabel = match ($contentType) { 'technical_post' => 'معلومة فنية', 'discussion' => 'نقاش عام', default => 'طلب مساعدة' };
 $resolved = $issue['status'] === 'resolved';
 $closed = $issue['status'] !== 'open';
 $canReply = $currentUser !== null && !$closed;
@@ -10,8 +13,8 @@ $specializations = [
 ?>
 <div class="page-head issue-page-head">
     <a class="issue-back" href="<?= $e($baseUrl) ?>/feed">← الرجوع للمنشورات</a>
-    <span class="issue-state <?= $resolved ? 'issue-state--resolved' : ($closed ? 'issue-state--closed' : '') ?>">
-        <?= $resolved ? 'تم الحل' : ($closed ? 'أُغلق دون حل' : 'نقاش مفتوح') ?>
+    <span class="issue-state <?= $isHelpRequest && $resolved ? 'issue-state--resolved' : ($isHelpRequest && $closed ? 'issue-state--closed' : '') ?>">
+        <?= $isHelpRequest ? ($resolved ? 'تم الحل' : ($closed ? 'أُغلق دون حل' : 'نقاش مفتوح')) : $e($typeLabel) ?>
     </span>
 </div>
 
@@ -25,10 +28,14 @@ $specializations = [
             </div>
             <?php if (in_array($issue['author_role'], ['admin', 'moderator'], true)) : ?><span class="badge">إشراف المنصة</span><?php endif; ?>
         </div>
-        <div class="issue-tags">
-            <span class="tag tech"><?= $e($issue['device_model']) ?></span>
-            <span class="tag"><?= $e($specializations[$issue['category']] ?? $issue['category']) ?></span>
-        </div>
+        <?php if ($isHelpRequest) : ?>
+            <div class="issue-tags">
+                <?php if (!empty($issue['device_model'])) : ?><span class="tag tech"><?= $e($issue['device_model']) ?></span><?php endif; ?>
+                <?php if (!empty($issue['category'])) : ?><span class="tag"><?= $e($specializations[$issue['category']] ?? $issue['category']) ?></span><?php endif; ?>
+            </div>
+        <?php else : ?>
+            <div class="issue-tags"><span class="tag"><?= $e($typeLabel) ?></span></div>
+        <?php endif; ?>
         <h1 class="issue-title" dir="auto"><?= $e($issue['title']) ?></h1>
         <p class="issue-description" dir="auto"><?= nl2br($e($issue['description'])) ?></p>
         <?php if (!empty($issue['measurements'])) : ?>
@@ -168,7 +175,7 @@ $specializations = [
     </section>
 
 
-    <?php if ($isOwner && $closed && $issue['latest_result_review'] !== null && $issue['latest_result_review'] !== 'pending') : ?>
+    <?php if ($isHelpRequest && $isOwner && $closed && $issue['latest_result_review'] !== null && $issue['latest_result_review'] !== 'pending') : ?>
         <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reopen" class="card reopen-issue">
             <?= $csrf() ?>
             <p class="muted">تمت مراجعة النتيجة السابقة. يمكنك فتح النقاش مجددًا لإضافة معلومات تشخيص جديدة.</p>
@@ -176,7 +183,7 @@ $specializations = [
         </form>
     <?php endif; ?>
 
-    <?php if ($isOwner && !$closed) : ?>
+    <?php if ($isHelpRequest && $isOwner && !$closed) : ?>
         <details class="card close-issue">
             <summary>إنهاء النقاش وتقديم النتيجة</summary>
             <p class="muted">لو وصلت للسبب النهائي بنفسك أو لم يتم إصلاح العطل، وثّق النتيجة ليستفيد الفنيون الآخرون. أي نقاط محتملة تخضع للمراجعة ولا تُضاف تلقائيًا.</p>
