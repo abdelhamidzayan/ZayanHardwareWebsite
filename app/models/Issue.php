@@ -226,7 +226,7 @@ final class Issue extends Model
 
     public static function replyAuthor(int $replyId): ?int
     {
-        $stmt = self::db()->prepare('SELECT user_id FROM issue_replies WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt = self::db()->prepare('SELECT r.user_id FROM issue_replies r JOIN issues i ON i.id = r.issue_id WHERE r.id = ? AND r.deleted_at IS NULL AND i.deleted_at IS NULL LIMIT 1');
         $stmt->execute([$replyId]);
         $userId = $stmt->fetchColumn();
         return $userId === false ? null : (int) $userId;
