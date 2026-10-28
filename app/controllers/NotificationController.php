@@ -36,7 +36,7 @@ final class NotificationController extends Controller
         if (!is_string($path) || $path === '' || $path[0] !== '/' || str_starts_with($path, '//')) {
             return $this->redirect('/notifications');
         }
-        if (preg_match('#^/issues/(\\d+)(?:$|[#?])#', $path, $match) && !Issue::find((int) $match[1])) {
+        if (preg_match('~^/issues/(\\d+)(?:$|[#?])~', $path, $match) && !Issue::find((int) $match[1])) {
             return $this->redirect('/notifications');
         }
         return $this->redirect($path);
