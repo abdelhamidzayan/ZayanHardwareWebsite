@@ -88,7 +88,7 @@ final class Issue extends Model
 
     public static function updateDiagnosticUpdateContent(int $updateId, int $userId, string $body): void
     {
-        self::db()->prepare('UPDATE issue_diagnostic_updates SET body = ? WHERE id = ? AND user_id = ?')
+        self::db()->prepare('UPDATE issue_diagnostic_updates SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ? AND deleted_at IS NULL')
             ->execute([$body, $updateId, $userId]);
     }
 
@@ -97,7 +97,7 @@ final class Issue extends Model
         $stmt = self::db()->prepare(
             'SELECT description AS body FROM issues WHERE id = ?
              UNION ALL SELECT body FROM issue_replies WHERE issue_id = ? AND deleted_at IS NULL
-             UNION ALL SELECT body FROM issue_diagnostic_updates WHERE issue_id = ?'
+             UNION ALL SELECT body FROM issue_diagnostic_updates WHERE issue_id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([$issueId, $issueId, $issueId]);
         return array_map(static fn (array $row): string => (string) $row['body'], $stmt->fetchAll());
@@ -235,13 +235,55 @@ final class Issue extends Model
     public static function diagnosticUpdates(int $issueId): array
     {
         $stmt = self::db()->prepare(
-            'SELECT d.id, d.body, d.created_at, u.id AS user_id, u.display_name
+            'SELECT d.id, d.body, d.created_at, d.updated_at, u.id AS user_id, u.display_name
              FROM issue_diagnostic_updates d
              JOIN users u ON u.id = d.user_id
-             WHERE d.issue_id = ? ORDER BY d.created_at ASC, d.id ASC'
+             WHERE d.issue_id = ? AND d.deleted_at IS NULL ORDER BY d.created_at ASC, d.id ASC'
         );
         $stmt->execute([$issueId]);
         return $stmt->fetchAll();
+    }
+
+    public static function editDiagnosticUpdate(int $issueId, int $updateId, int $userId, string $body): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT d.body FROM issue_diagnostic_updates d
+                 JOIN issues i ON i.id = d.issue_id
+                 WHERE d.id = ? AND d.issue_id = ? AND d.user_id = ? AND i.user_id = ?
+                   AND i.status IN ('open','in_progress','awaiting_confirmation')
+                   AND i.deleted_at IS NULL AND d.deleted_at IS NULL FOR UPDATE"
+            );
+            $stmt->execute([$updateId, $issueId, $userId, $userId]);
+            $oldBody = $stmt->fetchColumn();
+            if (!is_string($oldBody)) throw new \DomainException('diagnostic_update_not_editable');
+
+            $pdo->prepare(
+                'INSERT INTO issue_diagnostic_update_edit_history (diagnostic_update_id, editor_id, previous_body) VALUES (?, ?, ?)'
+            )->execute([$updateId, $userId, $oldBody]);
+            $pdo->prepare('UPDATE issue_diagnostic_updates SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')
+                ->execute([$body, $updateId]);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public static function deleteDiagnosticUpdate(int $issueId, int $updateId, int $userId): void
+    {
+        $stmt = self::db()->prepare(
+            "UPDATE issue_diagnostic_updates d
+             JOIN issues i ON i.id = d.issue_id
+             SET d.deleted_at = UTC_TIMESTAMP(), d.updated_at = UTC_TIMESTAMP()
+             WHERE d.id = ? AND d.issue_id = ? AND d.user_id = ? AND i.user_id = ?
+               AND i.status IN ('open','in_progress','awaiting_confirmation')
+               AND i.deleted_at IS NULL AND d.deleted_at IS NULL"
+        );
+        $stmt->execute([$updateId, $issueId, $userId, $userId]);
+        if ($stmt->rowCount() !== 1) throw new \DomainException('diagnostic_update_not_deletable');
     }
 
     public static function addDiagnosticUpdate(int $issueId, int $userId, string $body): int
