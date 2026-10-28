@@ -11,6 +11,15 @@ $specializations = [
     'display' => 'Display', 'schematics' => 'Schematics', 'audio' => 'Audio',
     'camera' => 'Camera', 'short_circuit' => 'Short Circuit',
 ];
+$topLevelReplies = [];
+$childrenByParent = [];
+foreach ($replies as $reply) {
+    if (empty($reply['parent_reply_id'])) {
+        $topLevelReplies[] = $reply;
+    } else {
+        $childrenByParent[(int) $reply['parent_reply_id']][] = $reply;
+    }
+}
 ?>
 <div class="page-head issue-page-head">
     <a class="issue-back" href="<?= $e($baseUrl) ?>/feed">← الرجوع للمنشورات</a>
@@ -184,8 +193,8 @@ $specializations = [
         <?php if (!$replies) : ?>
             <div class="card empty-state"><h3>لسه مفيش مساعدات فنية</h3><p class="empty-state__text">شارك بقياس أو اختبار واضح يساعد صاحب العطل يوصل للسبب.</p></div>
         <?php else : ?>
-            <?php foreach ($replies as $reply) : ?>
-                <article class="card reply-card <?= (int) $reply['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
+            <?php foreach ($topLevelReplies as $reply) : ?>
+                <article id="reply-<?= (int) $reply['id'] ?>" class="card reply-card <?= (int) $reply['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
                     <header class="reply-card__head">
                         <span class="avatar"><?= $e(mb_strtoupper(mb_substr($reply['display_name'], 0, 1))) ?></span>
                         <div class="reply-card__identity"><strong><?= $e($reply['display_name']) ?></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
@@ -203,7 +212,63 @@ $specializations = [
                                 <button class="text-action text-action--primary" type="submit">اعتماد الحل</button>
                             </form>
                         <?php elseif ((int) $reply['id'] === (int) $issue['accepted_reply_id']) : ?><span class="accepted-inline">✓ الحل المعتمد</span><?php endif; ?>
+                        <?php if (in_array($issue['status'], ['open', 'in_progress'], true) && (int) $currentUser['id'] === (int) $reply['user_id']) : ?>
+                            <details class="reply-edit"><summary class="text-action">تعديل</summary>
+                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $reply['id'] ?>/edit" class="issue-form">
+                                    <?= $csrf() ?><textarea class="field__input" name="body" minlength="2" maxlength="5000" rows="3" required><?= $e($reply['body']) ?></textarea>
+                                    <button class="btn btn--secondary" type="submit">حفظ التعديل</button>
+                                </form>
+                            </details>
+                            <details class="reply-delete"><summary class="text-action">حذف</summary>
+                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $reply['id'] ?>/delete">
+                                    <?= $csrf() ?><button class="text-action text-action--danger" type="submit">تأكيد حذف التعليق</button>
+                                </form>
+                            </details>
+                        <?php endif; ?>
+                        <?php if ($canReply && $isHelpRequest) : ?>
+                            <details class="reply-to-comment"><summary class="text-action">رد على التعليق</summary>
+                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reply" class="issue-form">
+                                    <?= $csrf() ?><input type="hidden" name="parent_reply_id" value="<?= (int) $reply['id'] ?>">
+                                    <textarea class="field__input" name="body" minlength="2" maxlength="5000" rows="2" required placeholder="اكتب ردك على تعليق الفني..."></textarea>
+                                    <button class="btn btn--secondary" type="submit">نشر الرد</button>
+                                </form>
+                            </details>
+                        <?php endif; ?>
                     </footer>
+                    <?php if (!empty($childrenByParent[(int) $reply['id']])) : ?>
+                        <div class="reply-card__children" aria-label="الردود على التعليق">
+                            <?php foreach ($childrenByParent[(int) $reply['id']] as $child) : ?>
+                                <article id="reply-<?= (int) $child['id'] ?>" class="reply-card reply-card--nested <?= (int) $child['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
+                                    <header class="reply-card__head">
+                                        <span class="avatar"><?= $e(mb_strtoupper(mb_substr($child['display_name'], 0, 1))) ?></span>
+                                        <div class="reply-card__identity"><strong><?= $e($child['display_name']) ?></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
+                                    </header>
+                                    <div class="reply-card__body" dir="auto"><?= nl2br($e($child['body'])) ?></div>
+                                    <footer class="reply-card__actions">
+                                        <?php if ($isHelpRequest && $isOwner && in_array($issue['status'], ['open', 'in_progress'], true) && (int) $child['id'] !== (int) $issue['accepted_reply_id']) : ?>
+                                            <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/accept">
+                                                <?= $csrf() ?><input type="hidden" name="reply_id" value="<?= (int) $child['id'] ?>">
+                                                <button class="text-action text-action--primary" type="submit">اعتماد الحل</button>
+                                            </form>
+                                        <?php elseif ((int) $child['id'] === (int) $issue['accepted_reply_id']) : ?><span class="accepted-inline">✓ الحل المعتمد</span><?php endif; ?>
+                                        <?php if (in_array($issue['status'], ['open', 'in_progress'], true) && (int) $currentUser['id'] === (int) $child['user_id']) : ?>
+                                            <details class="reply-edit"><summary class="text-action">تعديل</summary>
+                                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $child['id'] ?>/edit" class="issue-form">
+                                                    <?= $csrf() ?><textarea class="field__input" name="body" minlength="2" maxlength="5000" rows="3" required><?= $e($child['body']) ?></textarea>
+                                                    <button class="btn btn--secondary" type="submit">حفظ التعديل</button>
+                                                </form>
+                                            </details>
+                                            <details class="reply-delete"><summary class="text-action">حذف</summary>
+                                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $child['id'] ?>/delete">
+                                                    <?= $csrf() ?><button class="text-action text-action--danger" type="submit">تأكيد حذف التعليق</button>
+                                                </form>
+                                            </details>
+                                        <?php endif; ?>
+                                    </footer>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </article>
             <?php endforeach; ?>
         <?php endif; ?>
