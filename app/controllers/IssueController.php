@@ -211,6 +211,60 @@ final class IssueController extends Controller
         return $this->redirect('/issues/' . $id . '#diagnostic-updates');
     }
 
+    public function editDiagnosticUpdate(int $id, string $updateId): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $parsedId = filter_var($updateId, FILTER_VALIDATE_INT);
+        $body = trim($this->string('body'));
+        if (!$parsedId || $parsedId < 1 || mb_strlen($body) < 3 || mb_strlen($body) > 5000) {
+            return $this->fail('/issues/' . $id . '#diagnostic-updates', 'راجع نص تحديث التشخيص.');
+        }
+        try {
+            $uploads = ContentEditorService::validateUploads($_FILES['attachments'] ?? null, $this->request->input('attachment_tokens', []));
+        } catch (\DomainException) {
+            return $this->fail('/issues/' . $id . '#diagnostic-updates', 'راجع المرفقات وحاول مرة أخرى.');
+        }
+        try {
+            Issue::editDiagnosticUpdate($id, (int) $parsedId, (int) $user['id'], $body);
+            $stored = ContentEditorService::storeUploads($id, (int) $user['id'], $uploads, $body);
+            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $stored['map']);
+            Issue::updateDiagnosticUpdateContent((int) $parsedId, (int) $user['id'], $resolvedBody);
+            ContentEditorService::pruneUnusedInlineMedia($id);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'diagnostic_update', 'تم تعديل تحديث التشخيص',
+                $resolvedBody, 'diagnostic-update-edited:' . (int) $parsedId . ':' . time()
+            );
+            $this->flash((int) $stored['failed'] > 0 ? 'info' : 'success',
+                (int) $stored['failed'] > 0 ? 'تم تعديل التحديث، لكن تعذر حفظ بعض المرفقات.' : 'تم تعديل تحديث التشخيص وحفظ نسخته السابقة.');
+        } catch (\DomainException) {
+            $this->flash('error', 'يمكن لصاحب طلب المساعدة تعديل تحديثاته فقط أثناء استمرار الطلب.');
+        }
+        return $this->redirect('/issues/' . $id . '#diagnostic-updates');
+    }
+
+    public function deleteDiagnosticUpdate(int $id, string $updateId): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $parsedId = filter_var($updateId, FILTER_VALIDATE_INT);
+        if (!$parsedId || $parsedId < 1) return $this->fail('/issues/' . $id, 'تحديث التشخيص غير صحيح.');
+        try {
+            Issue::deleteDiagnosticUpdate($id, (int) $parsedId, (int) $user['id']);
+            ContentEditorService::pruneUnusedInlineMedia($id);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'diagnostic_update', 'تم تحديث سجل التشخيص',
+                'حذف صاحب الطلب أحد تحديثات التشخيص.', 'diagnostic-update-deleted:' . (int) $parsedId
+            );
+            $this->flash('success', 'تم حذف تحديث التشخيص من العرض مع الاحتفاظ بسجل التعديلات.');
+        } catch (\DomainException) {
+            $this->flash('error', 'يمكن لصاحب طلب المساعدة حذف تحديثاته فقط أثناء استمرار الطلب.');
+        }
+        return $this->redirect('/issues/' . $id . '#diagnostic-updates');
+    }
+
     public function confirmRepair(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
