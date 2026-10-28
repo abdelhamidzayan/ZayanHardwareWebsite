@@ -263,3 +263,16 @@
 .personal-post__notice { padding: .65rem .8rem; border-radius: var(--radius-sm); background: var(--color-primary-soft); color: var(--color-primary-hover); }
 .personal-posts__filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: var(--space-3); }
 @media (max-width: 639px) { .personal-posts__filters { grid-template-columns: 1fr; } .personal-posts__filters .btn { width: 100%; } }
+
+/* Notification inbox uses the same card, spacing and blue accent system. */
+.notification-list { display: grid; gap: var(--space-3); max-inline-size: 58rem; padding-block-end: var(--space-8); }
+.notification-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.notification-item__body { display: grid; gap: var(--space-2); min-inline-size: 0; }
+.notification-item__heading { display: flex; align-items: center; gap: var(--space-2); }
+.notification-item__body p { line-height: 1.7; overflow-wrap: anywhere; }
+.notification-item.is-unread { border-color: rgb(37 99 235 / 35%); background: linear-gradient(0deg, var(--color-primary-soft), var(--color-surface) 90%); }
+.notification-item__dot { inline-size: .5rem; block-size: .5rem; border-radius: 50%; background: var(--color-primary); flex: none; }
+@media (max-width: 639px) {
+  .notification-item { align-items: stretch; flex-direction: column; }
+  .notification-item > form, .notification-item .btn { width: 100%; }
+}
