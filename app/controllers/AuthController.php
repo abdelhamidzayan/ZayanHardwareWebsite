@@ -18,7 +18,8 @@ final class AuthController extends Controller
             return $this->redirect('/feed');
         }
 
-        return $this->view('auth/login', ['title' => 'تسجيل الدخول', 'authPage' => true], 200, 'guest');
+        $countries = require dirname(__DIR__, 2) . '/config/countries.php';
+        return $this->view('auth/login', ['title' => 'تسجيل الدخول', 'authPage' => true, 'countries' => $countries], 200, 'guest');
     }
 
     public function login(): Response
