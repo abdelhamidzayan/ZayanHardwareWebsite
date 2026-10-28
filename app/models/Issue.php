@@ -11,7 +11,6 @@ final class Issue extends Model
     {
         $stmt = self::db()->prepare(
             'SELECT i.*, u.username, u.display_name AS author_name, u.role AS author_role,
-                    p.specialization,
                     (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
                     (SELECT ir.id FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_id,
                     (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_review,
@@ -21,7 +20,6 @@ final class Issue extends Model
                     (SELECT ir.submitted_by FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_submitter
              FROM issues i
              JOIN users u ON u.id = i.user_id
-             LEFT JOIN technician_profiles p ON p.user_id = u.id
              WHERE i.id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -35,12 +33,10 @@ final class Issue extends Model
         $stmt = self::db()->prepare(
             'SELECT i.id, i.title, i.content_type, i.device_model AS device, i.category, i.description,
                     i.status, i.created_at, u.display_name AS author, u.role,
-                    p.tech_level,
                     (SELECT COUNT(*) FROM issue_replies r
                      WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS comments
              FROM issues i
              JOIN users u ON u.id = i.user_id
-             LEFT JOIN technician_profiles p ON p.user_id = u.id
              ORDER BY i.created_at DESC, i.id DESC
              LIMIT ' . $limit
         );
@@ -172,13 +168,12 @@ final class Issue extends Model
             default => 'CASE WHEN r.id = (SELECT accepted_reply_id FROM issues WHERE id = ?) THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
         };
         $sql = 'SELECT r.id, r.issue_id, r.user_id, r.parent_reply_id, r.body, r.created_at, r.updated_at,
-                       u.username, u.display_name, u.role, p.specialization,
+                       u.username, u.display_name, u.role,
                        parent_user.display_name AS parent_author_name, parent.user_id AS parent_author_id,
                        COALESCE((SELECT SUM(re.points) FROM reputation_events re WHERE re.user_id = u.id), 0) AS reputation_points,
                        (SELECT COUNT(*) FROM reply_votes v WHERE v.reply_id = r.id) AS helpful_count
                 FROM issue_replies r
                 JOIN users u ON u.id = r.user_id
-                LEFT JOIN technician_profiles p ON p.user_id = u.id
                 LEFT JOIN issue_replies parent ON parent.id = r.parent_reply_id
                 LEFT JOIN users parent_user ON parent_user.id = parent.user_id
                 WHERE r.issue_id = ? AND r.deleted_at IS NULL
