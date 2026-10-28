@@ -5,10 +5,71 @@
         const fileInput = editor.querySelector('[data-content-files]');
         const previews = editor.querySelector('[data-content-previews]');
         const tokenInputs = editor.querySelector('[data-content-token-inputs]');
+        const livePreview = editor.querySelector('[data-content-live-preview]');
+        const livePreviewBody = editor.querySelector('[data-content-live-preview-body]');
         if (!textarea || !fileInput || !previews || !tokenInputs) return;
 
         let files = [];
         let nextToken = 1;
+        let existingMedia = {};
+        try {
+            existingMedia = JSON.parse(editor.dataset.existingMedia || '{}');
+        } catch (_) {
+            existingMedia = {};
+        }
+
+        function appendText(container, value) {
+            const lines = value.replace(/\r\n?/g, '\n').split('\n');
+            lines.forEach((line, index) => {
+                if (index > 0) container.appendChild(document.createElement('br'));
+                if (line) container.appendChild(document.createTextNode(line));
+            });
+        }
+
+        function renderLivePreview() {
+            if (!livePreview || !livePreviewBody) return;
+            livePreview.hidden = false;
+            livePreviewBody.replaceChildren();
+
+            const value = textarea.value;
+            const tokenPattern = /\[\[image:([A-Za-z0-9_-]{1,80})\]\]/g;
+            let cursor = 0;
+            let match;
+            while ((match = tokenPattern.exec(value)) !== null) {
+                appendText(livePreviewBody, value.slice(cursor, match.index));
+                const token = match[1];
+                const selected = files.find((item) => item.token === token);
+                const media = selected
+                    ? { url: selected.url, type: selected.file.type.startsWith('image/') ? 'image' : 'pdf' }
+                    : existingMedia[token];
+
+                if (media && media.url) {
+                    if (media.type === 'image') {
+                        const image = document.createElement('img');
+                        image.className = 'content-editor__inline-image';
+                        image.src = media.url;
+                        image.alt = 'معاينة صورة فنية داخل النص';
+                        image.loading = 'lazy';
+                        livePreviewBody.appendChild(image);
+                    } else {
+                        const link = document.createElement('a');
+                        link.className = 'content-editor__inline-document';
+                        link.href = media.url;
+                        link.target = '_blank';
+                        link.rel = 'noopener';
+                        link.textContent = 'عرض المخطط PDF';
+                        livePreviewBody.appendChild(link);
+                    }
+                } else {
+                    const unavailable = document.createElement('span');
+                    unavailable.className = 'content-editor__unavailable';
+                    unavailable.textContent = '[مرفق غير متاح]';
+                    livePreviewBody.appendChild(unavailable);
+                }
+                cursor = tokenPattern.lastIndex;
+            }
+            appendText(livePreviewBody, value.slice(cursor));
+        }
 
         function makeToken() {
             return 'media-' + Date.now().toString(36) + '-' + (nextToken++).toString(36);
@@ -25,6 +86,7 @@
             const end = textarea.selectionEnd ?? start;
             textarea.setRangeText(marker, start, end, 'end');
             textarea.focus();
+            renderLivePreview();
         }
         function syncFiles() {
             const transfer = new DataTransfer();
@@ -109,12 +171,15 @@
                     files = files.filter((entry) => entry.token !== item.token);
                     syncFiles();
                     renderPreviews();
+                    renderLivePreview();
                 });
                 actions.appendChild(remove);
                 card.appendChild(actions);
                 previews.appendChild(card);
             });
         }
+
+        textarea.addEventListener('input', renderLivePreview);
 
         fileInput.addEventListener('change', () => {
             const incoming = Array.from(fileInput.files || []);
@@ -130,6 +195,9 @@
             }
             syncFiles();
             renderPreviews();
+            renderLivePreview();
         });
+
+        renderLivePreview();
     });
 })();
