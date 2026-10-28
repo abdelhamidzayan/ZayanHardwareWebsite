@@ -35,7 +35,7 @@ self.addEventListener('notificationclick',(event)=>{
   event.waitUntil((async()=>{
     const requested=event.notification.data&&typeof event.notification.data.url==='string'
       ?event.notification.data.url:'/notifications';
-    const relative=requested.replace(/^\\/+/, '');
+    const relative=requested.replace(/^\/+/, '');
     let target=new URL(relative,self.registration.scope);
     if(target.origin!==self.location.origin||!target.href.startsWith(self.registration.scope)){
       target=new URL('notifications',self.registration.scope);
