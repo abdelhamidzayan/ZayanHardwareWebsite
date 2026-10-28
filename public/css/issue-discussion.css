@@ -70,3 +70,10 @@
 .repair-confirmation { display: grid; gap: 1rem; border-color: var(--color-primary); }
 .repair-confirmation__reject { padding-block-start: .75rem; border-top: 1px solid var(--color-border); }
 .repair-confirmation__reject summary { color: var(--color-muted); cursor: pointer; font-weight: 600; }
+
+.reply-card__children { display: grid; gap: .75rem; margin-block-start: .9rem; padding-inline-start: 1rem; border-inline-start: 2px solid var(--color-border); }
+.reply-card--nested { padding: .9rem; background: var(--color-bg); box-shadow: none; }
+.reply-edit, .reply-delete, .reply-to-comment { display: inline-block; }
+.reply-edit summary, .reply-delete summary, .reply-to-comment summary { cursor: pointer; }
+.reply-edit form, .reply-delete form, .reply-to-comment form { display: grid; gap: .6rem; min-inline-size: min(100%, 24rem); margin-block-start: .6rem; }
+.text-action--danger { color: var(--color-danger); }
