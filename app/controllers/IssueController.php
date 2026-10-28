@@ -420,8 +420,16 @@ final class IssueController extends Controller
         if (!$resultId || $resultId < 1 || !in_array($decision, ['approve', 'reject'], true)) {
             return $this->fail('/issues/' . $id, 'بيانات المراجعة غير صحيحة.');
         }
+        $issue = Issue::find($id);
+        if (!$issue) return $this->notFound();
         try {
             Issue::reviewResult($id, (int) $resultId, (int) $user['id'], $decision === 'approve');
+            NotificationService::notify(
+                (int) $issue['user_id'], (int) $user['id'], $id, null, 'result_reviewed',
+                $decision === 'approve' ? 'تم اعتماد نتيجة الإصلاح' : 'لم يتم اعتماد نتيجة الإصلاح',
+                $decision === 'approve' ? 'راجعت الإدارة النتيجة واعتمدتها.' : 'راجعت الإدارة النتيجة ولم تعتمدها.',
+                '/issues/' . $id, 'result-reviewed:' . (int) $resultId . ':' . $decision
+            );
             $this->flash('success', $decision === 'approve' ? 'تم اعتماد النتيجة وإضافة نقاط السمعة مرة واحدة.' : 'تم رفض النتيجة. لم تُضف نقاط سمعة.');
         } catch (\DomainException) {
             $this->flash('error', 'النتيجة غير موجودة أو تمت مراجعتها من قبل.');
