@@ -101,7 +101,16 @@ final class AuthController extends Controller
         $result = AuthService::register($this->request->body);
         if ($result['errors']) return $this->registerForm($result['errors'], 422);
 
-        $this->flash('success', 'تم إنشاء حسابك بنجاح. سجّل الدخول للمتابعة.');
+        // Registration creates an active account, so establish the session immediately.
+        $userId = (int) ($result['userId'] ?? 0);
+        if ($userId > 0) {
+            User::markLoggedIn($userId);
+            AuthService::login($userId);
+            $this->flash('success', 'تم إنشاء حسابك وتسجيل دخولك بنجاح.');
+            return $this->redirect('/feed');
+        }
+
+        $this->flash('error', 'تم إنشاء الحساب، لكن تعذّر تسجيل الدخول تلقائيًا. حاول تسجيل الدخول.');
         return $this->redirect('/login');
     }
 
