@@ -140,28 +140,23 @@
 })();
 
 
-/* ---------- Login identifier: phone with country code or email ---------- */
+/* ---------- Login identifier: auto-detect email, phone, or username ---------- */
 (() => {
   'use strict';
 
   const form = document.querySelector('[data-login-identifier-form]');
   const pendingLoginKey = 'zayan-hardware-login-pending';
-
-  // Clear a pending failed-login value when leaving the login page (e.g. after success).
   if (!form) {
     try { sessionStorage.removeItem(pendingLoginKey); } catch (_) {}
     return;
   }
 
-  const wrapper = form.querySelector('.login-identifier');
   const visibleInput = form.querySelector('[data-login-visible-input]');
   const hiddenInput = form.querySelector('#identifier');
   const countrySelect = form.querySelector('[data-login-country]');
   const phoneControls = form.querySelector('[data-login-phone-controls]');
   const label = form.querySelector('[data-login-identifier-label]');
-  const switchButton = form.querySelector('[data-login-switch]');
 
-  // A failed-credentials notice describes the previous submission, not the edited form.
   const clearInvalidCredentialsNotice = () => {
     document.querySelectorAll('.flash--error').forEach((notice) => {
       const message = notice.querySelector('p')?.textContent?.trim();
@@ -173,13 +168,6 @@
     });
   };
 
-  let mode = 'phone';
-  let phoneValue = '';
-  let emailValue = '';
-
-  const emailIcon = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
-  const phoneIcon = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h4l2 5-2.5 1.5a15 15 0 0 0 6 6L16 13l5 2v4c0 1.1-.9 2-2 2C10 21 3 14 3 5c0-1.1.9-2 2-2z"/></svg>';
-
   const digitsOnly = (value) => value
     .replace(/[٠-٩۰-۹]/g, (digit) => {
       const arabic = '٠١٢٣٤٥٦٧٨٩';
@@ -189,95 +177,68 @@
     })
     .replace(/\D/g, '');
 
-  const normalizedPhone = () => {
-    const raw = visibleInput.value.trim();
-    const digits = digitsOnly(raw);
-    if (!digits) return '';
-    if (raw.startsWith('+')) return '+' + digits;
-    if (digits.startsWith('00')) return '+' + digits.slice(2);
-
-    const code = digitsOnly(countrySelect.value);
-    if (digits.startsWith(code) && digits.length > code.length + 6) return '+' + digits;
-    return '+' + code + digits.replace(/^0+/, '');
+  const isEmail = (value) => value.includes('@');
+  const isPhone = (value) => {
+    const trimmed = value.trim();
+    const digits = digitsOnly(trimmed);
+    return digits.length >= 7 && (/^[+\d\s().-]+$/.test(trimmed) || /^[٠-٩۰-۹\s().-]+$/.test(trimmed));
   };
 
-  const switchMode = () => {
-    if (mode === 'phone') {
-      phoneValue = visibleInput.value;
-      mode = 'email';
-      wrapper.classList.add('is-email');
-      phoneControls.hidden = true;
-      visibleInput.type = 'email';
-      visibleInput.inputMode = 'email';
-      visibleInput.autocomplete = 'email';
-      visibleInput.placeholder = 'البريد الإلكتروني';
-      visibleInput.dataset.rules = 'required';
-      visibleInput.value = emailValue;
-      label.textContent = 'البريد أو رقم الهاتف أو اسم المستخدم';
-      switchButton.innerHTML = phoneIcon;
-      switchButton.setAttribute('aria-label', 'التبديل إلى رقم الهاتف');
-      switchButton.title = 'التبديل إلى رقم الهاتف';
-    } else {
-      emailValue = visibleInput.value;
-      mode = 'phone';
-      wrapper.classList.remove('is-email');
-      phoneControls.hidden = false;
-      visibleInput.type = 'tel';
-      visibleInput.inputMode = 'tel';
-      visibleInput.autocomplete = 'tel-national';
-      visibleInput.placeholder = 'رقم الهاتف';
-      visibleInput.dataset.rules = 'required';
-      visibleInput.value = phoneValue;
-      label.textContent = 'البريد أو رقم الهاتف أو اسم المستخدم';
-      switchButton.innerHTML = emailIcon;
-      switchButton.setAttribute('aria-label', 'التبديل إلى البريد الإلكتروني');
-      switchButton.title = 'التبديل إلى البريد الإلكتروني';
-    }
-
-    visibleInput.setAttribute('aria-invalid', 'false');
-    const error = visibleInput.closest('.field')?.querySelector('.field__error');
-    if (error) error.textContent = '';
-    visibleInput.focus();
+  const updateMode = () => {
+    const value = visibleInput.value.trim();
+    const phoneMode = value === '' || (!isEmail(value) && isPhone(value));
+    phoneControls.hidden = !phoneMode;
+    visibleInput.type = 'text';
+    visibleInput.inputMode = isEmail(value) ? 'email' : (phoneMode ? 'tel' : 'text');
+    visibleInput.autocomplete = isEmail(value) ? 'email' : (phoneMode ? 'tel-national' : 'username');
+    visibleInput.placeholder = 'البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم';
+    label.textContent = 'البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم';
   };
 
-  switchButton.addEventListener('click', () => {
-    clearInvalidCredentialsNotice();
-    switchMode();
-  });
-
-  // Any edit means the previous invalid-credentials message is now stale.
-  form.addEventListener('input', clearInvalidCredentialsNotice);
   visibleInput.addEventListener('input', () => {
-    if (mode === 'phone') phoneValue = visibleInput.value;
-    else emailValue = visibleInput.value;
+    updateMode();
+    clearInvalidCredentialsNotice();
   });
+  form.addEventListener('input', clearInvalidCredentialsNotice);
 
-  // Restore the identifier and selected mode after an unsuccessful POST/redirect.
+  // Restore the identifier after a failed login redirect; never store the password.
   try {
     const pending = sessionStorage.getItem(pendingLoginKey);
     if (pending) {
       sessionStorage.removeItem(pendingLoginKey);
       const previous = JSON.parse(pending);
-      if (previous.mode === 'email') switchMode();
       visibleInput.value = typeof previous.value === 'string' ? previous.value : '';
-      if (mode === 'email') emailValue = visibleInput.value;
-      else phoneValue = visibleInput.value;
+      updateMode();
     }
   } catch (_) {
     try { sessionStorage.removeItem(pendingLoginKey); } catch (_) {}
   }
 
+  updateMode();
   form.addEventListener('submit', () => {
-    // The server checks username/email first, then normalizes phone numbers.
-    // Sending the original identifier also keeps numeric-only usernames usable.
-    hiddenInput.value = visibleInput.value.trim().toLowerCase();
+    const value = visibleInput.value.trim();
+    if (value.includes('@')) {
+      hiddenInput.value = value.toLowerCase();
+    } else if (isPhone(value)) {
+      const digits = digitsOnly(value);
+      if (value.startsWith('+')) {
+        hiddenInput.value = '+' + digits;
+      } else if (digits.startsWith('00')) {
+        hiddenInput.value = '+' + digits.slice(2);
+      } else {
+        const code = digitsOnly(countrySelect.value);
+        if (digits.startsWith(code) && digits.length > code.length + 6) {
+          hiddenInput.value = '+' + digits;
+        } else {
+          hiddenInput.value = '+' + code + digits.replace(/^0+/, '');
+        }
+      }
+    } else {
+      hiddenInput.value = value.toLowerCase();
+    }
 
-    // Keep only the identifier, never the password, for the one redirect back to login.
     try {
-      sessionStorage.setItem(pendingLoginKey, JSON.stringify({
-        mode,
-        value: visibleInput.value,
-      }));
+      sessionStorage.setItem(pendingLoginKey, JSON.stringify({ value }));
     } catch (_) {}
   });
 })();
