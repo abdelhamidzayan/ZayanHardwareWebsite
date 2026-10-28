@@ -8,6 +8,7 @@
 
   const base = body.dataset.pwaBase || '';
   const storageKey = 'zayan-hardware:pwa-guide:v1:' + userId;
+  const sessionKey = storageKey + ':later';
   let installPrompt = null;
   let dialog = null;
   let previousFocus = null;
@@ -30,6 +31,16 @@
     catch (_) {
       try { sessionStorage.setItem(storageKey, '1'); } catch (__) {}
     }
+  };
+
+  const getSnoozed = () => {
+    try { return sessionStorage.getItem(sessionKey) === '1'; }
+    catch (_) { return false; }
+  };
+
+  const snoozeGuide = () => {
+    try { sessionStorage.setItem(sessionKey, '1'); } catch (_) {}
+    closeGuide();
   };
 
   const platformGuide = () => {
@@ -84,6 +95,10 @@
   };
 
   const dismissGuide = () => {
+    snoozeGuide();
+  };
+
+  const skipPermanently = () => {
     markSeen();
     closeGuide();
   };
@@ -91,7 +106,7 @@
   const onKeydown = (event) => {
     if (event.key === 'Escape') {
       event.preventDefault();
-      dismissGuide();
+      snoozeGuide();
       return;
     }
     if (event.key !== 'Tab' || !dialog) return;
@@ -109,8 +124,7 @@
   };
 
   const openGuide = () => {
-    if (dialog || getSeen() || isInstalled()) return;
-    markSeen();
+    if (dialog || getSeen() || getSnoozed() || isInstalled()) return;
     previousFocus = document.activeElement;
 
     const guide = platformGuide();
@@ -138,17 +152,18 @@
         <p class="pwa-guide__note">التثبيت اختياري، وتقدر تكمل استخدام الموقع عادي حتى لو تخطّيت الخطوة دي.</p>
         <div class="pwa-guide__actions">
           <button class="pwa-guide__install" type="button" data-pwa-install hidden>تثبيت التطبيق الآن</button>
-          <button class="pwa-guide__done" type="button" data-pwa-done>تمام، فهمت</button>
-          <button class="pwa-guide__skip" type="button" data-pwa-close>تخطي الآن</button>
+          <button class="pwa-guide__done" type="button" data-pwa-done>مش دلوقتي</button>
+          <button class="pwa-guide__skip" type="button" data-pwa-skip>تخطي نهائيًا</button>
         </div>
       </section>`;
 
     document.body.appendChild(dialog);
     document.addEventListener('keydown', onKeydown);
     dialog.querySelectorAll('[data-pwa-close]').forEach(button => button.addEventListener('click', dismissGuide));
-    dialog.querySelector('[data-pwa-done]').addEventListener('click', dismissGuide);
+    dialog.querySelector('[data-pwa-done]').addEventListener('click', snoozeGuide);
+    dialog.querySelector('[data-pwa-skip]').addEventListener('click', skipPermanently);
     dialog.addEventListener('click', event => {
-      if (event.target === dialog) dismissGuide();
+      if (event.target === dialog) snoozeGuide();
     });
 
     const installButton = dialog.querySelector('[data-pwa-install]');
@@ -178,7 +193,12 @@
           installButton.hidden = true;
           doneButton.textContent = 'تمام، فهمت';
         }
-        dismissGuide();
+        if (typeof choice !== 'undefined' && choice?.outcome === 'accepted') {
+          markSeen();
+          closeGuide();
+        } else {
+          snoozeGuide();
+        }
       }
     });
 
