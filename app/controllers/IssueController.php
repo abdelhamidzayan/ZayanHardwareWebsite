@@ -345,6 +345,37 @@ final class IssueController extends Controller
         return $this->redirect('/issues/' . $id . '#discussion');
     }
 
+    public function edit(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $title = trim($this->string('title'));
+        $description = trim($this->string('description'));
+        $measurements = trim($this->string('measurements'));
+        if (mb_strlen($title) < 10 || mb_strlen($title) > 180 || mb_strlen($description) < 20
+            || mb_strlen($description) > 10000 || mb_strlen($measurements) > 5000) {
+            return $this->fail('/issues/' . $id, 'راجع العنوان والوصف والقياسات. يوجد حقل خارج الحدود المسموحة.');
+        }
+        try {
+            $uploads = ContentEditorService::validateUploads($_FILES['attachments'] ?? null, $this->request->input('attachment_tokens', []));
+        } catch (\DomainException) {
+            return $this->fail('/issues/' . $id, 'راجع المرفقات وحاول مرة أخرى.');
+        }
+        try {
+            Issue::edit($id, (int) $user['id'], $title, $description, $measurements);
+            $stored = ContentEditorService::storeUploads($id, (int) $user['id'], $uploads, $description);
+            $resolvedDescription = ContentEditorService::resolveInlineTokens($description, $stored['map']);
+            Issue::updateDescriptionContent($id, (int) $user['id'], $resolvedDescription);
+            ContentEditorService::pruneUnusedInlineMedia($id);
+            $this->flash((int) $stored['failed'] > 0 ? 'info' : 'success',
+                (int) $stored['failed'] > 0 ? 'تم تحديث المنشور، لكن تعذر حفظ بعض المرفقات.' : 'تم تحديث المنشور وحفظ النسخة السابقة في سجل التعديلات.');
+        } catch (\DomainException) {
+            $this->flash('error', 'لا تملك صلاحية تعديل هذا المنشور أو أن النقاش مغلق.');
+        }
+        return $this->redirect('/issues/' . $id);
+    }
+
     public function close(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
