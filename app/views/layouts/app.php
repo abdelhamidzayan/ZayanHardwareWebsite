@@ -8,6 +8,7 @@
 $active     = $active ?? 'home';
 $showHeader = $showHeader ?? true;
 $currentUser = $currentUser ?? \App\Services\AuthService::user();
+$unreadCount = $unreadCount ?? 0;
 if (!isset($unreadCount) && is_array($currentUser) && isset($currentUser['id'])) {
     $unreadCount = \App\Models\Notification::unreadCount((int) $currentUser['id']);
 }
