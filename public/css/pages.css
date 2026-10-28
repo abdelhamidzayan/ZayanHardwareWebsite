@@ -1146,6 +1146,17 @@
   white-space: nowrap;
 }
 .guest-header__policy-link:hover,
+.guest-header__policy-link:focus-visible,
+.guest-header__policy-link[aria-current="page"],
+.guest-header__help:hover,
+.guest-header__help:focus-visible,
+.guest-header__help[aria-current="page"] {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.guest-header__policy-link,
+.guest-header__help { text-decoration: none; }
 .guest-footer__links a:hover,
 .policy-text-link:hover { color: var(--color-primary); text-decoration: underline; text-underline-offset: .2em; }
 .guest-header__policy-link[aria-current="page"] { background: var(--color-primary-soft); }
