@@ -26,8 +26,13 @@ $topics = [
         <h1 class="help-hero__title" id="help-title">محتاج مساعدة؟ إحنا هنا نسهّل عليك استخدام Zayan Hardware</h1>
         <p class="help-hero__text">هنا هتلاقي شرح لطريقة استخدام المنصة، وإرشادات للتعامل مع المشكلات العامة، وإجابات لأهم الأسئلة. المنصة مخصّصة لفنيّي هاردوير الهواتف ومشاركة الخبرات الفنية.</p>
         <div class="help-hero__actions">
-            <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/register">إنشاء حساب</a>
-            <a class="btn btn--secondary" href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a>
+            <?php if (!empty($currentUser)) : ?>
+                <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/feed">العودة للرئيسية</a>
+                <a class="btn btn--secondary" href="<?= $e($baseUrl) ?>/policies">الخصوصية والقوانين</a>
+            <?php else : ?>
+                <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/register">إنشاء حساب</a>
+                <a class="btn btn--secondary" href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -94,6 +99,19 @@ $topics = [
             <details><summary>إزاي أساعد الفنيين التانيين؟</summary><div class="help-faq__answer">قدّم خطوات فحص واضحة ومرتبة، واذكر القياسات الفعلية بدل التخمين، واشرح سبب اقتراحك. ولو وصلت لحل ناجح، شارك النتيجة النهائية.</div></details>
             <details><summary>هل أقدر أشارك كلمة المرور أو بيانات الحساب مع الدعم؟</summary><div class="help-faq__answer">لا. ما تشاركش كلمة المرور أو رموز التحقق مع أي شخص. عند الإبلاغ عن مشكلة، اشرح الخطوات اللي أدت لها من غير إرسال بيانات سرية.</div></details>
         </div>
+    </section>
+
+    <section class="help-section" id="report-error" aria-labelledby="help-report-title">
+        <div class="help-section__head">
+            <div>
+                <h2 class="help-section__title" id="help-report-title">الإبلاغ عن خطأ</h2>
+                <p class="help-section__intro">ساعدنا نفهم المشكلة ونصلحها بخطوات واضحة.</p>
+            </div>
+        </div>
+        <article class="help-card">
+            <p class="help-card__text">لو واجهت خطأ، سجّل اسم الصفحة، والوقت التقريبي، والخطوات التي أدت للمشكلة، ورسالة الخطأ إن ظهرت. لا ترسل كلمة المرور أو رموز التحقق أو أي بيانات خاصة.</p>
+            <p class="help-card__text">نموذج إرسال البلاغات المباشر غير متاح حاليًا؛ سنضيف قناة إرسال فعلية عند تجهيزها بدل عرض نموذج لا يحفظ البلاغ.</p>
+        </article>
     </section>
 
     <section class="help-section" aria-labelledby="help-contact-title">
