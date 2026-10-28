@@ -35,6 +35,8 @@ return static function (Router $router): void {
     $router->post('/issues/{id}/replies/{replyId}/edit', [IssueController::class, 'editReply']);
     $router->post('/issues/{id}/replies/{replyId}/delete', [IssueController::class, 'deleteReply']);
     $router->post('/issues/{id}/diagnostic-updates', [IssueController::class, 'diagnosticUpdate']);
+    $router->post('/issues/{id}/diagnostic-updates/{updateId}/edit', [IssueController::class, 'editDiagnosticUpdate']);
+    $router->post('/issues/{id}/diagnostic-updates/{updateId}/delete', [IssueController::class, 'deleteDiagnosticUpdate']);
     $router->post('/issues/{id}/confirm-repair', [IssueController::class, 'confirmRepair']);
     $router->post('/issues/{id}/reject-repair', [IssueController::class, 'rejectRepairConfirmation']);
     $router->post('/issues/{id}/edit', [IssueController::class, 'edit']);
