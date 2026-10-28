@@ -121,8 +121,27 @@ foreach ($replies as $reply) {
                 <ol class="diagnostic-updates__list">
                     <?php foreach ($diagnosticUpdates as $update) : ?>
                         <li class="diagnostic-updates__item">
-                            <div><strong><?= $e($update['display_name']) ?></strong><span class="muted"><?= $e($update['created_at']) ?></span></div>
+                            <div><strong><?= $e($update['display_name']) ?></strong><span class="muted"><?= $e($update['created_at']) ?><?= !empty($update['updated_at']) ? ' · تم التعديل' : '' ?></span></div>
                             <div class="diagnostic-updates__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $update['body'], $attachments, $baseUrl) ?></div>
+                            <?php if ($isOwner && in_array($issue['status'], ['open', 'in_progress', 'awaiting_confirmation'], true)) : ?>
+                                <div class="diagnostic-updates__actions">
+                                    <details><summary class="text-action">تعديل التحديث</summary>
+                                        <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/diagnostic-updates/<?= (int) $update['id'] ?>/edit" class="issue-form" enctype="multipart/form-data">
+                                            <?= $csrf() ?><?php
+                                            $editorFieldName = 'body'; $editorLabel = 'تعديل تحديث التشخيص'; $editorPlaceholder = 'حدّث القياسات أو نتيجة التجربة...';
+                                            $editorValue = (string) $update['body']; $editorMaxLength = 5000; $editorRows = 3; $editorRequired = true;
+                                            require __DIR__ . '/../partials/content-editor.php';
+                                            ?>
+                                            <button class="btn btn--secondary" type="submit">حفظ التحديث</button>
+                                        </form>
+                                    </details>
+                                    <details><summary class="text-action">حذف التحديث</summary>
+                                        <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/diagnostic-updates/<?= (int) $update['id'] ?>/delete">
+                                            <?= $csrf() ?><button class="text-action text-action--danger" type="submit">تأكيد الحذف</button>
+                                        </form>
+                                    </details>
+                                </div>
+                            <?php endif; ?>
                         </li>
                     <?php endforeach; ?>
                 </ol>
