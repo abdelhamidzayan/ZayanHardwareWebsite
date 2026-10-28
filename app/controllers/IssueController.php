@@ -215,7 +215,7 @@ final class IssueController extends Controller
         try {
             Issue::addDiagnosticUpdate($id, (int) $user['id'], $body);
             $this->flash('success', 'تمت إضافة تحديث التشخيص مع حفظ توقيته.');
-        } catch (\\DomainException) {
+        } catch (\DomainException) {
             $this->flash('error', 'تحديث التشخيص متاح لصاحب طلب المساعدة فقط ما دام الطلب غير مغلق.');
         }
         return $this->redirect('/issues/' . $id . '#diagnostic-updates');
@@ -234,7 +234,7 @@ final class IssueController extends Controller
         try {
             Issue::confirmRepair($id, (int) $user['id'], $cause, $action);
             $this->flash('success', 'أكدت نجاح الإصلاح. أُغلق الطلب بعد اعتماد الرد وتسجيل النتيجة للمراجعة.');
-        } catch (\\DomainException) {
+        } catch (\DomainException) {
             $this->flash('error', 'لا يمكن تأكيد الإصلاح إلا لصاحب الطلب بعد اعتماد رد صالح.');
         }
         return $this->redirect('/issues/' . $id);
@@ -250,7 +250,7 @@ final class IssueController extends Controller
         try {
             Issue::rejectRepairConfirmation($id, (int) $user['id'], $reason);
             $this->flash('info', 'رجع الطلب إلى قيد التشخيص، ويمكنك إضافة قياسات وتجارب جديدة.');
-        } catch (\\DomainException) {
+        } catch (\DomainException) {
             $this->flash('error', 'لا يمكن رفض التأكيد إلا لصاحب الطلب عندما يكون بانتظار تأكيد الإصلاح.');
         }
         return $this->redirect('/issues/' . $id . '#diagnostic-updates');
