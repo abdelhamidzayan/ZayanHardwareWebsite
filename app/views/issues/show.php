@@ -83,7 +83,7 @@ foreach ($replies as $reply) {
         <?php if ($isOwner && in_array($issue['status'], ['open', 'in_progress'], true)) : ?>
             <details class="issue-edit">
                 <summary>تعديل المنشور وإضافة آخر تجربة</summary>
-                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/edit" class="issue-form">
+                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/edit" class="issue-form" enctype="multipart/form-data">
                     <?= $csrf() ?>
                     <label class="field"><span class="field__label">عنوان العطل</span><input class="field__input" name="title" minlength="10" maxlength="180" required value="<?= $e($issue['title']) ?>"></label>
                     <?php
@@ -219,7 +219,7 @@ foreach ($replies as $reply) {
                         <div class="reply-card__identity"><strong><?= $e($reply['display_name']) ?></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
                         <?php if (in_array($reply['role'], ['admin', 'moderator'], true)) : ?><span class="badge">خبير معتمد</span><?php endif; ?>
                     </header>
-                    <div class="reply-card__body" dir="auto"><?= nl2br($e($reply['body'])) ?></div>
+                    <div class="reply-card__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $reply['body'], $attachments, $baseUrl) ?></div>
                     <footer class="reply-card__actions">
                         <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/vote">
                             <?= $csrf() ?><input type="hidden" name="reply_id" value="<?= (int) $reply['id'] ?>">
@@ -280,7 +280,7 @@ foreach ($replies as $reply) {
                                         <?php elseif ((int) $child['id'] === (int) $issue['accepted_reply_id']) : ?><span class="accepted-inline">✓ الحل المعتمد</span><?php endif; ?>
                                         <?php if (in_array($issue['status'], ['open', 'in_progress'], true) && (int) $currentUser['id'] === (int) $child['user_id']) : ?>
                                             <details class="reply-edit"><summary class="text-action">تعديل</summary>
-                                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $child['id'] ?>/edit" class="issue-form">
+                                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $child['id'] ?>/edit" class="issue-form" enctype="multipart/form-data">
                                                     <?= $csrf() ?><?php
                                                     $editorFieldName = 'body'; $editorLabel = 'تعديل التعليق'; $editorPlaceholder = 'اكتب تعليقك...';
                                                     $editorValue = (string) $child['body']; $editorMaxLength = 5000; $editorRows = 3; $editorRequired = true;
