@@ -20,6 +20,8 @@ return static function (Router $router): void {
     $router->get('/policies', [PageController::class, 'policies']);
     $router->get('/settings', [PageController::class, 'settings']);
     $router->get('/feed', [FeedController::class, 'index']);
+    $router->get('/issues/create', [IssueController::class, 'create']);
+    $router->post('/issues/create', [IssueController::class, 'create']);
 
     $router->get('/issues/{id}', [IssueController::class, 'show']);
     $router->get('/attachments/{id}', [IssueController::class, 'attachment']);
@@ -54,7 +56,7 @@ return static function (Router $router): void {
     $router->get('/profile/{username}', [ProfileController::class, 'show']);
 
     // Navigation targets that are not built yet.
-    foreach (['/search', '/market', '/issues/create', '/notifications'] as $path) {
+    foreach (['/search', '/market', '/notifications'] as $path) {
         $router->get($path, [PageController::class, 'soon']);
     }
 };
