@@ -181,6 +181,7 @@
       item.setAttribute('aria-selected', item === button ? 'true' : 'false');
     });
     closeCountryList();
+    saveDraft();
     phoneInput.focus();
   };
 
@@ -209,6 +210,7 @@
 
   contactSwitch.addEventListener('click', () => {
     showContactMode(contactType.value === 'phone' ? 'email' : 'phone');
+    saveDraft();
     (contactType.value === 'phone' ? phoneInput : emailLocal).focus();
   });
 
@@ -375,6 +377,7 @@
         autoSuggestedUsername = '';
         usernameStatus.textContent = '';
         usernameStatus.classList.remove('is-error', 'is-available');
+        saveDraft();
       }
       return;
     }
@@ -398,6 +401,7 @@
     if (!usernameTouched && suggestedNames.length) {
       username.value = suggestedNames[0];
       autoSuggestedUsername = suggestedNames[0];
+      saveDraft();
       checkUsername();
     }
   };
