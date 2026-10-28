@@ -456,6 +456,9 @@ final class IssueController extends Controller
         try {
             $issue = Issue::find($id);
             if (!$issue) return $this->notFound();
+            if (Issue::replyIssueId((int) $replyId) !== $id) {
+                return $this->fail('/issues/' . $id, 'الرد لا يتبع هذا المنشور.');
+            }
             Issue::vote((int) $replyId, (int) $user['id']);
             $this->flash('success', 'تم تحديث تقييم الإفادة.');
         } catch (\DomainException) {
@@ -473,11 +476,26 @@ final class IssueController extends Controller
         if (!$replyId || $replyId < 1) return $this->fail('/issues/' . $id, 'الرد غير صحيح.');
         try {
             Issue::accept($id, (int) $replyId, (int) $user['id']);
-            NotificationService::notifyIssueParticipants(
-                $id, (int) $user['id'], 'accepted_solution', 'تم اعتماد ردك كحل',
-                'اعتمد صاحب طلب المساعدة أحد الردود كحل مقترح، والطلب بانتظار تأكيد نجاح الإصلاح.',
-                'accepted-solution:' . (int) $replyId
-            );
+            $acceptedAuthorId = Issue::replyAuthor((int) $replyId);
+            if ($acceptedAuthorId !== null) {
+                NotificationService::notify(
+                    $acceptedAuthorId, (int) $user['id'], $id, (int) $replyId,
+                    'accepted_solution', 'تم اعتماد ردك كحل',
+                    'اعتمد صاحب طلب المساعدة ردك كحل مقترح، والطلب بانتظار تأكيد نجاح الإصلاح.',
+                    '/issues/' . $id . '#reply-' . (int) $replyId,
+                    'accepted-solution:' . (int) $replyId
+                );
+            }
+            foreach (Issue::participantIds($id) as $recipientId) {
+                if ($recipientId === (int) $user['id'] || $recipientId === $acceptedAuthorId) continue;
+                NotificationService::notify(
+                    $recipientId, (int) $user['id'], $id, (int) $replyId,
+                    'status_changed', 'تم اعتماد حل مقترح',
+                    'اختار صاحب الطلب ردًا كحل مقترح. الطلب الآن بانتظار تأكيد نجاح الإصلاح.',
+                    '/issues/' . $id,
+                    'accepted-status:' . (int) $replyId . ':' . $recipientId
+                );
+            }
             $this->flash('success', 'تم اعتماد الرد. الطلب الآن بانتظار تأكيد نجاح الإصلاح.');
         } catch (\DomainException) {
             $this->flash('error', 'اعتماد الحل متاح لصاحب المنشور فقط، ويجب أن يكون الرد تابعًا لنفس العطل.');
