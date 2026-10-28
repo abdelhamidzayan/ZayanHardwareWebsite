@@ -39,7 +39,13 @@ final class AuthService
         $phone = $contactType === 'phone' ? PhoneNumber::fromParts($dial, $phoneRaw) : null;
         $emailValue = $contactType === 'email' ? $email : '';
         $username = strtolower(trim(self::str($input, 'username')));
-        $deviceFocus = self::str($input, 'device_focus');
+        $deviceFocusInput = $input['device_focus'] ?? [];
+        if (!is_array($deviceFocusInput)) $deviceFocusInput = [$deviceFocusInput];
+        $deviceFocuses = array_values(array_unique(array_filter(array_map(
+            static fn ($value): string => is_string($value) ? trim($value) : '',
+            $deviceFocusInput
+        ), static fn (string $value): bool => in_array($value, ['iphone', 'android'], true))));
+        $deviceFocus = $deviceFocuses[0] ?? '';
         $techLevel = self::str($input, 'tech_level');
         $boardExperience = self::str($input, 'board_experience');
         $biography = trim(self::str($input, 'profile_bio'));
@@ -70,7 +76,7 @@ final class AuthService
         } elseif (User::exists('username', $username)) {
             $errors['username'] = 'اسم المستخدم غير متاح';
         }
-        if (!in_array($deviceFocus, ['iphone', 'android'], true)) {
+        if (!$deviceFocuses) {
             $errors['device_focus'] = 'اختر مجال تخصصك';
         }
         if (!in_array($techLevel, ['fast', 'board'], true)) {
@@ -94,6 +100,7 @@ final class AuthService
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
             ], [
                 'device_focus' => $deviceFocus,
+                'device_focuses' => $deviceFocuses,
                 'tech_level' => $techLevel,
                 'board_experience' => $boardExperience !== '' ? $boardExperience : null,
                 'biography' => $biography !== '' ? $biography : null,
