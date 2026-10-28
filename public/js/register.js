@@ -39,6 +39,7 @@
   let checkSequence = 0;
   let suggestionOffset = 0;
   let suggestedNames = [];
+  let usernameTouched = username.value.trim() !== '';
   const showIsoFlags = /Win/i.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
   if (showIsoFlags) {
     countryFlag.textContent = countryValue.value;
@@ -223,20 +224,39 @@
 
   const transliterate = (value) => {
     const known = {
-      'أحمد':'ahmed','احمد':'ahmed','محمد':'mohamed','محمود':'mahmoud','علي':'ali','على':'ali',
-      'عبد الله':'abdullah','عبدالله':'abdullah','عبد الرحمن':'abdelrahman','عبدالرحمن':'abdelrahman',
-      'مصطفى':'mostafa','مصطفي':'mostafa','يوسف':'youssef','عمر':'omar','عمرو':'amr','خالد':'khaled',
-      'إبراهيم':'ibrahim','ابراهيم':'ibrahim','حسن':'hassan','حسين':'hussein','طارق':'tarek',
-      'كريم':'karim','سعيد':'saeed','زياد':'ziad','ياسين':'yassin','مروان':'marwan','نور':'nour',
-      'هشام':'hesham','عادل':'adel','رامي':'ramy','إسلام':'islam','اسلام':'islam','زayan':'zayan'
+      'عبد الرحمن':'abdelrahman','عبدالرحمن':'abdelrahman','عبد الله':'abdullah','عبدالله':'abdullah',
+      'عبد العزيز':'abdulaziz','عبدالعزيز':'abdulaziz','عبد الملك':'abdulmalik','عبدالملك':'abdulmalik',
+      'محمد':'mohamed','محمود':'mahmoud','مصطفى':'mostafa','مصطفي':'mostafa',
+      'أحمد':'ahmed','احمد':'ahmed','إبراهيم':'ibrahim','ابراهيم':'ibrahim',
+      'إسماعيل':'ismail','اسماعيل':'ismail','إسلام':'islam','اسلام':'islam',
+      'علي':'ali','على':'ali','حسن':'hassan','حسين':'hussein','يوسف':'youssef',
+      'عمر':'omar','عمرو':'amr','خالد':'khaled','طارق':'tarek','كريم':'karim',
+      'سعيد':'saeed','زياد':'ziad','ياسين':'yassin','مروان':'marwan','نور':'nour',
+      'هشام':'hesham','عادل':'adel','رامي':'ramy','زكريا':'zakaria','سارة':'sara',
+      'ساره':'sara','منى':'mona','مريم':'maryam','آية':'aya','ايه':'aya',
+      'ياسمين':'yasmin','فاطمة':'fatma','فاطمه':'fatma','نورهان':'nourhan',
+      'دينا':'dina','ندى':'nada','ملك':'malak','حبيبة':'habiba','حبيبه':'habiba'
     };
-    let result = value.toLowerCase();
+    let result = String(value || '').toLowerCase();
     Object.keys(known).sort((a, b) => b.length - a.length).forEach((key) => {
       result = result.split(key).join(known[key]);
     });
-    result = result.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    result = result.replace(/[^a-z0-9_\s.-]/g, ' ').trim().replace(/[.\s-]+/g, '_').replace(/_+/g, '_');
-    return result;
+
+    const letters = {
+      'ا':'a','أ':'a','إ':'e','آ':'aa','ٱ':'a','ب':'b','ت':'t','ث':'th',
+      'ج':'g','ح':'h','خ':'kh','د':'d','ذ':'z','ر':'r','ز':'z','س':'s',
+      'ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f',
+      'ق':'q','ك':'k','ل':'l','م':'m','ن':'n','ه':'h','ة':'a','و':'w',
+      'ؤ':'w','ي':'y','ى':'a','ئ':'y','ء':'','پ':'p','چ':'ch','گ':'g'
+    };
+    result = result.replace(/[ء-يٱپچگ]/g, (letter) => letters[letter] ?? '');
+    result = result.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+    return result
+      .replace(/[^a-z0-9_\\s.-]/g, ' ')
+      .trim()
+      .replace(/[.\\s-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
   };
 
   const makeCandidates = () => {
