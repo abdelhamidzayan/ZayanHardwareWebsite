@@ -53,6 +53,10 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
                     <span>طاولتي ومشاركاتي</span>
                 </a>
+                <a class="account-menu__item account-menu__item--policy" href="<?= $e($baseUrl) ?>/policies">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h7M8 16h7"/></svg>
+                    <span>سياسات الموقع والخصوصية</span>
+                </a>
                 <?php if (($currentUser['role'] ?? '') === 'admin') : ?>
                     <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
