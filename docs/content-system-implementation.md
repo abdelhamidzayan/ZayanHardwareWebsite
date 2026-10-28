@@ -8,7 +8,7 @@ This document describes the expected behavior after the content-system migration
 - **Technical post:** allows a repair note, technical information, or solved fault write-up.
 - **General discussion:** allows a technical discussion without requiring device-specific measurements.
 - The feed reads saved database records; demo data is not used as the primary feed source.
-- **My Posts** lists the signed-in user's content types and supports type/status filters.
+- **My Posts** lists the signed-in user's content types and supports type, status, and date-range filters.
 - **Workbench** lists the user's help requests with reply/update counts and lifecycle state.
 
 ## Request lifecycle
@@ -28,7 +28,7 @@ This document describes the expected behavior after the content-system migration
 - Authors may edit or soft-delete their own comments while the discussion is active. Previous comment text is stored in edit history.
 - Diagnostic updates are a separate timestamped timeline; editing the original post does not create a diagnostic update.
 - The request owner can edit or soft-delete diagnostic updates; prior text is stored in a separate history table.
-- The shared editor inserts media using explicit `[[image:ID]]` tokens, not arbitrary HTML. Only known attachments for the current issue are rendered; text is escaped.
+- The shared editor inserts media using explicit `[[image:ID]]` tokens, not arbitrary HTML. A live preview shows inline image/PDF placement while composing. Only known attachments for the current issue are rendered; text is escaped.
 - Selected media can be inserted at the text cursor, removed, and reordered. Unreferenced inline media is cleaned up; ordinary attachments remain attachments.
 - Images in issue content open in a responsive zoom/pan viewer.
 
