@@ -279,7 +279,7 @@ final class IssueController extends Controller
             Issue::confirmRepair($id, (int) $user['id'], $cause, $action);
             NotificationService::notifyIssueParticipants(
                 $id, (int) $user['id'], 'repair_confirmed', 'تم تأكيد نجاح الإصلاح',
-                'أكد صاحب الطلب نجاح الإصلاح، وأُغلق طلب المساعدة.', 'repair-confirmed:' . $id
+                'أكد صاحب الطلب نجاح الإصلاح، وأُغلق طلب المساعدة.', 'repair-confirmed:' . $id . ':' . time()
             );
             $this->flash('success', 'أكدت نجاح الإصلاح. أُغلق الطلب بعد اعتماد الرد وتسجيل النتيجة للمراجعة.');
         } catch (\DomainException) {
@@ -483,7 +483,7 @@ final class IssueController extends Controller
                     'accepted_solution', 'تم اعتماد ردك كحل',
                     'اعتمد صاحب طلب المساعدة ردك كحل مقترح، والطلب بانتظار تأكيد نجاح الإصلاح.',
                     '/issues/' . $id . '#reply-' . (int) $replyId,
-                    'accepted-solution:' . (int) $replyId
+                    'accepted-solution:' . (int) $replyId . ':' . time()
                 );
             }
             foreach (Issue::participantIds($id) as $recipientId) {
@@ -493,7 +493,7 @@ final class IssueController extends Controller
                     'status_changed', 'تم اعتماد حل مقترح',
                     'اختار صاحب الطلب ردًا كحل مقترح. الطلب الآن بانتظار تأكيد نجاح الإصلاح.',
                     '/issues/' . $id,
-                    'accepted-status:' . (int) $replyId . ':' . $recipientId
+                    'accepted-status:' . (int) $replyId . ':' . $recipientId . ':' . time()
                 );
             }
             $this->flash('success', 'تم اعتماد الرد. الطلب الآن بانتظار تأكيد نجاح الإصلاح.');
