@@ -34,7 +34,11 @@ for ($i = 0; $i < 32; $i++) {
     </header>
 
     <div class="issue-card__body">
-        <span class="tag tech"><?= $e($issue['device']) ?></span>
+        <?php if (($issue['content_type'] ?? 'help_request') === 'help_request' && !empty($issue['device'])) : ?>
+            <span class="tag tech"><?= $e($issue['device']) ?></span>
+        <?php else : ?>
+            <span class="tag"><?= $e($issue['type_label'] ?? 'منشور فني') ?></span>
+        <?php endif; ?>
         <h3 class="issue-card__title" dir="auto"><a class="issue-card__title-link" href="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>"><?= $e($issue['title']) ?></a></h3>
         <p class="issue-card__excerpt" dir="auto"><?= $e($issue['excerpt']) ?></p>
     </div>
@@ -52,7 +56,7 @@ for ($i = 0; $i < 32; $i++) {
 
     <footer class="issue-card__foot">
         <span class="status<?= $solved ? ' status--solved' : '' ?>">
-            <?= $solved ? 'تم الحل · ' : '' ?><?= $e($issue['category']) ?>
+            <?= $solved ? 'تم الحل · ' : '' ?><?= $e(($issue['content_type'] ?? 'help_request') === 'help_request' ? ($issue['category'] ?? 'طلب مساعدة') : ($issue['type_label'] ?? 'منشور فني')) ?>
         </span>
         <span class="issue-card__comments">
             <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
