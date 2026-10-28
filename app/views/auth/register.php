@@ -207,7 +207,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
             </section>
         </form>
 
-        <p class="wizard__terms">بإنشاء الحساب فإنك توافق على قواعد المنصة وسياسة الخصوصية.</p>
+        <p class="wizard__terms">بإنشاء الحساب فإنك توافق على <a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">قواعد المنصة</a> و<a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">سياسة الخصوصية</a>.</p>
         <p class="auth__switch">لديك حساب؟ <a href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a></p>
     </div>
 </section>
