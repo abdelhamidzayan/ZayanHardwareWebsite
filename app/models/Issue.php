@@ -128,13 +128,16 @@ final class Issue extends Model
             'newest' => 'r.created_at DESC',
             default => 'CASE WHEN r.id = (SELECT accepted_reply_id FROM issues WHERE id = ?) THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
         };
-        $sql = 'SELECT r.id, r.issue_id, r.user_id, r.body, r.created_at, r.updated_at,
+        $sql = 'SELECT r.id, r.issue_id, r.user_id, r.parent_reply_id, r.body, r.created_at, r.updated_at,
                        u.username, u.display_name, u.role, p.specialization,
+                       parent_user.display_name AS parent_author_name, parent.user_id AS parent_author_id,
                        COALESCE((SELECT SUM(re.points) FROM reputation_events re WHERE re.user_id = u.id), 0) AS reputation_points,
                        (SELECT COUNT(*) FROM reply_votes v WHERE v.reply_id = r.id) AS helpful_count
                 FROM issue_replies r
                 JOIN users u ON u.id = r.user_id
                 LEFT JOIN technician_profiles p ON p.user_id = u.id
+                LEFT JOIN issue_replies parent ON parent.id = r.parent_reply_id
+                LEFT JOIN users parent_user ON parent_user.id = parent.user_id
                 WHERE r.issue_id = ? AND r.deleted_at IS NULL
                 ORDER BY ' . $order . ' ';
         $stmt = self::db()->prepare($sql);
@@ -234,14 +237,89 @@ final class Issue extends Model
         return $stmt->fetchAll();
     }
 
-    public static function addReply(int $issueId, int $userId, string $body): int
+    public static function addReply(int $issueId, int $userId, string $body, ?int $parentReplyId = null): int
     {
-        $stmt = self::db()->prepare("INSERT INTO issue_replies (issue_id, user_id, body) SELECT ?, ?, ? FROM issues WHERE id = ? AND status IN ('open','in_progress')");
-        $stmt->execute([$issueId, $userId, $body, $issueId]);
-        if ($stmt->rowCount() !== 1) {
-            throw new \DomainException('discussion_closed');
+        $pdo = self::db();
+        if ($parentReplyId !== null) {
+            $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL LIMIT 1');
+            $stmt->execute([$parentReplyId, $issueId]);
+            if (!$stmt->fetchColumn()) throw new \DomainException('invalid_parent_reply');
         }
-        return (int) self::db()->lastInsertId();
+
+        $stmt = $pdo->prepare(
+            "INSERT INTO issue_replies (issue_id, parent_reply_id, user_id, body)
+             SELECT ?, ?, ?, ? FROM issues WHERE id = ? AND status IN ('open','in_progress')"
+        );
+        $stmt->execute([$issueId, $parentReplyId, $userId, $body, $issueId]);
+        if ($stmt->rowCount() !== 1) throw new \DomainException('discussion_closed');
+        return (int) $pdo->lastInsertId();
+    }
+
+    public static function replyIssueId(int $replyId): ?int
+    {
+        $stmt = self::db()->prepare('SELECT issue_id FROM issue_replies WHERE id = ? LIMIT 1');
+        $stmt->execute([$replyId]);
+        $issueId = $stmt->fetchColumn();
+        return $issueId === false ? null : (int) $issueId;
+    }
+
+    public static function editReply(int $replyId, int $userId, string $body): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT r.body FROM issue_replies r
+                 JOIN issues i ON i.id = r.issue_id
+                 WHERE r.id = ? AND r.user_id = ? AND r.deleted_at IS NULL
+                   AND i.status IN ('open','in_progress') FOR UPDATE"
+            );
+            $stmt->execute([$replyId, $userId]);
+            $oldBody = $stmt->fetchColumn();
+            if (!is_string($oldBody)) throw new \DomainException('reply_not_editable');
+
+            $pdo->prepare('INSERT INTO issue_reply_edit_history (issue_reply_id, editor_id, previous_body) VALUES (?, ?, ?)')
+                ->execute([$replyId, $userId, $oldBody]);
+            $pdo->prepare('UPDATE issue_replies SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')
+                ->execute([$body, $replyId]);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public static function deleteReply(int $replyId, int $userId): int
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT r.issue_id, i.accepted_reply_id FROM issue_replies r
+                 JOIN issues i ON i.id = r.issue_id
+                 WHERE r.id = ? AND r.user_id = ? AND r.deleted_at IS NULL
+                   AND i.status IN ('open','in_progress','awaiting_confirmation') FOR UPDATE"
+            );
+            $stmt->execute([$replyId, $userId]);
+            $row = $stmt->fetch();
+            if (!$row) throw new \DomainException('reply_not_deletable');
+
+            $issueId = (int) $row['issue_id'];
+            $pdo->prepare('UPDATE issue_replies SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = ?')
+                ->execute([$replyId]);
+            if ((int) ($row['accepted_reply_id'] ?? 0) === $replyId) {
+                $pdo->prepare(
+                    "UPDATE issues SET accepted_reply_id = NULL, status = 'in_progress',
+                        repair_confirmed_at = NULL, repair_confirmed_by = NULL, closed_at = NULL,
+                        updated_at = UTC_TIMESTAMP() WHERE id = ?"
+                )->execute([$issueId]);
+            }
+            $pdo->commit();
+            return $issueId;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
     }
 
     public static function edit(int $issueId, int $userId, string $title, string $description, string $measurements): void
