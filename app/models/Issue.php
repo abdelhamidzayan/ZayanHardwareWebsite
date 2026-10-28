@@ -305,6 +305,8 @@ final class Issue extends Model
             if (!$row) throw new \DomainException('reply_not_deletable');
 
             $issueId = (int) $row['issue_id'];
+            $pdo->prepare('UPDATE issue_replies SET parent_reply_id = NULL WHERE parent_reply_id = ? AND deleted_at IS NULL')
+                ->execute([$replyId]);
             $pdo->prepare('UPDATE issue_replies SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$replyId]);
             if ((int) ($row['accepted_reply_id'] ?? 0) === $replyId) {
