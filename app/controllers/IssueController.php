@@ -444,6 +444,45 @@ final class IssueController extends Controller
         return $this->redirect('/issues/' . $id);
     }
 
+    public function vote(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $replyId = filter_var($this->request->input('reply_id'), FILTER_VALIDATE_INT);
+        if (!$replyId || $replyId < 1) return $this->fail('/issues/' . $id, 'الرد غير صحيح.');
+        try {
+            $issue = Issue::find($id);
+            if (!$issue) return $this->notFound();
+            Issue::vote((int) $replyId, (int) $user['id']);
+            $this->flash('success', 'تم تحديث تقييم الإفادة.');
+        } catch (\DomainException) {
+            $this->flash('error', 'لا يمكنك تقييم ردك أو أن الرد غير متاح.');
+        }
+        return $this->redirect('/issues/' . $id . '#discussion');
+    }
+
+    public function accept(int $id): Response
+    {
+        if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $replyId = filter_var($this->request->input('reply_id'), FILTER_VALIDATE_INT);
+        if (!$replyId || $replyId < 1) return $this->fail('/issues/' . $id, 'الرد غير صحيح.');
+        try {
+            Issue::accept($id, (int) $replyId, (int) $user['id']);
+            NotificationService::notifyIssueParticipants(
+                $id, (int) $user['id'], 'accepted_solution', 'تم اعتماد ردك كحل',
+                'اعتمد صاحب طلب المساعدة أحد الردود كحل مقترح، والطلب بانتظار تأكيد نجاح الإصلاح.',
+                'accepted-solution:' . (int) $replyId
+            );
+            $this->flash('success', 'تم اعتماد الرد. الطلب الآن بانتظار تأكيد نجاح الإصلاح.');
+        } catch (\DomainException) {
+            $this->flash('error', 'اعتماد الحل متاح لصاحب المنشور فقط، ويجب أن يكون الرد تابعًا لنفس العطل.');
+        }
+        return $this->redirect('/issues/' . $id . '#discussion');
+    }
+
     public function close(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
