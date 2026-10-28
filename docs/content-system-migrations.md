@@ -11,6 +11,8 @@ Apply the new content-system migrations in this order:
 3. `006_notifications_and_push_subscriptions.sql` — adds in-app notification and device push-subscription tables.
 4. `007_threaded_replies_and_edit_history.sql` — adds one-level threaded replies and reply edit history.
 5. `008_inline_media_tokens.sql` — tracks media rendered inline in safe text-token content.
+6. `009_soft_delete_posts.sql` — adds non-destructive post deletion metadata.
+7. `010_diagnostic_update_history.sql` — adds edit history and soft deletion for diagnostic updates.
 
 Before applying, confirm the database selected by the local `.env` is the intended development database and take a backup. Do not paste credentials or the complete `.env` file into chat.
 
