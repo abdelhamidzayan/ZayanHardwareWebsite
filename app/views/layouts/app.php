@@ -13,7 +13,7 @@ $showHeader = $showHeader ?? true;
 <head>
     <?php require __DIR__ . '/head.php'; ?>
 </head>
-<body>
+<body data-pwa-user-id="<?= $e((string) ($currentUser['id'] ?? '')) ?>" data-pwa-base="<?= $e($baseUrl) ?>">
 <div class="app">
 
     <?php if ($showHeader) { require __DIR__ . '/header.php'; } ?>
@@ -34,5 +34,6 @@ $showHeader = $showHeader ?? true;
 
 </div>
 <script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
+<script src="<?= $e($baseUrl) ?>/js/pwa-guide.js" defer></script>
 </body>
 </html>
