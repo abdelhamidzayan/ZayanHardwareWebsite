@@ -20,7 +20,7 @@ final class Issue extends Model
                     (SELECT ir.submitted_by FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_submitter
              FROM issues i
              JOIN users u ON u.id = i.user_id
-             WHERE i.id = ? LIMIT 1'
+             WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
         );
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;
@@ -36,8 +36,9 @@ final class Issue extends Model
                     (SELECT COUNT(*) FROM issue_replies r
                      WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS comments
              FROM issues i
-             JOIN users u ON u.id = i.user_id
-             ORDER BY i.created_at DESC, i.id DESC
+              JOIN users u ON u.id = i.user_id
+              WHERE i.deleted_at IS NULL
+              ORDER BY i.created_at DESC, i.id DESC
              LIMIT ' . $limit
         );
         $stmt->execute();
@@ -124,7 +125,7 @@ final class Issue extends Model
                     (SELECT COUNT(*) FROM issue_diagnostic_updates d WHERE d.issue_id = i.id) AS diagnostic_count,
                     (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_review
              FROM issues i
-             WHERE i.user_id = ? AND i.content_type = 'help_request'
+             WHERE i.user_id = ? AND i.content_type = 'help_request' AND i.deleted_at IS NULL
              ORDER BY CASE WHEN i.status IN ('open','in_progress','awaiting_confirmation') THEN 0 ELSE 1 END,
                       i.updated_at DESC, i.id DESC
              LIMIT 100"
@@ -137,7 +138,7 @@ final class Issue extends Model
     {
         $allowedTypes = ['help_request', 'technical_post', 'discussion'];
         $allowedStatuses = ['open', 'in_progress', 'awaiting_confirmation', 'resolved', 'closed_unresolved'];
-        $where = ['i.user_id = ?'];
+        $where = ['i.user_id = ?', 'i.deleted_at IS NULL'];
         $params = [$userId];
         if (in_array($type, $allowedTypes, true)) {
             $where[] = 'i.content_type = ?';
@@ -156,6 +157,16 @@ final class Issue extends Model
         $stmt = self::db()->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public static function deleteIssue(int $issueId, int $ownerId): void
+    {
+        $stmt = self::db()->prepare(
+            'UPDATE issues SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP()
+             WHERE id = ? AND user_id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$issueId, $ownerId]);
+        if ($stmt->rowCount() !== 1) throw new \DomainException('not_owner_or_already_deleted');
     }
 
     public static function replies(int $issueId, string $sort): array
@@ -197,7 +208,7 @@ final class Issue extends Model
 
     public static function attachmentById(int $attachmentId): ?array
     {
-        $stmt = self::db()->prepare('SELECT a.id, a.file_path, a.mime_type, a.file_size, a.issue_id FROM issue_attachments a WHERE a.id = ? LIMIT 1');
+        $stmt = self::db()->prepare('SELECT a.id, a.file_path, a.mime_type, a.file_size, a.issue_id FROM issue_attachments a JOIN issues i ON i.id = a.issue_id WHERE a.id = ? AND i.deleted_at IS NULL LIMIT 1');
         $stmt->execute([$attachmentId]);
         return $stmt->fetch() ?: null;
     }
@@ -240,7 +251,7 @@ final class Issue extends Model
         try {
             $stmt = $pdo->prepare(
                 "SELECT status FROM issues WHERE id = ? AND user_id = ?
-                 AND status IN ('open','in_progress','awaiting_confirmation') FOR UPDATE"
+                 AND status IN ('open','in_progress','awaiting_confirmation') AND deleted_at IS NULL FOR UPDATE"
             );
             $stmt->execute([$issueId, $userId]);
             $status = $stmt->fetchColumn();
@@ -286,7 +297,7 @@ final class Issue extends Model
 
         $stmt = $pdo->prepare(
             "INSERT INTO issue_replies (issue_id, parent_reply_id, user_id, body)
-             SELECT ?, ?, ?, ? FROM issues WHERE id = ? AND status IN ('open','in_progress')"
+             SELECT ?, ?, ?, ? FROM issues WHERE id = ? AND status IN ('open','in_progress') AND deleted_at IS NULL"
         );
         $stmt->execute([$issueId, $parentReplyId, $userId, $body, $issueId]);
         if ($stmt->rowCount() !== 1) throw new \DomainException('discussion_closed');
@@ -367,7 +378,7 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("SELECT title, description, measurements FROM issues WHERE id = ? AND user_id = ? AND status IN ('open','in_progress') FOR UPDATE");
+            $stmt = $pdo->prepare("SELECT title, description, measurements FROM issues WHERE id = ? AND user_id = ? AND status IN ('open','in_progress') AND deleted_at IS NULL FOR UPDATE");
             $stmt->execute([$issueId, $userId]);
             $old = $stmt->fetch();
             if (!$old) {
@@ -410,7 +421,7 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('open','in_progress') FOR UPDATE");
+            $stmt = $pdo->prepare("SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('open','in_progress') AND deleted_at IS NULL FOR UPDATE");
             $stmt->execute([$issueId, $ownerId]);
             if (!$stmt->fetchColumn()) throw new \DomainException('not_owner_or_closed');
             $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL');
@@ -433,7 +444,7 @@ final class Issue extends Model
             $stmt = $pdo->prepare(
                 "SELECT accepted_reply_id FROM issues
                  WHERE id = ? AND user_id = ? AND content_type = 'help_request'
-                   AND status = 'awaiting_confirmation' FOR UPDATE"
+                   AND status = 'awaiting_confirmation' AND deleted_at IS NULL FOR UPDATE"
             );
             $stmt->execute([$issueId, $ownerId]);
             $acceptedReplyId = $stmt->fetchColumn();
@@ -520,7 +531,7 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("SELECT status FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('resolved','closed_unresolved') FOR UPDATE");
+            $stmt = $pdo->prepare("SELECT status FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('resolved','closed_unresolved') AND deleted_at IS NULL FOR UPDATE");
             $stmt->execute([$issueId, $ownerId]);
             $status = $stmt->fetchColumn();
             if ($status === false) {
@@ -550,7 +561,7 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('open','in_progress') FOR UPDATE");
+            $stmt = $pdo->prepare("SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('open','in_progress') AND deleted_at IS NULL FOR UPDATE");
             $stmt->execute([$issueId, $ownerId]);
             if (!$stmt->fetchColumn()) throw new \DomainException('not_owner_or_closed');
             if ($helpfulReplyId !== null) {
