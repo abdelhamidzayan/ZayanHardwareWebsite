@@ -241,7 +241,7 @@ final class Issue extends Model
     {
         $pdo = self::db();
         if ($parentReplyId !== null) {
-            $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND deleted_at IS NULL LIMIT 1');
+            $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND parent_reply_id IS NULL AND deleted_at IS NULL LIMIT 1');
             $stmt->execute([$parentReplyId, $issueId]);
             if (!$stmt->fetchColumn()) throw new \DomainException('invalid_parent_reply');
         }
