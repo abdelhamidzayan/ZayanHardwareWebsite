@@ -321,7 +321,7 @@ final class Issue extends Model
                 "SELECT r.body FROM issue_replies r
                  JOIN issues i ON i.id = r.issue_id
                  WHERE r.id = ? AND r.user_id = ? AND r.deleted_at IS NULL
-                   AND i.status IN ('open','in_progress') FOR UPDATE"
+                   AND i.status IN ('open','in_progress') AND i.deleted_at IS NULL FOR UPDATE"
             );
             $stmt->execute([$replyId, $userId]);
             $oldBody = $stmt->fetchColumn();
@@ -347,7 +347,7 @@ final class Issue extends Model
                 "SELECT r.issue_id, i.accepted_reply_id FROM issue_replies r
                  JOIN issues i ON i.id = r.issue_id
                  WHERE r.id = ? AND r.user_id = ? AND r.deleted_at IS NULL
-                   AND i.status IN ('open','in_progress','awaiting_confirmation') FOR UPDATE"
+                   AND i.status IN ('open','in_progress','awaiting_confirmation') AND i.deleted_at IS NULL FOR UPDATE"
             );
             $stmt->execute([$replyId, $userId]);
             $row = $stmt->fetch();
@@ -479,7 +479,7 @@ final class Issue extends Model
         try {
             $stmt = $pdo->prepare(
                 "SELECT id FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request'
-                 AND status = 'awaiting_confirmation' FOR UPDATE"
+                 AND status = 'awaiting_confirmation' AND deleted_at IS NULL FOR UPDATE"
             );
             $stmt->execute([$issueId, $ownerId]);
             if (!$stmt->fetchColumn()) throw new \DomainException('not_awaiting_confirmation');
