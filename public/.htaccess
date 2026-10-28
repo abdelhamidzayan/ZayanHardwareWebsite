@@ -2,6 +2,14 @@
 Options -Indexes -MultiViews
 DirectoryIndex index.php
 
+# Correct PWA manifest MIME type and keep worker updates fresh.
+AddType application/manifest+json .webmanifest
+<Files "service-worker.js">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </IfModule>
+</Files>
+
 <FilesMatch "^\.">
     Require all denied
 </FilesMatch>
