@@ -53,9 +53,30 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
                     <span>طاولتي ومشاركاتي</span>
                 </a>
-                <a class="account-menu__item account-menu__item--policy" href="<?= $e($baseUrl) ?>/policies">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h7M8 16h7"/></svg>
-                    <span>سياسات الموقع والخصوصية</span>
+                <details class="account-menu__group">
+                    <summary class="account-menu__item account-menu__group-trigger">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.2-1.8 2.7M12 17h.01"/></svg>
+                        <span>مساعدة</span>
+                        <svg class="icon account-menu__group-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    </summary>
+                    <div class="account-menu__submenu">
+                        <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help">
+                            <span>مركز المساعدة</span>
+                        </a>
+                        <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help#report-error">
+                            <span>بلاغ عن خطأ</span>
+                        </a>
+                        <a class="account-menu__item" href="<?= $e($baseUrl) ?>/policies">
+                            <span>الخصوصية والقوانين</span>
+                        </a>
+                        <button class="account-menu__item" type="button" data-pwa-open-guide>
+                            <span>تثبيت الموقع</span>
+                        </button>
+                    </div>
+                </details>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/settings">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.5.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.5-.9l-1.7.6-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.8L6.3 12l1.4-2.4 1.7.6a8 8 0 0 1 1.5-.9l.3-1.8H14l.3 1.8a8 8 0 0 1 1.5.9l1.7-.6 1.4 2.4-1.4 1.1a7 7 0 0 1-.1 1.9Z"/></svg>
+                    <span>الإعدادات</span>
                 </a>
                 <?php if (($currentUser['role'] ?? '') === 'admin') : ?>
                     <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin">
