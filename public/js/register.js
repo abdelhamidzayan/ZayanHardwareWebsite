@@ -485,7 +485,6 @@
 
   root.querySelectorAll('[data-next]').forEach((button) => button.addEventListener('click', goNext));
   root.querySelectorAll('[data-back]').forEach((button) => button.addEventListener('click', () => setStep(Math.max(1, activeStep - 1))));
-  root.querySelector('[data-more-suggestions]').addEventListener('click', () => renderSuggestions(true));
 
   username.addEventListener('input', () => {
     if (username.value !== autoSuggestedUsername) usernameTouched = true;
