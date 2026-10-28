@@ -188,13 +188,15 @@ final class User extends Model
             $id = (int) $pdo->lastInsertId();
 
             $pdo->prepare(
-                'INSERT INTO technician_profiles (user_id, device_focus, tech_level, board_experience, level_verified)
-                 VALUES (?, ?, ?, ?, 0)'
+                'INSERT INTO technician_profiles (user_id, device_focus, tech_level, board_experience, level_verified, biography, workshop_name)
+                 VALUES (?, ?, ?, ?, 0, ?, ?)'
             )->execute([
                 $id,
                 $profile['device_focus'],
                 $profile['tech_level'],
                 $profile['board_experience'] ?? null,
+                $profile['biography'] ?? null,
+                $profile['workshop_name'] ?? null,
             ]);
             $pdo->commit();
             return $id;
