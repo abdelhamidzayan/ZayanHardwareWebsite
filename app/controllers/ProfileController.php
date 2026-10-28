@@ -32,6 +32,12 @@ final class ProfileController extends Controller
         $words = preg_split('/\s+/u', trim($profile['display_name'])) ?: [''];
         $initials = mb_strtoupper(mb_substr($words[0], 0, 1) . (isset($words[1]) ? mb_substr($words[1], 0, 1) : ''));
         $isBoard = ($profile['tech_level'] ?? '') === 'board';
+        $deviceTypes = array_filter(explode(',', (string) ($profile['device_specializations'] ?? '')));
+        if (!$deviceTypes && in_array(($profile['device_focus'] ?? ''), ['iphone', 'android'], true)) {
+            $deviceTypes = [$profile['device_focus']];
+        }
+        $deviceLabels = ['iphone' => 'iPhone', 'android' => 'Android'];
+        $deviceLabel = implode(' و ', array_map(static fn (string $type): string => $deviceLabels[$type] ?? '', $deviceTypes));
 
         return $this->view('profile/show', [
             'title' => $profile['display_name'],
@@ -43,7 +49,7 @@ final class ProfileController extends Controller
                 'username' => $profile['username'],
                 'initials' => $initials,
                 'role_label' => self::ROLES[$profile['role']] ?? 'فنّي',
-                'device' => ['iphone' => 'iPhone', 'android' => 'Android'][$profile['device_focus'] ?? ''] ?? '',
+                'device' => $deviceLabel,
                 'level' => ['fast' => 'فني فاست', 'board' => 'فني بورد'][$profile['tech_level'] ?? ''] ?? '',
                 'level_verified' => (int) ($profile['level_verified'] ?? 0),
                 'experience' => $isBoard ? (self::EXPERIENCE[$profile['board_experience'] ?? ''] ?? '') : '',
