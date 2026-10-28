@@ -47,7 +47,7 @@ foreach ($replies as $reply) {
             <div class="issue-tags"><span class="tag"><?= $e($typeLabel) ?></span></div>
         <?php endif; ?>
         <h1 class="issue-title" dir="auto"><?= $e($issue['title']) ?></h1>
-        <p class="issue-description" dir="auto"><?= \\App\\Services\\ContentEditorService::renderInlineContent((string) $issue['description'], $attachments, $baseUrl) ?></p>
+        <div class="issue-description" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $issue['description'], $attachments, $baseUrl) ?></div>
         <?php if (!empty($issue['measurements'])) : ?>
             <div class="issue-measurements"><strong>القياسات والملاحظات</strong><p dir="auto"><?= nl2br($e($issue['measurements'])) ?></p></div>
         <?php endif; ?>
@@ -86,7 +86,16 @@ foreach ($replies as $reply) {
                 <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/edit" class="issue-form">
                     <?= $csrf() ?>
                     <label class="field"><span class="field__label">عنوان العطل</span><input class="field__input" name="title" minlength="10" maxlength="180" required value="<?= $e($issue['title']) ?>"></label>
-                    <label class="field"><span class="field__label">وصف العطل وآخر تجربة</span><textarea class="field__input" name="description" minlength="20" maxlength="10000" rows="5" required><?= $e($issue['description']) ?></textarea></label>
+                    <?php
+                    $editorFieldName = 'description';
+                    $editorLabel = 'وصف العطل وآخر تجربة';
+                    $editorPlaceholder = 'اكتب وصف العطل وأحدث تجربة...';
+                    $editorValue = (string) $issue['description'];
+                    $editorMaxLength = 10000;
+                    $editorRows = 5;
+                    $editorRequired = true;
+                    require __DIR__ . '/../partials/content-editor.php';
+                    ?>
                     <label class="field"><span class="field__label">القياسات والملاحظات</span><textarea class="field__input" name="measurements" maxlength="5000" rows="3"><?= $e((string) $issue['measurements']) ?></textarea></label>
                     <button class="btn btn--primary" type="submit">حفظ التعديل</button>
                 </form>
@@ -119,9 +128,18 @@ foreach ($replies as $reply) {
                 </ol>
             <?php endif; ?>
             <?php if ($isOwner && in_array($issue['status'], ['open', 'in_progress', 'awaiting_confirmation'], true)) : ?>
-                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/diagnostic-updates" class="issue-form">
+                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/diagnostic-updates" class="issue-form" enctype="multipart/form-data">
                     <?= $csrf() ?>
-                    <label class="field"><span class="field__label">إضافة تجربة أو قياس جديد</span><textarea class="field__input" name="body" minlength="3" maxlength="5000" rows="3" required placeholder="اكتب القياس الجديد أو التغيير الذي ظهر بعد آخر تجربة..."></textarea></label>
+                    <?php
+                    $editorFieldName = 'body';
+                    $editorLabel = 'إضافة تجربة أو قياس جديد';
+                    $editorPlaceholder = 'اكتب القياس الجديد أو التغيير الذي ظهر بعد آخر تجربة...';
+                    $editorValue = '';
+                    $editorMaxLength = 5000;
+                    $editorRows = 3;
+                    $editorRequired = true;
+                    require __DIR__ . '/../partials/content-editor.php';
+                    ?>
                     <button class="btn btn--secondary" type="submit">إضافة تحديث التشخيص</button>
                 </form>
             <?php endif; ?>
@@ -215,8 +233,12 @@ foreach ($replies as $reply) {
                         <?php elseif ((int) $reply['id'] === (int) $issue['accepted_reply_id']) : ?><span class="accepted-inline">✓ الحل المعتمد</span><?php endif; ?>
                         <?php if (in_array($issue['status'], ['open', 'in_progress'], true) && (int) $currentUser['id'] === (int) $reply['user_id']) : ?>
                             <details class="reply-edit"><summary class="text-action">تعديل</summary>
-                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $reply['id'] ?>/edit" class="issue-form">
-                                    <?= $csrf() ?><textarea class="field__input" name="body" minlength="2" maxlength="5000" rows="3" required><?= $e($reply['body']) ?></textarea>
+                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $reply['id'] ?>/edit" class="issue-form" enctype="multipart/form-data">
+                                    <?= $csrf() ?><?php
+                                    $editorFieldName = 'body'; $editorLabel = 'تعديل التعليق'; $editorPlaceholder = 'اكتب تعليقك...';
+                                    $editorValue = (string) $reply['body']; $editorMaxLength = 5000; $editorRows = 3; $editorRequired = true;
+                                    require __DIR__ . '/../partials/content-editor.php';
+                                    ?>
                                     <button class="btn btn--secondary" type="submit">حفظ التعديل</button>
                                 </form>
                             </details>
@@ -228,9 +250,13 @@ foreach ($replies as $reply) {
                         <?php endif; ?>
                         <?php if ($canReply) : ?>
                             <details class="reply-to-comment"><summary class="text-action">رد على التعليق</summary>
-                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reply" class="issue-form">
+                                <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reply" class="issue-form" enctype="multipart/form-data">
                                     <?= $csrf() ?><input type="hidden" name="parent_reply_id" value="<?= (int) $reply['id'] ?>">
-                                    <textarea class="field__input" name="body" minlength="2" maxlength="5000" rows="2" required placeholder="اكتب ردك على تعليق الفني..."></textarea>
+                                    <?php
+                                    $editorFieldName = 'body'; $editorLabel = 'رد على التعليق'; $editorPlaceholder = 'اكتب ردك على تعليق الفني...';
+                                    $editorValue = ''; $editorMaxLength = 5000; $editorRows = 2; $editorRequired = true;
+                                    require __DIR__ . '/../partials/content-editor.php';
+                                    ?>
                                     <button class="btn btn--secondary" type="submit">نشر الرد</button>
                                 </form>
                             </details>
@@ -255,7 +281,11 @@ foreach ($replies as $reply) {
                                         <?php if (in_array($issue['status'], ['open', 'in_progress'], true) && (int) $currentUser['id'] === (int) $child['user_id']) : ?>
                                             <details class="reply-edit"><summary class="text-action">تعديل</summary>
                                                 <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/replies/<?= (int) $child['id'] ?>/edit" class="issue-form">
-                                                    <?= $csrf() ?><textarea class="field__input" name="body" minlength="2" maxlength="5000" rows="3" required><?= $e($child['body']) ?></textarea>
+                                                    <?= $csrf() ?><?php
+                                                    $editorFieldName = 'body'; $editorLabel = 'تعديل التعليق'; $editorPlaceholder = 'اكتب تعليقك...';
+                                                    $editorValue = (string) $child['body']; $editorMaxLength = 5000; $editorRows = 3; $editorRequired = true;
+                                                    require __DIR__ . '/../partials/content-editor.php';
+                                                    ?>
                                                     <button class="btn btn--secondary" type="submit">حفظ التعديل</button>
                                                 </form>
                                             </details>
@@ -275,10 +305,14 @@ foreach ($replies as $reply) {
         <?php endif; ?>
 
         <?php if ($canReply) : ?>
-            <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reply" class="card issue-form reply-composer">
+            <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reply" class="card issue-form reply-composer" enctype="multipart/form-data">
                 <h3>شارك بمساعدة فنية</h3>
                 <?= $csrf() ?>
-                <label class="field"><span class="field__label">الحل أو خطوات التشخيص</span><textarea class="field__input" name="body" minlength="2" maxlength="5000" rows="4" required placeholder="اكتب القياس، الاختبار، أو سبب العطل المحتمل..."></textarea></label>
+                <?php
+                $editorFieldName = 'body'; $editorLabel = 'الحل أو خطوات التشخيص'; $editorPlaceholder = 'اكتب القياس، الاختبار، أو سبب العطل المحتمل...';
+                $editorValue = ''; $editorMaxLength = 5000; $editorRows = 4; $editorRequired = true;
+                require __DIR__ . '/../partials/content-editor.php';
+                ?>
                 <button class="btn btn--primary" type="submit">نشر الرد</button>
             </form>
         <?php elseif (!$currentUser && !$closed) : ?>
