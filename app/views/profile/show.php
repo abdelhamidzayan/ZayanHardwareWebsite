@@ -18,7 +18,7 @@
                 <div><dt>نبذة</dt><dd><?= $e($profile['biography']) ?></dd></div>
             <?php endif; ?>
             <?php if ($profile['device'] !== '') : ?>
-                <div><dt>الجهاز</dt><dd><?= $e($profile['device']) ?></dd></div>
+                <div><dt>مجال التخصص</dt><dd><?= $e($profile['device']) ?></dd></div>
             <?php endif; ?>
             <?php if ($profile['level'] !== '') : ?>
                 <div>
