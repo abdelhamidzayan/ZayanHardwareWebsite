@@ -67,13 +67,56 @@ final class Issue extends Model
         return (int) self::db()->lastInsertId();
     }
 
-    public static function addAttachment(int $issueId, int $userId, string $filePath, string $mimeType, int $fileSize): void
+    public static function addAttachment(int $issueId, int $userId, string $filePath, string $mimeType, int $fileSize, bool $isInline = false): int
     {
         $stmt = self::db()->prepare(
-            'INSERT INTO issue_attachments (issue_id, uploaded_by, file_path, mime_type, file_size)
-             VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO issue_attachments (issue_id, uploaded_by, file_path, mime_type, file_size, is_inline)
+             VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$issueId, $userId, $filePath, $mimeType, $fileSize]);
+        $stmt->execute([$issueId, $userId, $filePath, $mimeType, $fileSize, $isInline ? 1 : 0]);
+        return (int) self::db()->lastInsertId();
+    }
+
+    public static function updateDescriptionContent(int $issueId, int $userId, string $body): void
+    {
+        self::db()->prepare('UPDATE issues SET description = ?, updated_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ?')
+            ->execute([$body, $issueId, $userId]);
+    }
+
+    public static function updateReplyContent(int $replyId, int $userId, string $body): void
+    {
+        self::db()->prepare('UPDATE issue_replies SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ? AND deleted_at IS NULL')
+            ->execute([$body, $replyId, $userId]);
+    }
+
+    public static function updateDiagnosticUpdateContent(int $updateId, int $userId, string $body): void
+    {
+        self::db()->prepare('UPDATE issue_diagnostic_updates SET body = ? WHERE id = ? AND user_id = ?')
+            ->execute([$body, $updateId, $userId]);
+    }
+
+    public static function allInlineContent(int $issueId): array
+    {
+        $stmt = self::db()->prepare(
+            'SELECT description AS body FROM issues WHERE id = ?
+             UNION ALL SELECT body FROM issue_replies WHERE issue_id = ? AND deleted_at IS NULL
+             UNION ALL SELECT body FROM issue_diagnostic_updates WHERE issue_id = ?'
+        );
+        $stmt->execute([$issueId, $issueId, $issueId]);
+        return array_map(static fn (array $row): string => (string) $row['body'], $stmt->fetchAll());
+    }
+
+    public static function inlineAttachments(int $issueId): array
+    {
+        $stmt = self::db()->prepare('SELECT id, file_path FROM issue_attachments WHERE issue_id = ? AND is_inline = 1');
+        $stmt->execute([$issueId]);
+        return $stmt->fetchAll();
+    }
+
+    public static function deleteInlineAttachment(int $issueId, int $attachmentId): void
+    {
+        self::db()->prepare('DELETE FROM issue_attachments WHERE id = ? AND issue_id = ? AND is_inline = 1')
+            ->execute([$attachmentId, $issueId]);
     }
 
     public static function workbench(int $userId): array
@@ -152,7 +195,7 @@ final class Issue extends Model
 
     public static function attachments(int $issueId): array
     {
-        $stmt = self::db()->prepare('SELECT id, file_path, mime_type, file_size FROM issue_attachments WHERE issue_id = ? ORDER BY id');
+        $stmt = self::db()->prepare('SELECT id, file_path, mime_type, file_size, is_inline FROM issue_attachments WHERE issue_id = ? ORDER BY id');
         $stmt->execute([$issueId]);
         return $stmt->fetchAll();
     }
