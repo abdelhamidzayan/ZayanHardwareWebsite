@@ -404,9 +404,12 @@
   if (!appScript) return;
 
   const scriptUrl = new URL(appScript.src, window.location.href);
-  const basePath = scriptUrl.pathname.replace(/\\/js\\/app\\.js$/, '').replace(/\\/$/, '');
-  const workerUrl = `${basePath}/service-worker.js` || '/service-worker.js';
-  const scope = `${basePath}/` || '/';
+  const suffix = '/js/app.js';
+  const basePath = scriptUrl.pathname.endsWith(suffix)
+    ? scriptUrl.pathname.slice(0, -suffix.length).replace(/\/$/, '')
+    : '';
+  const workerUrl = `${basePath}/service-worker.js`;
+  const scope = `${basePath}/`;
 
   // Service workers require HTTPS in production (localhost is allowed for development).
   if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') return;
