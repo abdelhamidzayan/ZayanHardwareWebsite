@@ -27,3 +27,4 @@ $pageTitle = isset($title) && $title !== '' ? $title . ' | ' . $appName : $appNa
 <link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/pages.css">
 <link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/responsive.css">
 <link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/issue-discussion.css">
+<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/pwa-guide.css">
