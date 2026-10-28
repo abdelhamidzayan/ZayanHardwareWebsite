@@ -5,7 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Response;
-use App\Models\DemoData;
+use App\Models\Issue;
 use App\Services\AuthService;
 
 final class FeedController extends Controller
