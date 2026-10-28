@@ -525,10 +525,10 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("SELECT status FROM issues WHERE id = ? AND user_id = ? FOR UPDATE");
+            $stmt = $pdo->prepare("SELECT status FROM issues WHERE id = ? AND user_id = ? AND content_type = 'help_request' AND status IN ('resolved','closed_unresolved') FOR UPDATE");
             $stmt->execute([$issueId, $ownerId]);
             $status = $stmt->fetchColumn();
-            if ($status === false || $status === 'open') {
+            if ($status === false) {
                 throw new \DomainException('not_reopenable');
             }
             $stmt = $pdo->prepare("SELECT review_status FROM issue_results WHERE issue_id = ? ORDER BY created_at DESC LIMIT 1");
@@ -537,8 +537,9 @@ final class Issue extends Model
             if ($review === false || $review === 'pending') {
                 throw new \DomainException('result_pending_review');
             }
-            $pdo->prepare("UPDATE issues SET status = 'open', closed_at = NULL, updated_at = UTC_TIMESTAMP() WHERE id = ?")
-                ->execute([$issueId]);
+            $pdo->prepare("UPDATE issues SET status = 'open', accepted_reply_id = NULL,
+                repair_confirmed_at = NULL, repair_confirmed_by = NULL, closed_at = NULL,
+                updated_at = UTC_TIMESTAMP() WHERE id = ?")->execute([$issueId]);
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
