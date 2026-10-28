@@ -122,7 +122,7 @@ final class Issue extends Model
             "SELECT i.id, i.title, i.device_model, i.category, i.status, i.created_at, i.updated_at,
                     i.accepted_reply_id,
                     (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
-                    (SELECT COUNT(*) FROM issue_diagnostic_updates d WHERE d.issue_id = i.id) AS diagnostic_count,
+                    (SELECT COUNT(*) FROM issue_diagnostic_updates d WHERE d.issue_id = i.id AND d.deleted_at IS NULL) AS diagnostic_count,
                     (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_review
              FROM issues i
              WHERE i.user_id = ? AND i.content_type = 'help_request' AND i.deleted_at IS NULL
@@ -151,7 +151,7 @@ final class Issue extends Model
         $sql = 'SELECT i.id, i.title, i.content_type, i.device_model, i.category, i.status,
                        i.created_at, i.updated_at,
                        (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
-                       (SELECT COUNT(*) FROM issue_diagnostic_updates d WHERE d.issue_id = i.id) AS diagnostic_count
+                       (SELECT COUNT(*) FROM issue_diagnostic_updates d WHERE d.issue_id = i.id AND d.deleted_at IS NULL) AS diagnostic_count
                 FROM issues i WHERE ' . implode(' AND ', $where) . '
                 ORDER BY i.updated_at DESC, i.id DESC LIMIT 100';
         $stmt = self::db()->prepare($sql);
