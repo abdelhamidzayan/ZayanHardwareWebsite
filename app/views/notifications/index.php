@@ -8,6 +8,15 @@
     <?php endif; ?>
 </div>
 <div class="container notification-list">
+    <section class="card push-settings" data-push-controls>
+        <?= $csrf() ?>
+        <div><h2>إشعارات الجهاز</h2><p class="muted">فعّل Push عشان توصلك تنبيهات حتى لو الموقع مش مفتوح، إذا كان المتصفح والجهاز بيدعموا ده.</p></div>
+        <div class="push-settings__actions">
+            <button class="btn btn--primary" type="button" data-push-enable>تفعيل إشعارات Push</button>
+            <button class="btn btn--secondary" type="button" data-push-disable hidden>إيقاف إشعارات هذا الجهاز</button>
+        </div>
+        <p class="muted" data-push-status role="status" aria-live="polite"></p>
+    </section>
     <?php if (!$notifications) : ?>
         <div class="card empty-state"><h2>مفيش إشعارات لسه</h2><p class="empty-state__text">لما يحصل تحديث يخص مشاركاتك، هتلاقيه هنا.</p></div>
     <?php else : ?>
@@ -29,3 +38,5 @@
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<script src="<?= $e($baseUrl) ?>/js/notifications.js" defer></script>
