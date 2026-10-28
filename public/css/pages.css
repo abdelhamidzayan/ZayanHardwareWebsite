@@ -3,21 +3,75 @@
    Place at: public/css/pages.css
    ========================================================== */
 
-.guest-header { border-block-end: 1px solid var(--color-border); background: var(--color-surface); }
+.guest-header {
+  inline-size: 100%;
+  box-sizing: border-box;
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
 
 .guest-header__inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  inline-size: 100%;
   max-inline-size: 72rem;
+  box-sizing: border-box;
   margin-inline: auto;
   padding: var(--space-3) var(--space-5);
   padding-block-start: calc(var(--space-3) + env(safe-area-inset-top));
 }
 
-.guest-header__actions { display: flex; gap: var(--space-2); }
-.guest-header__actions .btn { min-block-size: var(--tap-min); padding-inline: var(--space-4); }
+.guest-header__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  gap: clamp(0.25rem, 1vw, 0.625rem);
+  min-inline-size: 0;
+}
+
+.guest-header__actions .guest-header__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-block-size: 2.65rem;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.guest-header__actions .guest-header__link:hover,
+.guest-header__actions .guest-header__link:focus-visible,
+.guest-header__actions .guest-header__link[aria-current="page"] {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.guest-header__actions .guest-header__login,
+.guest-header__actions .guest-header__login:hover,
+.guest-header__actions .guest-header__login:focus-visible {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.guest-header__actions .guest-header__login:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+.guest-header__actions .guest-header__login:focus-visible,
+.guest-header__actions .guest-header__link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 .guest-footer {
   padding: var(--space-6) var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom));
@@ -133,61 +187,27 @@
 
 /* ---------- Guest header navigation and compact mobile actions ---------- */
 .guest-header__inner > .brand { flex: 1 1 auto; min-inline-size: 0; }
-.guest-header__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-  gap: clamp(0.25rem, 1vw, 0.625rem);
-  min-inline-size: 0;
-}
-.guest-header__help {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  min-block-size: 2.65rem;
-  padding: 0.5rem 0.65rem;
-  border-radius: var(--radius-md);
-  color: var(--color-muted);
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: 500;
-  line-height: inherit;
-  white-space: nowrap;
-  text-decoration: none;
-  transition: color 150ms ease, background 150ms ease;
-}
-.guest-header__help:hover,
-.guest-header__help[aria-current="page"] {
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-}
-.guest-header__help:hover { color: var(--color-primary); }
-.guest-header__label-mobile { display: none; }
+.guest .brand { min-inline-size: 0; }
 .guest .brand__logo { inline-size: clamp(2.25rem, 4vw, 3rem); block-size: clamp(2.25rem, 4vw, 3rem); }
 .guest .brand__logo .icon { inline-size: 1.4rem; block-size: 1.4rem; }
-.guest .brand__name { font-size: clamp(0.9rem, 1.8vw, var(--text-xl)); }
-.guest-header__actions .btn { flex: none; min-block-size: 2.65rem; padding-inline: clamp(0.55rem, 1.5vw, 1rem); font-size: clamp(0.75rem, 1.3vw, 0.9rem); }
+.guest .brand__name { min-inline-size: 0; font-size: clamp(0.9rem, 1.8vw, var(--text-xl)); }
 
 @media (max-width: 520px) {
-  .guest-header__inner { gap: 0.4rem; padding-inline: 0.65rem; }
+  .guest-header__inner { gap: 0.45rem; padding-inline: 0.65rem; }
   .guest .brand { gap: 0.4rem; }
   .guest .brand__logo { inline-size: 2rem; block-size: 2rem; border-radius: 0.45rem; }
   .guest .brand__logo .icon { inline-size: 1.2rem; block-size: 1.2rem; }
-  .guest .brand__name { font-size: clamp(0.72rem, 3.2vw, 0.95rem); letter-spacing: -0.025em; }
+  .guest .brand__name { max-inline-size: 6.5rem; font-size: clamp(0.72rem, 3.2vw, 0.95rem); letter-spacing: -0.025em; }
   .guest-header__actions { gap: 0.2rem; }
-  .guest-header__actions .btn { min-block-size: 2.25rem; padding-inline: 0.45rem; border-radius: 0.45rem; font-size: 0.72rem; }
-  .guest-header__help { padding-inline: 0.2rem; font-size: 0.72rem; }
-  .guest-header__label-full { display: none; }
-  .guest-header__label-mobile { display: inline; }
+  .guest-header__actions .guest-header__link { min-block-size: 2.25rem; padding: 0.4rem 0.45rem; border-radius: 0.45rem; font-size: 0.72rem; }
 }
 
 @media (max-width: 360px) {
-  .guest-header__inner { padding-inline: 0.45rem; }
-  .guest .brand__name { max-inline-size: 5.5rem; }
-  .guest-header__actions .btn { padding-inline: 0.35rem; font-size: 0.68rem; }
-  .guest-header__help { font-size: 0.68rem; }
+  .guest-header__inner { gap: 0.3rem; padding-inline: 0.45rem; }
+  .guest .brand { gap: 0.3rem; }
+  .guest .brand__name { max-inline-size: 5.2rem; font-size: 0.72rem; }
+  .guest-header__actions { gap: 0.12rem; }
+  .guest-header__actions .guest-header__link { padding-inline: 0.32rem; font-size: 0.68rem; }
 }
 
 /* ---------- Login phone/email switch ---------- */
@@ -413,7 +433,7 @@
   .help-card { padding: var(--space-4); }
   .help-faq summary { padding: var(--space-4); }
   .help-faq__answer { padding-inline: var(--space-4); }
-  .guest-header__help { min-block-size: 2.25rem; padding-inline: .45rem; font-size: .82rem; }
+  .guest-header__actions .guest-header__link { min-block-size: 2.25rem; }
 }
 
 
@@ -1141,7 +1161,7 @@
 .policy-page .policy-contact .btn:hover { color: var(--color-ink); }
 @media (max-width: 520px) {
   .policy-page { padding-inline: var(--space-4); }
-  .guest-header__policy-link { padding-inline: .35rem; font-size: .72rem; }
+  .guest-header__actions .guest-header__link { padding-inline: .45rem; font-size: .72rem; }
 }
 .account-menu__item--policy { color: var(--color-primary); }
 .account-menu__item--policy:hover { color: var(--color-primary); background: var(--color-primary-soft); }
