@@ -1147,3 +1147,6 @@
 .policy-note { margin-block-start: var(--space-5); padding: var(--space-4); border-inline-start: 3px solid #2563eb; border-radius: var(--radius-sm); background: #eff6ff; color: var(--color-ink); line-height: 1.9; }
 @media (min-width: 760px) { .policy-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .guest-header__policy-link { padding-inline: .35rem; font-size: .72rem; } }
+
+.account-menu__item--policy { color: #2563eb; }
+.account-menu__item--policy:hover { color: #1d4ed8; background: #eff6ff; }
