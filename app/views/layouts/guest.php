@@ -28,6 +28,7 @@ $authPage = $authPage ?? false;
                 <a class="btn btn--primary guest-header__login" href="<?= $e($baseUrl) ?>/login">دخول</a>
             <?php endif; ?>
             <a class="guest-header__help" href="<?= $e($baseUrl) ?>/help"<?= (($title ?? '') === 'المساعدة والدعم') ? ' aria-current="page"' : '' ?>>المساعدة</a>
+            <a class="guest-header__policy-link" href="<?= $e($baseUrl) ?>/policies"<?= (($title ?? '') === 'سياسات الموقع') ? ' aria-current="page"' : '' ?>>السياسات</a>
         </nav>
     </div>
 </header>
@@ -40,6 +41,9 @@ $authPage = $authPage ?? false;
 
 <footer class="guest-footer">
     <p><?= $e($appName) ?> — منصة للفنّيين المتخصصين في هاردوير الهواتف المحمولة.</p>
+    <nav class="guest-footer__links" aria-label="السياسات والمعلومات">
+        <a href="<?= $e($baseUrl) ?>/policies">سياسات الموقع والخصوصية</a>
+    </nav>
 </footer>
 
 <script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
