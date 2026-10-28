@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Issue;
+use App\Services\ContentEditorService;
 use App\Services\NotificationService;
 use App\Services\AuthService;
 
@@ -101,37 +102,19 @@ final class IssueController extends Controller
             return $this->fail('/issues/create', 'طلب المساعدة يحتاج موديل الجهاز والتخصص والقياسات أو الاختبارات التي جربتها.');
         }
 
-        $uploads = [];
-        $files = $_FILES['attachments'] ?? null;
-        if (is_array($files) && isset($files['name']) && is_array($files['name'])) {
-            if (count($files['name']) > 8) {
-                return $this->fail('/issues/create', 'الحد الأقصى 8 مرفقات للمنشور الواحد.');
-            }
-            $allowed = [
-                'image/jpeg' => 'jpg',
-                'image/png' => 'png',
-                'image/webp' => 'webp',
-                'image/gif' => 'gif',
-                'application/pdf' => 'pdf',
-            ];
-            $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            foreach ($files['name'] as $index => $originalName) {
-                $error = (int) ($files['error'][$index] ?? UPLOAD_ERR_NO_FILE);
-                if ($error === UPLOAD_ERR_NO_FILE) continue;
-                $tmp = (string) ($files['tmp_name'][$index] ?? '');
-                $size = (int) ($files['size'][$index] ?? 0);
-                if ($error !== UPLOAD_ERR_OK || $tmp === '' || !is_uploaded_file($tmp)
-                    || $size < 1 || $size > 8 * 1024 * 1024) {
-                    return $this->fail('/issues/create', 'أحد المرفقات غير صالح أو أكبر من 8 ميجابايت.');
-                }
-                $mime = $finfo->file($tmp) ?: '';
-                if (!isset($allowed[$mime])) {
-                    return $this->fail('/issues/create', 'المرفقات المسموحة صور JPG/PNG/WEBP/GIF أو PDF فقط.');
-                }
-                $uploads[] = ['tmp' => $tmp, 'size' => $size, 'mime' => $mime, 'ext' => $allowed[$mime]];
-            }
-        } elseif ($files !== null) {
-            return $this->fail('/issues/create', 'تعذر قراءة المرفقات. حاول اختيار الملفات مرة أخرى.');
+        try {
+            $uploads = ContentEditorService::validateUploads(
+                $_FILES['attachments'] ?? null,
+                $this->request->input('attachment_tokens', [])
+            );
+        } catch (\DomainException $e) {
+            $message = match ($e->getMessage()) {
+                'too_many_uploads' => 'الحد الأقصى 8 مرفقات للمنشور الواحد.',
+                'invalid_upload_size' => 'أحد المرفقات غير صالح أو أكبر من 8 ميجابايت.',
+                'invalid_upload_type' => 'المرفقات المسموحة صور JPG/PNG/WEBP/GIF أو PDF فقط.',
+                default => 'تعذر قراءة المرفقات. حاول اختيار الملفات مرة أخرى.',
+            };
+            return $this->fail('/issues/create', $message);
         }
 
         $issueId = Issue::create(
@@ -144,12 +127,17 @@ final class IssueController extends Controller
             $type === 'help_request' ? $measurements : ''
         );
 
-        $saved = 0;
-        if ($uploads) {
-            $targetDir = \App\Core\App::root('storage/private/issues/' . $issueId);
-            if (!is_dir($targetDir) && !mkdir($targetDir, 0750, true) && !is_dir($targetDir)) {
-                $this->flash('info', 'تم نشر المنشور، لكن تعذر إنشاء مجلد المرفقات.');
-                return $this->redirect('/issues/' . $issueId);
+        $stored = ContentEditorService::storeUploads($issueId, (int) $user['id'], $uploads, $description);
+        $resolvedDescription = ContentEditorService::resolveInlineTokens($description, $stored['map']);
+        Issue::updateDescriptionContent($issueId, (int) $user['id'], $resolvedDescription);
+        ContentEditorService::pruneUnusedInlineMedia($issueId);
+
+        if ((int) $stored['failed'] > 0) {
+            $this->flash('info', 'تم نشر المنشور، لكن تعذر حفظ بعض المرفقات. يمكنك إضافتها مرة أخرى.');
+        } else {
+            $this->flash('success', 'تم نشر المنشور بنجاح.');
+        }
+        return $this->redirect('/issues/' . $issueId);
             }
             foreach ($uploads as $upload) {
                 $filename = bin2hex(random_bytes(16)) . '.' . $upload['ext'];
