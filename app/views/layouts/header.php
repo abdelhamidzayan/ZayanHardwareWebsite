@@ -49,9 +49,13 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                         <?php if ($username !== '') : ?><span dir="ltr">@<?= $e($username) ?></span><?php endif; ?>
                     </div>
                 </div>
-                <a class="account-menu__item" href="<?= $e($profileHref) ?>">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-                    <span>طاولتي ومشاركاتي</span>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/workbench">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg>
+                    <span>طاولتي</span>
+                </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/my-posts">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+                    <span>مشاركاتي</span>
                 </a>
                 <details class="account-menu__group">
                     <summary class="account-menu__item account-menu__group-trigger">
