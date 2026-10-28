@@ -1096,3 +1096,12 @@
 .auth__form .login-contact .wizard-contact__phone[hidden] {
   display: none !important;
 }
+
+.auth__form .login-contact--email .country-picker,
+.auth__form .login-contact--username .country-picker {
+  display: none;
+}
+.auth__form .login-contact--email .wizard-contact__phone > input,
+.auth__form .login-contact--username .wizard-contact__phone > input {
+  padding-inline: .8rem;
+}
