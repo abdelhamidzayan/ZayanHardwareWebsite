@@ -89,3 +89,10 @@
   .image-viewer__toolbar { align-items: flex-start; flex-direction: column; }
   .image-viewer__viewport { height: calc(100% - 5.25rem); }
 }
+
+.inline-media { margin: 1rem 0; max-inline-size: min(100%, 42rem); }
+.inline-media a { display: inline-block; max-inline-size: 100%; }
+.inline-media img { display: block; max-inline-size: 100%; max-block-size: 34rem; object-fit: contain; border-radius: var(--radius-md); background: var(--color-bg); cursor: zoom-in; }
+.inline-media__document { margin: .75rem 0; }
+.inline-media__document a { display: inline-flex; padding: .6rem .9rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-primary); }
+.accepted-solution__body, .diagnostic-updates__body { line-height: 1.85; overflow-wrap: anywhere; }
