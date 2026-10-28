@@ -120,7 +120,6 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                     <p class="field__hint">هنقترح لك أسماء بالإنجليزية من اسمك الظاهر، وتقدر تختار اقتراحًا أو تكتب اسمك بنفسك.</p>
                     <p class="field__status" data-username-status aria-live="polite"><?= $err('username') ?></p>
                     <div class="wizard-suggestions" data-username-suggestions aria-label="اقتراحات أسماء المستخدمين"></div>
-                    <button class="wizard__text-button" type="button" data-more-suggestions>اقتراحات أخرى</button>
                 </div>
 
                 <fieldset class="field wizard-choice">
@@ -210,7 +209,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
             </section>
         </form>
 
-        <p class="wizard__terms">بإنشاء الحساب فإنك توافق على <a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">قواعد المنصة</a> و<a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">سياسة الخصوصية</a>.</p>
+        <p class="wizard__terms">بإنشاء الحساب فإنك توافق على <a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">قواعد المنصة</a> و <a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">سياسة الخصوصية</a>.</p>
         <p class="auth__switch">لديك حساب؟ <a href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a></p>
     </div>
 </section>
