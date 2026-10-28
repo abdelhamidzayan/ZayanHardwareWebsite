@@ -59,7 +59,7 @@ foreach ($replies as $reply) {
                     $mimeType = (string) $file['mime_type'];
                     ?>
                     <?php if (str_starts_with($mimeType, 'image/')) : ?>
-                        <a href="<?= $e($attachmentUrl) ?>" target="_blank" rel="noopener">
+                        <a href="<?= $e($attachmentUrl) ?>" class="attachment-image-link" data-image-viewer data-image-src="<?= $e($attachmentUrl) ?>" aria-label="تكبير الصورة">
                             <img src="<?= $e($attachmentUrl) ?>" alt="مرفق فني" loading="lazy">
                         </a>
                     <?php elseif (str_starts_with($mimeType, 'audio/')) : ?>
@@ -311,4 +311,12 @@ foreach ($replies as $reply) {
             </form>
         </details>
     <?php endif; ?>
+    <dialog class="image-viewer" data-image-viewer-dialog aria-label="عارض الصور">
+        <div class="image-viewer__toolbar">
+            <span>اسحب للتحريك · استخدم عجلة الماوس أو أزرار التكبير</span>
+            <div><button type="button" class="btn btn--secondary" data-image-zoom-out aria-label="تصغير">−</button><button type="button" class="btn btn--secondary" data-image-zoom-in aria-label="تكبير">+</button><button type="button" class="btn btn--primary" data-image-viewer-close>إغلاق</button></div>
+        </div>
+        <div class="image-viewer__viewport" data-image-viewer-viewport><img data-image-viewer-image alt="صورة فنية مكبرة" draggable="false"></div>
+    </dialog>
+    <script src="<?= $e($baseUrl) ?>/js/image-viewer.js" defer></script>
 </div>
