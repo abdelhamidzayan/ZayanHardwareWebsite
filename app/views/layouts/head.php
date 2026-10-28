@@ -8,7 +8,14 @@ $pageTitle = isset($title) && $title !== '' ? $title . ' | ' . $appName : $appNa
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= $e($pageTitle) ?></title>
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zayan Hardware">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="<?= $e($baseUrl) ?>/manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="<?= $e($baseUrl) ?>/assets/icons/icon.svg">
+<link rel="apple-touch-icon" href="<?= $e($baseUrl) ?>/assets/icons/icon.svg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
