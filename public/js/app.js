@@ -140,7 +140,7 @@
 })();
 
 
-/* ---------- Login identifier: auto-detect email, phone, or username ---------- */
+/* ---------- Login identifier: phone, email, or username in one field ---------- */
 (() => {
   'use strict';
 
@@ -153,9 +153,16 @@
 
   const visibleInput = form.querySelector('[data-login-visible-input]');
   const hiddenInput = form.querySelector('#identifier');
-  const countrySelect = form.querySelector('[data-login-country]');
+  const contact = form.querySelector('[data-login-contact]');
   const phoneControls = form.querySelector('[data-login-phone-controls]');
+  const countryToggle = form.querySelector('[data-login-country-toggle]');
+  const countryList = form.querySelector('[data-login-country-list]');
+  const countryFlag = form.querySelector('[data-login-country-flag]');
+  const countryDial = form.querySelector('[data-login-country-dial]');
+  const contactSwitch = form.querySelector('[data-login-contact-switch]');
+  const contactIcon = form.querySelector('[data-login-contact-icon]');
   const label = form.querySelector('[data-login-identifier-label]');
+  let manualMode = 'phone';
 
   const clearInvalidCredentialsNotice = () => {
     document.querySelectorAll('.flash--error').forEach((notice) => {
@@ -168,32 +175,83 @@
     });
   };
 
-  const digitsOnly = (value) => value
-    .replace(/[٠-٩۰-۹]/g, (digit) => {
-      const arabic = '٠١٢٣٤٥٦٧٨٩';
-      const persian = '۰۱۲۳۴۵۶۷۸۹';
-      const index = arabic.indexOf(digit);
-      return String(index >= 0 ? index : persian.indexOf(digit));
-    })
-    .replace(/\D/g, '');
-
+  const toLatinDigits = (value) => value.replace(/[٠-٩۰-۹]/g, (digit) => {
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    const persian = '۰۱۲۳۴۵۶۷۸۹';
+    const index = arabic.indexOf(digit);
+    return String(index >= 0 ? index : persian.indexOf(digit));
+  });
+  const digitsOnly = (value) => toLatinDigits(value).replace(/\D/g, '');
   const isEmail = (value) => value.includes('@');
   const isPhone = (value) => {
     const trimmed = value.trim();
     const digits = digitsOnly(trimmed);
-    return digits.length >= 7 && (/^[+\d\s().-]+$/.test(trimmed) || /^[٠-٩۰-۹\s().-]+$/.test(trimmed));
+    return digits.length >= 7 && /^[+0-9٠-٩۰-۹().\s-]+$/.test(trimmed);
+  };
+
+  const currentMode = () => {
+    const value = visibleInput.value.trim();
+    if (isEmail(value)) return 'email';
+    if (value && !isPhone(value)) return 'username';
+    return manualMode;
   };
 
   const updateMode = () => {
     const value = visibleInput.value.trim();
-    const phoneMode = value === '' || (!isEmail(value) && isPhone(value));
+    const mode = currentMode();
+    const phoneMode = mode === 'phone';
     phoneControls.hidden = !phoneMode;
-    visibleInput.type = 'text';
-    visibleInput.inputMode = isEmail(value) ? 'email' : (phoneMode ? 'tel' : 'text');
-    visibleInput.autocomplete = isEmail(value) ? 'email' : (phoneMode ? 'tel-national' : 'username');
-    visibleInput.placeholder = 'البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم';
-    label.textContent = 'البريد الإلكتروني أو رقم الهاتف أو اسم المستخدم';
+    contact.classList.toggle('login-contact--email', mode === 'email');
+    visibleInput.inputMode = mode === 'email' ? 'email' : (phoneMode ? 'tel' : 'text');
+    visibleInput.autocomplete = mode === 'email' ? 'email' : (phoneMode ? 'tel-national' : 'username');
+    visibleInput.placeholder = mode === 'email' ? 'name@example.com' : (mode === 'username' ? 'اسم المستخدم' : 'رقم الهاتف');
+    label.textContent = mode === 'email' ? 'البريد الإلكتروني' : (mode === 'username' ? 'اسم المستخدم' : 'رقم الهاتف أو البريد الإلكتروني أو اسم المستخدم');
+    contactSwitch.setAttribute('aria-label', phoneMode ? 'التبديل إلى البريد الإلكتروني' : 'التبديل إلى رقم الهاتف');
+    contactSwitch.title = phoneMode ? 'التبديل إلى البريد الإلكتروني' : 'التبديل إلى رقم الهاتف';
+    contactIcon.innerHTML = phoneMode
+      ? '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 18.5h4"/>'
+      : '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>';
   };
+
+  const closeCountryList = () => {
+    countryList.hidden = true;
+    countryToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  countryToggle.addEventListener('click', () => {
+    const open = countryList.hidden;
+    countryList.hidden = !open;
+    countryToggle.setAttribute('aria-expanded', String(open));
+  });
+
+  countryList.querySelectorAll('[data-login-country]').forEach((button) => {
+    button.addEventListener('click', () => {
+      countryFlag.textContent = button.dataset.flag || button.dataset.country;
+      countryDial.textContent = '+' + button.dataset.dial;
+      countryList.querySelectorAll('[data-login-country]').forEach((item) => {
+        item.setAttribute('aria-selected', item === button ? 'true' : 'false');
+      });
+      countryToggle.dataset.country = button.dataset.country;
+      countryToggle.dataset.dial = button.dataset.dial;
+      closeCountryList();
+      visibleInput.focus();
+    });
+  });
+
+  contactSwitch.addEventListener('click', () => {
+    manualMode = currentMode() === 'phone' ? 'email' : 'phone';
+    visibleInput.value = '';
+    updateMode();
+    closeCountryList();
+    visibleInput.focus();
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-login-phone-controls]')) closeCountryList();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeCountryList();
+  });
 
   visibleInput.addEventListener('input', () => {
     updateMode();
@@ -201,13 +259,16 @@
   });
   form.addEventListener('input', clearInvalidCredentialsNotice);
 
-  // Restore the identifier after a failed login redirect; never store the password.
   try {
     const pending = sessionStorage.getItem(pendingLoginKey);
     if (pending) {
       sessionStorage.removeItem(pendingLoginKey);
       const previous = JSON.parse(pending);
       visibleInput.value = typeof previous.value === 'string' ? previous.value : '';
+      if (previous.country) {
+        const selected = countryList.querySelector('[data-login-country="' + CSS.escape(previous.country) + '"]');
+        if (selected) selected.click();
+      }
       updateMode();
     }
   } catch (_) {
@@ -217,7 +278,8 @@
   updateMode();
   form.addEventListener('submit', () => {
     const value = visibleInput.value.trim();
-    if (value.includes('@')) {
+    const mode = currentMode();
+    if (mode === 'email' || value.includes('@')) {
       hiddenInput.value = value.toLowerCase();
     } else if (isPhone(value)) {
       const digits = digitsOnly(value);
@@ -226,7 +288,7 @@
       } else if (digits.startsWith('00')) {
         hiddenInput.value = '+' + digits.slice(2);
       } else {
-        const code = digitsOnly(countrySelect.value);
+        const code = digitsOnly(countryToggle.dataset.dial || '20');
         if (digits.startsWith(code) && digits.length > code.length + 6) {
           hiddenInput.value = '+' + digits;
         } else {
@@ -238,7 +300,8 @@
     }
 
     try {
-      sessionStorage.setItem(pendingLoginKey, JSON.stringify({ value }));
+      const selected = countryToggle.dataset.country || 'EG';
+      sessionStorage.setItem(pendingLoginKey, JSON.stringify({ value, country: selected }));
     } catch (_) {}
   });
 })();
