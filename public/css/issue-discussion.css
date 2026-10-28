@@ -60,3 +60,13 @@
 .issue-result h2 { font-size:var(--text-lg); }
 .issue-result__status { color:var(--color-primary); font-weight:700; }
 .issue-result__actions { display:flex; flex-wrap:wrap; gap:.75rem; }
+
+/* Diagnostic timeline and repair confirmation share the existing blue card pattern. */
+.diagnostic-updates { display: grid; gap: 1rem; }
+.diagnostic-updates__list { display: grid; gap: .9rem; margin: 0; padding: 0; list-style: none; }
+.diagnostic-updates__item { display: grid; gap: .45rem; padding: 1rem; border-inline-start: 3px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-primary-soft); }
+.diagnostic-updates__item > div { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .4rem .8rem; }
+.diagnostic-updates__item p { margin: 0; line-height: 1.85; overflow-wrap: anywhere; }
+.repair-confirmation { display: grid; gap: 1rem; border-color: var(--color-primary); }
+.repair-confirmation__reject { padding-block-start: .75rem; border-top: 1px solid var(--color-border); }
+.repair-confirmation__reject summary { color: var(--color-muted); cursor: pointer; font-weight: 600; }
