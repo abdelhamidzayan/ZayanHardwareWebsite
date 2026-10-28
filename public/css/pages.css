@@ -960,9 +960,25 @@
   text-align: left;
   direction: ltr;
 }
-.field__status { min-block-size: 1.3rem; margin: .3rem 0 0; color: var(--color-muted, #7b8493); font-size: .82rem; }
-.field__status.is-available { color: #16803d; }
-.field__status.is-error { color: #dc2626; }
+.wizard-username { position: relative; }
+.wizard-username .field__input { padding-inline-end: 5.5rem; }
+.wizard-username .field__status {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: .75rem;
+  display: flex;
+  align-items: center;
+  max-inline-size: 5rem;
+  min-block-size: 0;
+  margin: 0;
+  color: var(--color-muted, #7b8493);
+  font-size: .78rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.wizard-username .field__status.is-available { color: #16803d; }
+.wizard-username .field__status.is-error { color: #dc2626; }
 .wizard-suggestions { display: flex; flex-wrap: wrap; gap: .45rem; margin-block-start: .45rem; }
 .wizard-suggestion {
   max-inline-size: 100%;
