@@ -17,13 +17,14 @@ final class Notification extends Model
         string $body,
         string $targetPath,
         string $eventKey
-    ): void {
+    ): bool {
         $stmt = self::db()->prepare(
             'INSERT IGNORE INTO notifications
                 (user_id, actor_user_id, issue_id, reply_id, type, title, body, target_path, event_key)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([$userId, $actorUserId, $issueId, $replyId, $type, $title, $body, $targetPath, $eventKey]);
+        return $stmt->rowCount() === 1;
     }
 
     public static function forUser(int $userId, int $limit = 100): array
