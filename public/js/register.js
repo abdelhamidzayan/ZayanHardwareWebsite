@@ -39,7 +39,8 @@
   let checkSequence = 0;
   let suggestionOffset = 0;
   let suggestedNames = [];
-  let usernameTouched = username.value.trim() !== '';
+  let usernameTouched = false;
+  let autoSuggestedUsername = '';
   const showIsoFlags = /Win/i.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
   if (showIsoFlags) {
     countryFlag.textContent = countryValue.value;
@@ -262,8 +263,11 @@
   const makeCandidates = () => {
     const fullName = transliterate(displayName.value);
     const nameParts = fullName.split('_').filter(Boolean);
-    const first = (nameParts[0] || 'tech').replace(/[^a-z0-9]/g, '');
-    const last = (nameParts.slice(1).join('_') || 'tech').replace(/[^a-z0-9_]/g, '');
+    const first = (nameParts[0] || '').replace(/[^a-z0-9]/g, '');
+    const last = (nameParts.slice(1).join('_') || '').replace(/[^a-z0-9_]/g, '');
+
+    // Never generate generic "tech_tech" names when the display name cannot be converted.
+    if (first.length < 2) return [];
     const localSeed = contactType.value === 'email'
       ? transliterate(emailLocal.value.split('@')[0] || '')
       : '';
@@ -293,6 +297,17 @@
   const renderSuggestions = async (refresh) => {
     if (refresh) suggestionOffset += 1;
     const candidates = makeCandidates();
+    if (!candidates.length) {
+      suggestedNames = [];
+      suggestionBox.replaceChildren();
+      if (autoSuggestedUsername && username.value === autoSuggestedUsername && !usernameTouched) {
+        username.value = '';
+        autoSuggestedUsername = '';
+        usernameStatus.textContent = '';
+        usernameStatus.classList.remove('is-error', 'is-available');
+      }
+      return;
+    }
     const rotated = candidates.slice(suggestionOffset % candidates.length).concat(candidates.slice(0, suggestionOffset % candidates.length));
     suggestedNames = await requestAvailable(rotated);
     suggestionBox.replaceChildren();
@@ -303,6 +318,7 @@
       button.textContent = '@' + name;
       button.addEventListener('click', () => {
         usernameTouched = true;
+        autoSuggestedUsername = '';
         username.value = name;
         username.dispatchEvent(new Event('input', { bubbles: true }));
         checkUsername();
@@ -311,6 +327,7 @@
     });
     if (!usernameTouched && suggestedNames.length) {
       username.value = suggestedNames[0];
+      autoSuggestedUsername = suggestedNames[0];
       checkUsername();
     }
   };
@@ -397,7 +414,7 @@
   root.querySelector('[data-more-suggestions]').addEventListener('click', () => renderSuggestions(true));
 
   username.addEventListener('input', () => {
-    usernameTouched = true;
+    if (username.value !== autoSuggestedUsername) usernameTouched = true;
     checkSequence += 1;
     clearTimeout(checkTimer);
     usernameStatus.textContent = '';
