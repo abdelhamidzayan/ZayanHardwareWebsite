@@ -117,7 +117,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                                minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" value="<?= $val('username') ?>"
                                data-username-input required>
                     </div>
-                    <p class="field__hint">يمكنك تغييره لاحقًا من ملفك الشخصي.</p>
+                    <p class="field__hint">هنقترح لك أسماء بالإنجليزية من اسمك الظاهر، وتقدر تختار اقتراحًا أو تكتب اسمك بنفسك.</p>
                     <p class="field__status" data-username-status aria-live="polite"><?= $err('username') ?></p>
                     <div class="wizard-suggestions" data-username-suggestions aria-label="اقتراحات أسماء المستخدمين"></div>
                     <button class="wizard__text-button" type="button" data-more-suggestions>اقتراحات أخرى</button>
