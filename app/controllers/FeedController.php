@@ -20,8 +20,7 @@ final class FeedController extends Controller
         foreach ($issues as &$issue) {
             $name = trim((string) ($issue['author'] ?? ''));
             $issue['initials'] = $name !== '' ? mb_substr($name, 0, 2, 'UTF-8') : '؟';
-            $issue['expert'] = ($issue['tech_level'] ?? '') === 'board'
-                || in_array($issue['role'] ?? '', ['admin', 'moderator'], true);
+            $issue['expert'] = in_array($issue['role'] ?? '', ['admin', 'moderator'], true);
             $issue['type_label'] = match ($issue['content_type'] ?? 'help_request') {
                 'technical_post' => 'معلومة فنية',
                 'discussion' => 'نقاش عام',
@@ -30,7 +29,7 @@ final class FeedController extends Controller
             $issue['role'] = match ($issue['role'] ?? '') {
                 'admin' => 'إدارة المنصة',
                 'moderator' => 'مشرف فني',
-                default => ($issue['tech_level'] ?? '') === 'board' ? 'فني بورد' : 'فني صيانة',
+                default => 'فني هاردوير',
             };
 
             $createdAt = strtotime((string) ($issue['created_at'] ?? '') . ' UTC');
