@@ -1071,3 +1071,28 @@
   font-size: .7rem;
   font-weight: 600;
 }
+
+
+/* Login contact field uses the same phone/email control styling as registration. */
+.auth__form .login-contact {
+  inline-size: 100%;
+  min-block-size: 3.25rem;
+}
+.auth__form .login-contact .wizard-contact__phone {
+  min-block-size: 3.25rem;
+}
+.auth__form .login-contact .wizard-contact__phone > input {
+  display: block;
+  min-block-size: 3.15rem;
+  box-sizing: border-box;
+  border-radius: 0;
+}
+.auth__form .login-contact .wizard-contact__switch {
+  min-block-size: 3.25rem;
+}
+.auth__form .login-contact .country-list {
+  z-index: 30;
+}
+.auth__form .login-contact .wizard-contact__phone[hidden] {
+  display: none !important;
+}
