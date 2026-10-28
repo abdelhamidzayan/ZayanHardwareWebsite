@@ -62,6 +62,122 @@ final class IssueController extends Controller
         ]);
     }
 
+    public function create(): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+
+        if (!$this->request->isPost()) {
+            return $this->view('issues/create', [
+                'title' => 'إنشاء منشور',
+                'active' => 'add',
+                'currentUser' => $user,
+            ]);
+        }
+
+        if (!Csrf::verify($this->request->input('_token'))) {
+            return $this->fail('/issues/create', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        }
+
+        $type = $this->string('content_type');
+        $title = trim($this->string('title'));
+        $description = trim($this->string('description'));
+        $deviceModel = trim($this->string('device_model'));
+        $category = trim($this->string('category'));
+        $measurements = trim($this->string('measurements'));
+
+        if (!in_array($type, ['help_request', 'technical_post', 'discussion'], true)) {
+            return $this->fail('/issues/create', 'اختار نوع المنشور.');
+        }
+        if (mb_strlen($title) < 5 || mb_strlen($title) > 180
+            || mb_strlen($description) < 10 || mb_strlen($description) > 10000
+            || mb_strlen($measurements) > 5000) {
+            return $this->fail('/issues/create', 'راجع العنوان والوصف والقياسات؛ يوجد حقل خارج الحدود المسموحة.');
+        }
+        if ($type === 'help_request'
+            && ($deviceModel === '' || mb_strlen($deviceModel) > 120 || $category === '' || mb_strlen($category) > 40
+                || mb_strlen($measurements) < 3)) {
+            return $this->fail('/issues/create', 'طلب المساعدة يحتاج موديل الجهاز والتخصص والقياسات أو الاختبارات التي جربتها.');
+        }
+
+        $uploads = [];
+        $files = $_FILES['attachments'] ?? null;
+        if (is_array($files) && isset($files['name']) && is_array($files['name'])) {
+            if (count($files['name']) > 8) {
+                return $this->fail('/issues/create', 'الحد الأقصى 8 مرفقات للمنشور الواحد.');
+            }
+            $allowed = [
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif',
+                'application/pdf' => 'pdf',
+            ];
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            foreach ($files['name'] as $index => $originalName) {
+                $error = (int) ($files['error'][$index] ?? UPLOAD_ERR_NO_FILE);
+                if ($error === UPLOAD_ERR_NO_FILE) continue;
+                $tmp = (string) ($files['tmp_name'][$index] ?? '');
+                $size = (int) ($files['size'][$index] ?? 0);
+                if ($error !== UPLOAD_ERR_OK || $tmp === '' || !is_uploaded_file($tmp)
+                    || $size < 1 || $size > 8 * 1024 * 1024) {
+                    return $this->fail('/issues/create', 'أحد المرفقات غير صالح أو أكبر من 8 ميجابايت.');
+                }
+                $mime = $finfo->file($tmp) ?: '';
+                if (!isset($allowed[$mime])) {
+                    return $this->fail('/issues/create', 'المرفقات المسموحة صور JPG/PNG/WEBP/GIF أو PDF فقط.');
+                }
+                $uploads[] = ['tmp' => $tmp, 'size' => $size, 'mime' => $mime, 'ext' => $allowed[$mime]];
+            }
+        } elseif ($files !== null) {
+            return $this->fail('/issues/create', 'تعذر قراءة المرفقات. حاول اختيار الملفات مرة أخرى.');
+        }
+
+        $issueId = Issue::create(
+            (int) $user['id'],
+            $type,
+            $title,
+            $type === 'help_request' ? $deviceModel : '',
+            $type === 'help_request' ? $category : '',
+            $description,
+            $type === 'help_request' ? $measurements : ''
+        );
+
+        $saved = 0;
+        if ($uploads) {
+            $targetDir = \App\Core\App::root('storage/private/issues/' . $issueId);
+            if (!is_dir($targetDir) && !mkdir($targetDir, 0750, true) && !is_dir($targetDir)) {
+                $this->flash('info', 'تم نشر المنشور، لكن تعذر إنشاء مجلد المرفقات.');
+                return $this->redirect('/issues/' . $issueId);
+            }
+            foreach ($uploads as $upload) {
+                $filename = bin2hex(random_bytes(16)) . '.' . $upload['ext'];
+                $destination = $targetDir . DIRECTORY_SEPARATOR . $filename;
+                if (!move_uploaded_file($upload['tmp'], $destination)) continue;
+                try {
+                    Issue::addAttachment(
+                        $issueId,
+                        (int) $user['id'],
+                        'issues/' . $issueId . '/' . $filename,
+                        $upload['mime'],
+                        $upload['size']
+                    );
+                    $saved++;
+                } catch (\Throwable $e) {
+                    @unlink($destination);
+                    \App\Core\App::log('error', 'Unable to save issue attachment metadata: ' . $e->getMessage());
+                }
+            }
+        }
+
+        if (count($uploads) > $saved) {
+            $this->flash('info', 'تم نشر المنشور، لكن تعذر حفظ بعض المرفقات. يمكنك إضافتها لاحقًا.');
+        } else {
+            $this->flash('success', 'تم نشر المنشور بنجاح.');
+        }
+        return $this->redirect('/issues/' . $issueId);
+    }
+
     public function show(int $id): Response
     {
         $user = AuthService::user();
