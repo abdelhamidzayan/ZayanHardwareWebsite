@@ -134,8 +134,13 @@ final class Issue extends Model
         return $stmt->fetchAll();
     }
 
-    public static function myPosts(int $userId, string $type = '', string $status = ''): array
-    {
+    public static function myPosts(
+        int $userId,
+        string $type = '',
+        string $status = '',
+        string $fromDate = '',
+        string $toDate = ''
+    ): array {
         $allowedTypes = ['help_request', 'technical_post', 'discussion'];
         $allowedStatuses = ['open', 'in_progress', 'awaiting_confirmation', 'resolved', 'closed_unresolved'];
         $where = ['i.user_id = ?', 'i.deleted_at IS NULL'];
@@ -147,6 +152,14 @@ final class Issue extends Model
         if (in_array($status, $allowedStatuses, true)) {
             $where[] = 'i.status = ?';
             $params[] = $status;
+        }
+        if ($fromDate !== '') {
+            $where[] = 'i.created_at >= ?';
+            $params[] = $fromDate . ' 00:00:00';
+        }
+        if ($toDate !== '') {
+            $where[] = 'i.created_at < DATE_ADD(?, INTERVAL 1 DAY)';
+            $params[] = $toDate . ' 00:00:00';
         }
         $sql = 'SELECT i.id, i.title, i.content_type, i.device_model, i.category, i.status,
                        i.created_at, i.updated_at,
