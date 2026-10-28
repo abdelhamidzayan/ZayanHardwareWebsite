@@ -143,8 +143,8 @@
     }
   };
 
-  const openGuide = () => {
-    if (dialog || getSeen() || getSnoozed() || isInstalled()) return;
+  const openGuide = (force = false) => {
+    if (dialog || (!force && (getSeen() || getSnoozed() || isInstalled()))) return;
     previousFocus = document.activeElement;
 
     const guide = platformGuide();
@@ -234,7 +234,14 @@
     closeGuide();
   });
 
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-pwa-open-guide]');
+    if (!trigger) return;
+    event.preventDefault();
+    openGuide(true);
+  });
+
   if (!getSeen() && !getSnoozed() && !isInstalled()) {
-    window.setTimeout(openGuide, 900);
+    window.setTimeout(() => openGuide(false), 900);
   }
 })();
