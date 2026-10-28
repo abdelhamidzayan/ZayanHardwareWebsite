@@ -62,3 +62,201 @@
   .features { grid-template-columns: repeat(3, 1fr); }
   .steps { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ==========================================================
+   Zayan Hardware UI consistency layer
+   Shared responsive behavior for iOS, Android, tablets and desktop.
+   Keep device differences in layout and interaction, not brand styling.
+   ========================================================== */
+
+:root {
+  --ui-tap-target: 2.75rem;
+  --ui-page-gutter: clamp(1rem, 3.5vw, 1.5rem);
+  --ui-content-width: 72rem;
+  --ui-focus-ring: 0 0 0 3px rgb(37 99 235 / 18%);
+}
+
+/* Consistent page sizing and prevent accidental horizontal overflow. */
+html {
+  min-block-size: 100%;
+  scroll-padding-block-start: 1rem;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  min-inline-size: 320px;
+  overflow-wrap: break-word;
+}
+button, input, select, textarea, summary, a {
+  -webkit-tap-highlight-color: transparent;
+}
+button, [role="button"], .btn, .icon-btn, .bottom-nav__item {
+  touch-action: manipulation;
+}
+button, input, select, textarea {
+  max-inline-size: 100%;
+}
+img, video, canvas, iframe {
+  max-inline-size: 100%;
+}
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  box-shadow: var(--ui-focus-ring);
+}
+
+/* One shared interaction language: hover only where a real hover exists. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:not(:disabled):hover,
+  .chip:hover,
+  .bottom-nav__item:hover,
+  .account-menu__item:hover,
+  .sort-menu__options a:hover {
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .btn, .chip, .bottom-nav__item, .account-menu__item {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Consistent registration wizard palette — remove legacy dark/gold accents. */
+.registration-progress__step.is-active,
+.registration-progress__step.is-done { color: var(--color-primary) !important; }
+.registration-progress__step.is-active .registration-progress__number {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #fff !important;
+}
+.registration-progress__step.is-done .registration-progress__number {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+.registration-progress__step:not(:last-child)::before {
+  background: var(--color-border, #e5e7eb) !important;
+}
+.choice-card:has(input:checked),
+.wizard-choice__card:has(input:checked) {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 1px var(--color-primary) !important;
+  background: var(--color-primary-soft) !important;
+}
+.choice-card input,
+.wizard-choice__card input {
+  accent-color: var(--color-primary);
+}
+.username-suggestion:hover,
+.wizard-suggestion:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.test-status__dot { background: var(--color-primary) !important; }
+.avatar-placeholder__circle {
+  background: var(--color-primary-soft) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-primary) !important;
+}
+.avatar-placeholder__button {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-muted) !important;
+}
+
+/* Form controls use readable iOS-safe text size (prevents Safari zoom on focus). */
+.field__input,
+.field__password input,
+.wizard-contact input,
+.wizard-contact select,
+textarea,
+select {
+  font-size: max(1rem, 16px);
+}
+.field__input,
+.field__password,
+.wizard-contact__phone,
+.wizard-contact__email,
+.wizard-contact__switch,
+.country-picker {
+  min-block-size: var(--ui-tap-target);
+}
+.btn,
+button.btn,
+input[type="submit"],
+input[type="button"] {
+  min-block-size: var(--ui-tap-target);
+}
+textarea { max-inline-size: 100%; }
+
+/* iPhone/iPad safe areas and stable viewport sizing. */
+.app {
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+}
+.app-header {
+  padding-block-start: calc(var(--space-4) + env(safe-area-inset-top, 0px));
+}
+.bottom-nav {
+  padding-block-end: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+}
+.app__main {
+  padding-block-end: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
+}
+.guest-header__inner {
+  padding-block-start: calc(var(--space-3) + env(safe-area-inset-top, 0px));
+}
+.guest-footer {
+  padding-block-end: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Responsive rhythm: compact on phones, breathable on tablets, bounded on desktop. */
+.container,
+.help-page,
+.section,
+.featured-carousel {
+  min-inline-size: 0;
+}
+@media (max-width: 639px) {
+  .container { padding-inline: var(--space-4); }
+  .card { border-radius: var(--radius-md); }
+  .auth { padding-inline: var(--space-4); }
+  .auth__card { gap: var(--space-4); }
+  .app-header { padding-inline: var(--space-4); }
+  .topbar { flex-wrap: wrap; }
+  .topbar__search { order: 3; flex: 1 0 100%; min-inline-size: 0; }
+  .account-menu__name { display: none; }
+  .account-menu__trigger { min-block-size: var(--ui-tap-target); padding: .2rem; }
+  .account-menu__avatar { inline-size: 2.25rem; block-size: 2.25rem; }
+  .issue-page { padding-inline: var(--space-4); }
+  .issue-page-head { align-items: flex-start; flex-wrap: wrap; }
+  .reply-card__actions { gap: .75rem; }
+}
+@media (min-width: 640px) {
+  .guest-main > .section,
+  .guest-main > .help-page,
+  .guest-main > .policy-page {
+    margin-inline: auto;
+  }
+  .app__main > .container,
+  .app__main > .issue-page {
+    margin-inline: auto;
+  }
+}
+@media (min-width: 1024px) {
+  .guest-header__inner { padding-inline: var(--space-6); }
+  .guest-main > .section,
+  .guest-main > .help-page {
+    max-inline-size: var(--ui-content-width);
+  }
+}
+
+/* Respect reduced motion and avoid hover-only affordances on touch devices. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
