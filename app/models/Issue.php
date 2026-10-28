@@ -28,6 +28,26 @@ final class Issue extends Model
         return $stmt->fetch() ?: null;
     }
 
+    /** Fetch real help requests for the feed; demo fixtures must not be shown to members. */
+    public static function feed(int $limit = 50): array
+    {
+        $limit = max(1, min(100, $limit));
+        $stmt = self::db()->prepare(
+            'SELECT i.id, i.title, i.device_model AS device, i.category, i.description,
+                    i.status, i.created_at, u.display_name AS author, u.role,
+                    p.tech_level,
+                    (SELECT COUNT(*) FROM issue_replies r
+                     WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS comments
+             FROM issues i
+             JOIN users u ON u.id = i.user_id
+             LEFT JOIN technician_profiles p ON p.user_id = u.id
+             ORDER BY i.created_at DESC, i.id DESC
+             LIMIT ' . $limit
+        );
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     public static function replies(int $issueId, string $sort): array
     {
         $order = match ($sort) {

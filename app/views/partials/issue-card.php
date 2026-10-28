@@ -35,7 +35,7 @@ for ($i = 0; $i < 32; $i++) {
 
     <div class="issue-card__body">
         <span class="tag tech"><?= $e($issue['device']) ?></span>
-        <h3 class="issue-card__title" dir="auto"><?= $e($issue['title']) ?></h3>
+        <h3 class="issue-card__title" dir="auto"><a class="issue-card__title-link" href="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>"><?= $e($issue['title']) ?></a></h3>
         <p class="issue-card__excerpt" dir="auto"><?= $e($issue['excerpt']) ?></p>
     </div>
 

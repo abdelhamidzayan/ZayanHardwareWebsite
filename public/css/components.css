@@ -139,6 +139,9 @@
 
 .issue-card__meta { font-size: var(--text-sm); color: var(--color-muted); }
 .issue-card__title { margin-block: var(--space-2); font-size: var(--text-xl); }
+.issue-card__title-link { color: inherit; text-decoration: none; }
+.issue-card__title-link:hover { color: var(--color-primary); }
+.issue-card__title-link:focus-visible { border-radius: .2rem; }
 .issue-card__excerpt { color: var(--color-muted); }
 /* User text can have its own direction (dir="auto"); keep it aligned with the page. */
 [dir="rtl"] .issue-card__title, [dir="rtl"] .issue-card__excerpt { text-align: right; }
