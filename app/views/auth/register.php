@@ -16,7 +16,9 @@ if (str_contains($emailLocal, '@')) {
     $emailLocal = $emailParts[0];
     if ($emailDomain === '') $emailDomain = $emailParts[1] ?? '';
 }
-$selectedFocus = (string) ($old['device_focus'] ?? '');
+$selectedFocuses = $old['device_focus'] ?? [];
+if (!is_array($selectedFocuses)) $selectedFocuses = [$selectedFocuses];
+$selectedFocuses = array_values(array_intersect(['iphone', 'android'], array_map('strval', $selectedFocuses)));
 $selectedLevel = (string) ($old['tech_level'] ?? 'fast');
 $selectedExperience = (string) ($old['board_experience'] ?? '');
 ?>
@@ -123,9 +125,10 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
 
                 <fieldset class="field wizard-choice">
                     <legend class="field__label">مجال تخصصك</legend>
+                    <p class="field__hint">يمكنك اختيار مجال واحد أو المجالين معًا إذا كنت متخصصًا في الاثنين.</p>
                     <div class="wizard-choice__grid">
                         <label class="wizard-choice__card">
-                            <input type="radio" name="device_focus" value="iphone" data-wizard-required <?= $selectedFocus === 'iphone' ? 'checked' : '' ?>>
+                            <input type="checkbox" name="device_focus[]" value="iphone" data-wizard-required <?= in_array('iphone', $selectedFocuses, true) ? 'checked' : '' ?>>
                             <span class="wizard-choice__logo wizard-choice__logo--apple" aria-hidden="true">
                                 <svg viewBox="0 0 24 24"><path d="M16.37 12.2c.02 2.2 1.93 2.93 1.95 2.94-.02.05-.3 1.05-1 2.08-.6.9-1.23 1.8-2.22 1.82-.97.02-1.28-.59-2.39-.59-1.1 0-1.45.57-2.36.61-.95.04-1.67-.98-2.28-1.88-1.25-1.82-2.2-5.15-.92-7.4.64-1.12 1.78-1.83 3.02-1.85.94-.02 1.82.66 2.39.66.56 0 1.62-.82 2.73-.7.46.02 1.76.18 2.6 1.42-.07.04-1.55.9-1.53 2.89ZM14.6 5.9c.5-.6.83-1.44.74-2.27-.72.03-1.59.48-2.1 1.08-.46.53-.86 1.39-.75 2.2.8.06 1.61-.4 2.11-1.01Z"/></svg>
                             </span>
@@ -133,7 +136,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                             <span>أجهزة Apple</span>
                         </label>
                         <label class="wizard-choice__card">
-                            <input type="radio" name="device_focus" value="android" data-wizard-required <?= $selectedFocus === 'android' ? 'checked' : '' ?>>
+                            <input type="checkbox" name="device_focus[]" value="android" data-wizard-required <?= in_array('android', $selectedFocuses, true) ? 'checked' : '' ?>>
                             <span class="wizard-choice__logo wizard-choice__logo--android" aria-hidden="true">
                                 <svg viewBox="0 0 24 24"><path d="M6.2 8.1 4.6 5.3a.5.5 0 0 1 .87-.5l1.65 2.85a9.2 9.2 0 0 1 9.76 0l1.65-2.85a.5.5 0 0 1 .87.5L17.8 8.1a8.2 8.2 0 0 1 2.6 6H3.6a8.2 8.2 0 0 1 2.6-6ZM7.1 10.6a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6Zm9.8 0a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6ZM3.6 15.2h16.8v3.1a1.5 1.5 0 0 1-1.5 1.5h-.8v2.1a1.1 1.1 0 0 1-2.2 0v-2.1h-7v2.1a1.1 1.1 0 0 1-2.2 0v-2.1h-.8a1.5 1.5 0 0 1-1.5-1.5v-3.1Z"/></svg>
                             </span>
