@@ -192,10 +192,12 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                 <div class="field">
                     <label class="field__label" for="profile_bio">نبذة عنك</label>
                     <textarea class="field__input" id="profile_bio" name="profile_bio" rows="3" maxlength="1000" placeholder="اكتب نبذة قصيرة عن خبرتك" data-profile-field><?= $val('profile_bio') ?></textarea>
+                    <p class="field__error" data-error-for="profile_bio" aria-live="polite"><?= $err('profile_bio') ?></p>
                 </div>
                 <div class="field">
                     <label class="field__label" for="workshop_name">اسم الورشة</label>
                     <input class="field__input" id="workshop_name" name="workshop_name" type="text" maxlength="100" value="<?= $val('workshop_name') ?>" placeholder="اسم ورشتك" data-profile-field>
+                    <p class="field__error" data-error-for="workshop_name" aria-live="polite"><?= $err('workshop_name') ?></p>
                 </div>
                 <p class="field__hint">يمكنك تخطي هذه الخطوة وإكمالها لاحقًا من ملفك الشخصي.</p>
                 <div class="wizard__actions">
