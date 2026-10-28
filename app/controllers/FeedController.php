@@ -45,6 +45,7 @@ final class FeedController extends Controller
             }
 
             $description = trim(strip_tags((string) ($issue['description'] ?? '')));
+            $description = preg_replace('/\\[\\[image:\\d+\\]\\]/', '', $description) ?? $description;
             $issue['excerpt'] = mb_strimwidth($description, 0, 180, '…', 'UTF-8');
             $issue['solved'] = ($issue['status'] ?? '') === 'resolved';
             $issue['comments'] = (int) ($issue['comments'] ?? 0);
