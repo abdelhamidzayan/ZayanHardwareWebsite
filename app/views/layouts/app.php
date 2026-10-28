@@ -37,6 +37,7 @@ if (!isset($unreadCount) && is_array($currentUser) && isset($currentUser['id']))
     </div>
 
 </div>
+<script src="<?= $e($baseUrl) ?>/js/content-editor.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/pwa-guide.js" defer></script>
 </body>
