@@ -309,7 +309,7 @@
       });
       suggestionBox.append(button);
     });
-    if (!username.value.trim() && suggestedNames.length) {
+    if (!usernameTouched && suggestedNames.length) {
       username.value = suggestedNames[0];
       checkUsername();
     }
