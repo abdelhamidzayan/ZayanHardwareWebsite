@@ -537,7 +537,7 @@ final class IssueController extends Controller
                 $decision === 'approve' ? 'راجعت الإدارة النتيجة واعتمدتها.' : 'راجعت الإدارة النتيجة ولم تعتمدها.',
                 '/issues/' . $id, 'result-reviewed:' . (int) $resultId . ':' . $decision
             );
-            $this->flash('success', $decision === 'approve' ? 'تم اعتماد النتيجة وإضافة نقاط السمعة مرة واحدة.' : 'تم رفض النتيجة. لم تُضف نقاط سمعة.');
+            $this->flash('success', $decision === 'approve' ? ((int) ($issue['latest_was_repaired'] ?? 0) === 1 ? 'تم اعتماد النتيجة وإضافة نقاط السمعة مرة واحدة.' : 'تم اعتماد النتيجة دون إضافة نقاط سمعة لأن العطل لم يُحل.') : 'تم رفض النتيجة. لم تُضف نقاط سمعة.');
         } catch (\DomainException) {
             $this->flash('error', 'النتيجة غير موجودة أو تمت مراجعتها من قبل.');
         }
