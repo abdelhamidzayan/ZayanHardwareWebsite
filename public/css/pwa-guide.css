@@ -123,6 +123,7 @@
 .pwa-guide__instructions li::marker { color: var(--color-primary); font-weight: 700; }
 .pwa-guide__note { margin: .8rem 0 1rem; color: var(--color-muted); font-size: .82rem; line-height: 1.6; }
 .pwa-guide__actions { display: grid; gap: .55rem; }
+.pwa-guide [hidden] { display: none !important; }
 .pwa-guide__install, .pwa-guide__done, .pwa-guide__skip {
   display: flex;
   align-items: center;
