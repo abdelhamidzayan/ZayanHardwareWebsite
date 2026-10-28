@@ -349,6 +349,7 @@ final class IssueController extends Controller
         }
         try {
             Issue::deleteReply((int) $parsedReplyId, (int) $user['id']);
+            ContentEditorService::pruneUnusedInlineMedia($id);
             NotificationService::notifyIssueParticipants(
                 $id, (int) $user['id'], 'status_changed', 'تم تحديث النقاش',
                 'تم حذف تعليق بواسطة صاحبه. إذا كان هو الحل المعتمد، عاد الطلب إلى قيد التشخيص.',
