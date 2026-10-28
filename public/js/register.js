@@ -250,11 +250,11 @@
       'ؤ':'w','ي':'y','ى':'a','ئ':'y','ء':'','پ':'p','چ':'ch','گ':'g'
     };
     result = result.replace(/[ء-يٱپچگ]/g, (letter) => letters[letter] ?? '');
-    result = result.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+    result = result.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return result
-      .replace(/[^a-z0-9_\\s.-]/g, ' ')
+      .replace(/[^a-z0-9_\s.-]/g, ' ')
       .trim()
-      .replace(/[.\\s-]+/g, '_')
+      .replace(/[.\s-]+/g, '_')
       .replace(/_+/g, '_')
       .replace(/^_+|_+$/g, '');
   };
@@ -302,6 +302,7 @@
       button.className = 'wizard-suggestion';
       button.textContent = '@' + name;
       button.addEventListener('click', () => {
+        usernameTouched = true;
         username.value = name;
         username.dispatchEvent(new Event('input', { bubbles: true }));
         checkUsername();
@@ -396,6 +397,7 @@
   root.querySelector('[data-more-suggestions]').addEventListener('click', () => renderSuggestions(true));
 
   username.addEventListener('input', () => {
+    usernameTouched = true;
     checkSequence += 1;
     clearTimeout(checkTimer);
     usernameStatus.textContent = '';
@@ -403,13 +405,13 @@
     checkTimer = setTimeout(checkUsername, 500);
   });
   displayName.addEventListener('input', () => {
-    if (!username.value.trim()) {
+    if (!usernameTouched) {
       clearTimeout(checkTimer);
       checkTimer = setTimeout(() => renderSuggestions(false), 500);
     }
   });
   emailLocal.addEventListener('input', () => {
-    if (!username.value.trim()) {
+    if (!usernameTouched) {
       clearTimeout(checkTimer);
       checkTimer = setTimeout(() => renderSuggestions(false), 500);
     }
