@@ -225,7 +225,7 @@ foreach ($replies as $reply) {
                                 </form>
                             </details>
                         <?php endif; ?>
-                        <?php if ($canReply && $isHelpRequest) : ?>
+                        <?php if ($canReply) : ?>
                             <details class="reply-to-comment"><summary class="text-action">رد على التعليق</summary>
                                 <form method="post" action="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/reply" class="issue-form">
                                     <?= $csrf() ?><input type="hidden" name="parent_reply_id" value="<?= (int) $reply['id'] ?>">
