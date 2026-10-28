@@ -35,7 +35,7 @@ final class User extends Model
     public static function findForLogin(string $identifier, string $type = 'username'): ?array
     {
         if (!in_array($type, ['username', 'email', 'phone'], true)) {
-            throw new \\InvalidArgumentException('Invalid login identifier type.');
+            throw new \InvalidArgumentException('Invalid login identifier type.');
         }
 
         $stmt = self::db()->prepare(
