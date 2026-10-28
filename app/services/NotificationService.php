@@ -24,6 +24,7 @@ final class NotificationService
             $targetPath = '/notifications';
         }
 
+        $body = preg_replace('/\\[\\[image:[A-Za-z0-9_-]{1,80}\\]\\]/', '[صورة مرفقة]', $body) ?? $body;
         $eventKey = hash('sha256', implode('|', [
             $recipientId, $actorId ?? 0, $issueId ?? 0, $replyId ?? 0, $type, $eventIdentity,
         ]));
