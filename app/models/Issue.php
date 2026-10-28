@@ -33,7 +33,7 @@ final class Issue extends Model
     {
         $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
-            'SELECT i.id, i.title, i.device_model AS device, i.category, i.description,
+            'SELECT i.id, i.title, i.content_type, i.device_model AS device, i.category, i.description,
                     i.status, i.created_at, u.display_name AS author, u.role,
                     p.tech_level,
                     (SELECT COUNT(*) FROM issue_replies r
@@ -46,6 +46,34 @@ final class Issue extends Model
         );
         $stmt->execute();
         return $stmt->fetchAll();
+    }
+
+    /** Create one of the supported post types while keeping existing issue IDs and relations intact. */
+    public static function create(int $userId, string $type, string $title, ?string $deviceModel, ?string $category, string $description, string $measurements): int
+    {
+        $stmt = self::db()->prepare(
+            "INSERT INTO issues (user_id, content_type, title, device_model, category, description, measurements, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'open')"
+        );
+        $stmt->execute([
+            $userId,
+            $type,
+            $title,
+            $deviceModel !== '' ? $deviceModel : null,
+            $category !== '' ? $category : null,
+            $description,
+            $measurements !== '' ? $measurements : null,
+        ]);
+        return (int) self::db()->lastInsertId();
+    }
+
+    public static function addAttachment(int $issueId, int $userId, string $filePath, string $mimeType, int $fileSize): void
+    {
+        $stmt = self::db()->prepare(
+            'INSERT INTO issue_attachments (issue_id, uploaded_by, file_path, mime_type, file_size)
+             VALUES (?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$issueId, $userId, $filePath, $mimeType, $fileSize]);
     }
 
     public static function replies(int $issueId, string $sort): array
