@@ -207,6 +207,7 @@
                     sort_order: item.sort_order,
                     original_url: item.original_url || item.url || '',
                     editor_state: item.editor_state || null,
+                    needs_render: Boolean(item.needsRender),
                     url: item.url || '',
                     uploaded: Boolean(item.media_uuid)
                 };
@@ -239,7 +240,8 @@
             file_size: item.file_size,
             blob: item.blob || null,
             rendered_blob: item.renderedBlob || null,
-            editor_state: item.editor_state || null
+            editor_state: item.editor_state || null,
+            needs_render: Boolean(item.needsRender)
         });
     }
 
@@ -376,6 +378,7 @@
                         window.ZayanImageEditor.open(item, async function (result) {
                             item.editor_state = result.state;
                             item.renderedBlob = result.renderedBlob || null;
+                            item.needsRender = false;
                             if (item.renderedBlob) {
                                 if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
                                 item.url = URL.createObjectURL(item.renderedBlob);
@@ -549,6 +552,8 @@
                 item.url = renderedResult.rendered_url;
                 item.original_url = renderedResult.original_url;
                 item.renderedBlob = null;
+                item.needsRender = false;
+                item.rendered = true;
             }
             const body = new URLSearchParams({
                 _token: csrf,
@@ -978,6 +983,10 @@
             setStatus('اكتب تفاصيل لا تقل عن 10 أحرف.', 'error');
             return;
         }
+        if (media.some(function (item) { return item.media_kind === 'image' && item.needsRender; })) {
+            setStatus('فيه صورة عليها تعديلات غير مكتملة. افتح الصورة واضغط «تم» عشان نعتمد التعديلات قبل النشر.', 'error');
+            return;
+        }
         if (!titleInput.value.trim() || !manufacturerSelect.value || !modelIdInput.value) {
             setStatus('اختار الشركة والموديل واكتب عنوان المنشور.', 'error');
             return;
@@ -1125,6 +1134,8 @@
                 renderedBlob: record.rendered_blob || null,
                 sort_order: matched ? matched.sort_order : record.sort_order,
                 editor_state: record.editor_state || (matched ? matched.editor_state : null),
+                needsRender: Boolean(record.needs_render) || Boolean((record.editor_state || matched?.editor_state) && !matched?.url?.includes('variant=rendered') && !record.rendered_blob),
+                rendered: Boolean(matched?.url?.includes('variant=rendered') || record.rendered_blob),
                 uploaded: Boolean(matched)
             });
         }
