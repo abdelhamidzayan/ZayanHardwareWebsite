@@ -36,10 +36,12 @@ final class AvatarService
         if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
             throw new \DomainException('avatar_storage_unavailable');
         }
-        $filename = bin2hex(random_bytes(20)) . '.jpg';
+        $canReencode = function_exists('imagecreatefromstring') && function_exists('imagejpeg');
+        $extension = $canReencode ? 'jpg' : match ($mime) { 'image/png' => 'png', 'image/webp' => 'webp', default => 'jpg' };
+        $filename = bin2hex(random_bytes(20)) . '.' . $extension;
         $target = $directory . DIRECTORY_SEPARATOR . $filename;
 
-        if (function_exists('imagecreatefromstring') && function_exists('imagejpeg')) {
+        if ($canReencode) {
             $source = @imagecreatefromstring((string) file_get_contents($tmp));
             if (!$source) throw new \DomainException('avatar_invalid_image');
             $width = imagesx($source);
