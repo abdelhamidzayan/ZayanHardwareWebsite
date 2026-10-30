@@ -249,8 +249,9 @@ final class HelpRequest extends Model
             $pdo->prepare(
                 'INSERT INTO help_public_posts
                     (publication_id, request_id, title, problem_summary, diagnosis_summary, solution_summary,
-                     requester_display_name, helper_display_name, requester_avatar_key, helper_avatar_key)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                     requester_display_name, helper_display_name, requester_avatar_key, helper_avatar_key,
+                     requester_user_id, helper_user_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             )->execute([
                 $publicationId, (int) $publication['request_id'], $publication['draft_title'],
                 $publication['problem_summary'], $publication['diagnosis_summary'], $publication['solution_summary'],
