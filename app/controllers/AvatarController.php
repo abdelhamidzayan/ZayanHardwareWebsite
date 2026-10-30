@@ -16,7 +16,15 @@ final class AvatarController extends Controller
     public function show(int $userId): Response
     {
         $user = User::findById($userId);
-        if (!$user || $user['account_status'] !== 'active') return $this->notFound();
+        if (!$user) return $this->notFound();
+
+        // Keep authorship displays intact after account suspension/anonymization,
+        // but never expose a custom personal avatar for an inactive account.
+        if ($user['account_status'] !== 'active') {
+            $user['avatar_path'] = null;
+            $user['avatar_key'] = 'technician-blue';
+        }
+
         if (empty($user['avatar_path'])) {
             $allowed = ['technician-blue', 'technician-cyan', 'technician-violet', 'technician-green', 'technician-orange', 'technician-red'];
             $key = in_array((string) ($user['avatar_key'] ?? ''), $allowed, true)
