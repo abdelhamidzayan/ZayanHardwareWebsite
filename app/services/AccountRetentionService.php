@@ -124,9 +124,7 @@ final class AccountRetentionService
                  SET status = 'completed',
                      completed_at = UTC_TIMESTAMP(),
                      note = 'Identity anonymized; all technical content and related files retained.'
-                 WHERE user_id = ? AND status = 'pending'
-                   AND scheduled_purge_at IS NOT NULL
-                   AND scheduled_purge_at <= UTC_TIMESTAMP()"
+                 WHERE user_id = ? AND status = 'pending'"
             )->execute([$userId]);
 
             $pdo->prepare(
