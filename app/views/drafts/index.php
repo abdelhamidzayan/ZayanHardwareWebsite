@@ -7,7 +7,7 @@
     </div>
     <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/issues/create">منشور جديد</a>
 </div>
-<div class="container drafts-page" data-drafts-page data-server-draft-ids="<?= $e(json_encode(array_column($drafts, 'id')) ?: '[]') ?>">
+<div class="container drafts-page" data-drafts-page data-server-draft-ids="<?= $e(json_encode(array_column($drafts, 'id')) ?: '[]') ?>" data-base-url="<?= $e($baseUrl) ?>">
     <div class="drafts-list" data-local-drafts></div>
     <?php if (empty($drafts)) : ?>
         <section class="card empty-state">
