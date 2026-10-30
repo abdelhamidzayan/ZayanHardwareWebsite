@@ -23,8 +23,16 @@ final class AccountController extends Controller
 
         $pdo = Database::connection();
         $adminDeletionLockAcquired = false;
-        $pdo->beginTransaction();
         try {
+            // Acquire the shared roster lock before any per-user row lock.
+            $adminLock = (int) $pdo->query(
+                "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
+            )->fetchColumn();
+            if ($adminLock !== 1) {
+                throw new \RuntimeException('Could not acquire the account-deletion coordination lock.');
+            }
+            $adminDeletionLockAcquired = true;
+            $pdo->beginTransaction();
             // Serialize concurrent deletion requests on the existing user row.
             $accountLock = $pdo->prepare('SELECT account_status, role FROM users WHERE id = ? FOR UPDATE');
             $accountLock->execute([(int) $user['id']]);
@@ -38,14 +46,6 @@ final class AccountController extends Controller
             // Serialize administrator deletion requests so two admins cannot
             // simultaneously schedule the deletion of the last active admin.
             if ($account['role'] === 'admin') {
-                $adminLock = (int) $pdo->query(
-                    "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
-                )->fetchColumn();
-                if ($adminLock !== 1) {
-                    throw new \RuntimeException('Could not acquire the administrator deletion lock.');
-                }
-                $adminDeletionLockAcquired = true;
-
                 $otherAdmins = $pdo->prepare(
                     "SELECT COUNT(*) FROM users
                      WHERE role = 'admin' AND account_status = 'active' AND id <> ?"
