@@ -224,8 +224,16 @@ final class AccountRetentionService
     private static function anonymizeRequest(PDO $pdo, int $requestId): bool
     {
         $adminDeletionLockAcquired = false;
-        $pdo->beginTransaction();
         try {
+            // Acquire the shared roster lock before taking any per-user row lock.
+            $adminLock = (int) $pdo->query(
+                "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
+            )->fetchColumn();
+            if ($adminLock !== 1) {
+                throw new RuntimeException('Could not acquire the account-deletion coordination lock.');
+            }
+            $adminDeletionLockAcquired = true;
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare(
                 "SELECT r.id, r.user_id, u.account_status, u.role
                  FROM account_deletion_requests r
@@ -252,14 +260,6 @@ final class AccountRetentionService
                 // Share the same advisory lock as the account-request flow so
                 // a concurrently submitted admin deletion cannot race this
                 // final-active-admin check.
-                $adminLock = (int) $pdo->query(
-                    "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
-                )->fetchColumn();
-                if ($adminLock !== 1) {
-                    throw new RuntimeException('Could not acquire the administrator deletion lock.');
-                }
-                $adminDeletionLockAcquired = true;
-
                 $otherAdmins = $pdo->prepare(
                     "SELECT COUNT(*) FROM users
                      WHERE role = 'admin' AND account_status = 'active' AND id <> ?"
