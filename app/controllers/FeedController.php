@@ -58,7 +58,7 @@ final class FeedController extends Controller
                     - (int) ($issue['audio_trim_start_ms'] ?? 0)
                 )) / 1000))
                 : '';
-            $issue['audio_src'] = !empty($issue['audio_path']) ? '/issues/' . (int) $issue['id'] . '/audio' : '';
+            $issue['audio_src'] = !empty($issue['audio_path']) ? \\App\\Core\\Request::basePath() . '/issues/' . (int) $issue['id'] . '/audio' : '';
             if ($issue['audio'] && $issue['excerpt'] === '') $issue['excerpt'] = 'تسجيل صوتي مرفق';
         }
         unset($issue);
