@@ -30,6 +30,47 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
         </form>
 
         <div class="header-actions">
+        <details class="notification-menu">
+            <summary class="icon-btn notification-menu__trigger" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
+                <svg class="icon notification-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/>
+                    <path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/>
+                </svg>
+                <?php if ($unreadCount > 0) : ?>
+                    <span class="notification-btn__count" aria-label="<?= $e((string) $unreadCount) ?> إشعارات غير مقروءة"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span>
+                <?php endif; ?>
+            </summary>
+            <div class="notification-menu__panel" aria-label="أحدث الإشعارات">
+                <div class="notification-menu__head">
+                    <strong>الإشعارات</strong>
+                    <?php if ($unreadCount > 0) : ?><span><?= $unreadCount > 99 ? '99+' : $unreadCount ?> غير مقروء</span><?php endif; ?>
+                </div>
+                <?php if (empty($headerNotifications)) : ?>
+                    <div class="notification-menu__empty">
+                        <span class="notification-menu__empty-icon" aria-hidden="true">✓</span>
+                        <strong>أنت على اطلاع</strong>
+                        <p>لا توجد إشعارات جديدة حاليًا.</p>
+                    </div>
+                <?php else : ?>
+                    <div class="notification-menu__list">
+                        <?php foreach ($headerNotifications as $headerNotification) : ?>
+                            <form class="notification-menu__form" method="post" action="<?= $e($baseUrl) ?>/notifications/<?= (int) $headerNotification['id'] ?>/open">
+                                <?= $csrf() ?>
+                                <button class="notification-menu__item <?= (int) $headerNotification['is_read'] === 1 ? 'is-read' : 'is-unread' ?>" type="submit">
+                                    <span class="notification-menu__item-mark" aria-hidden="true"></span>
+                                    <span class="notification-menu__item-copy">
+                                        <strong><?= $e($headerNotification['title']) ?></strong>
+                                        <span><?= $e($headerNotification['body']) ?></span>
+                                        <small><?= $e((string) ($headerNotification['actor_name'] ?? 'النظام')) ?> · <?= $e($headerNotification['created_at']) ?></small>
+                                    </span>
+                                </button>
+                            </form>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <a class="notification-menu__all" href="<?= $e($baseUrl) ?>/notifications">عرض كل الإشعارات</a>
+            </div>
+        </details>
         <details class="account-menu">
             <summary class="account-menu__trigger" aria-label="قائمة الحساب">
                 <span class="avatar account-menu__avatar" aria-hidden="true"><?= $e($avatarInitials) ?></span>
@@ -92,17 +133,6 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                 </form>
             </div>
         </details>
-
-        <a class="icon-btn notification-btn" href="<?= $e($baseUrl) ?>/notifications"
-           aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
-            <svg class="icon notification-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/>
-                <path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/>
-            </svg>
-            <?php if ($unreadCount > 0) : ?>
-                <span class="notification-btn__count" aria-label="<?= $e((string) $unreadCount) ?> إشعارات غير مقروءة"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span>
-            <?php endif; ?>
-        </a>
         </div>
     </div>
 </header>
