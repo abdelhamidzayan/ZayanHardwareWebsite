@@ -26,7 +26,7 @@ final class FeedController extends Controller
             $issue['expert'] = in_array($issue['role'] ?? '', ['admin', 'moderator'], true);
             $issue['type_label'] = match ($issue['content_type'] ?? 'help_request') {
                 'technical_post' => 'معلومة فنية',
-                'discussion' => 'نقاش عام',
+                'discussion' => 'معلومة فنية',
                 default => 'طلب مساعدة',
             };
             $issue['role'] = match ($issue['role'] ?? '') {
@@ -52,8 +52,9 @@ final class FeedController extends Controller
             $issue['excerpt'] = mb_strimwidth($description, 0, 180, '…', 'UTF-8');
             $issue['solved'] = ($issue['status'] ?? '') === 'resolved';
             $issue['comments'] = (int) ($issue['comments'] ?? 0);
-            $issue['audio'] = '';
-            $issue['audio_src'] = '';
+            $issue['audio'] = !empty($issue['audio_path']);
+            $issue['audio_src'] = !empty($issue['audio_path']) ? '/issues/' . (int) $issue['id'] . '/audio' : '';
+            if ($issue['audio'] && $issue['excerpt'] === '') $issue['excerpt'] = 'تسجيل صوتي مرفق';
         }
         unset($issue);
 
