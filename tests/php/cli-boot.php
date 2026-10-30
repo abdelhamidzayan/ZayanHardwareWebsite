@@ -29,7 +29,7 @@ if (session_status() !== PHP_SESSION_NONE) {
 echo "CLI application boot does not start a browser session.\n";
 
 register_shutdown_function(static function () use ($tempRoot): void {
-    // App's shutdown logger was registered first; its output can now be inspected.
+    // App's shutdown logger was registered first; inspect its output here.
     $unexpectedAccessLogs = glob($tempRoot . '/storage/logs/access-*.log') ?: [];
 
     $removeTree = static function (string $path) use (&$removeTree): void {
@@ -47,7 +47,7 @@ register_shutdown_function(static function () use ($tempRoot): void {
     $removeTree($tempRoot);
 
     if ($unexpectedAccessLogs) {
-        fwrite(STDERR, "CLI boot must not write an HTTP access log.\\n");
+        fwrite(STDERR, "CLI boot must not write an HTTP access log.\n");
         exit(1);
     }
 });
