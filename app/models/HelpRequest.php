@@ -30,7 +30,7 @@ final class HelpRequest extends Model
             $pdo->prepare(
                 'INSERT INTO help_request_messages (request_id, sender_id, body) VALUES (?, ?, ?)'
             )->execute([$requestId, $requesterId, $body]);
-            $pdo->prepare('UPDATE help_requests SET last_message_at = UTC_TIMESTAMP(), requester_last_seen_at = UTC_TIMESTAMP() WHERE id = ?')
+            $pdo->prepare('UPDATE help_requests SET last_message_at = CURRENT_TIMESTAMP, requester_last_seen_at = CURRENT_TIMESTAMP WHERE id = ?')
                 ->execute([$requestId]);
             $pdo->commit();
             return $requestId;
@@ -43,7 +43,7 @@ final class HelpRequest extends Model
     public static function respond(int $requestId, int $helperId, bool $accept): void
     {
         $stmt = self::db()->prepare(
-            "UPDATE help_requests SET status = ?, updated_at = UTC_TIMESTAMP()
+            "UPDATE help_requests SET status = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ? AND helper_id = ? AND status = 'pending'"
         );
         $stmt->execute([$accept ? 'active' : 'declined', $requestId, $helperId]);
@@ -64,7 +64,7 @@ final class HelpRequest extends Model
             $pdo->prepare('INSERT INTO help_request_messages (request_id, sender_id, body) VALUES (?, ?, ?)')
                 ->execute([$requestId, $senderId, $body]);
             $messageId = (int) $pdo->lastInsertId();
-            $pdo->prepare('UPDATE help_requests SET last_message_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = ?')
+            $pdo->prepare('UPDATE help_requests SET last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
                 ->execute([$requestId]);
             $pdo->commit();
             return $messageId;
@@ -77,8 +77,8 @@ final class HelpRequest extends Model
     public static function close(int $requestId, int $userId): void
     {
         $stmt = self::db()->prepare(
-            "UPDATE help_requests SET status = 'closed', closed_by = ?, closed_at = UTC_TIMESTAMP(),
-                    updated_at = UTC_TIMESTAMP()
+            "UPDATE help_requests SET status = 'closed', closed_by = ?, closed_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
              WHERE id = ? AND status = 'active' AND (requester_id = ? OR helper_id = ?)"
         );
         $stmt->execute([$userId, $requestId, $userId, $userId]);
@@ -238,14 +238,14 @@ final class HelpRequest extends Model
             if (!$consent) {
                 $pdo->prepare(
                     "UPDATE help_request_publications SET status = 'declined', requester_consented = 0,
-                        requester_show_identity = 0, responded_at = UTC_TIMESTAMP() WHERE id = ?"
+                        requester_show_identity = 0, responded_at = CURRENT_TIMESTAMP WHERE id = ?"
                 )->execute([$publicationId]);
                 $pdo->commit();
                 return null;
             }
             $pdo->prepare(
                 "UPDATE help_request_publications SET requester_consented = 1, requester_show_identity = ?,
-                    status = 'published', responded_at = UTC_TIMESTAMP(), published_at = UTC_TIMESTAMP()
+                    status = 'published', responded_at = CURRENT_TIMESTAMP, published_at = CURRENT_TIMESTAMP
                  WHERE id = ?"
             )->execute([$showIdentity ? 1 : 0, $publicationId]);
             $requester = $showIdentity ? self::publicIdentity((int) $publication['requester_id']) : null;
@@ -323,8 +323,8 @@ final class HelpRequest extends Model
     {
         self::db()->prepare(
             'UPDATE help_requests SET
-                requester_last_seen_at = CASE WHEN requester_id = ? THEN UTC_TIMESTAMP() ELSE requester_last_seen_at END,
-                helper_last_seen_at = CASE WHEN helper_id = ? THEN UTC_TIMESTAMP() ELSE helper_last_seen_at END
+                requester_last_seen_at = CASE WHEN requester_id = ? THEN CURRENT_TIMESTAMP ELSE requester_last_seen_at END,
+                helper_last_seen_at = CASE WHEN helper_id = ? THEN CURRENT_TIMESTAMP ELSE helper_last_seen_at END
              WHERE id = ? AND (requester_id = ? OR helper_id = ?)'
         )->execute([$userId, $userId, $requestId, $userId, $userId]);
     }
