@@ -15,8 +15,20 @@ final class AvatarController extends Controller
     public function show(int $userId): Response
     {
         $user = User::findById($userId);
-        if (!$user || $user['account_status'] !== 'active' || empty($user['avatar_path'])) {
-            return $this->notFound();
+        if (!$user || $user['account_status'] !== 'active') return $this->notFound();
+        if (empty($user['avatar_path'])) {
+            $allowed = ['technician-blue', 'technician-cyan', 'technician-violet', 'technician-green', 'technician-orange', 'technician-red'];
+            $key = in_array((string) ($user['avatar_key'] ?? ''), $allowed, true)
+                ? (string) $user['avatar_key'] : 'technician-blue';
+            $defaultFile = \\App\\Core\\App::root('public/assets/avatars/' . $key . '.svg');
+            if (!is_file($defaultFile)) return $this->notFound();
+            return new Response((string) file_get_contents($defaultFile), 200, [
+                'Content-Type' => 'image/svg+xml; charset=utf-8',
+                'Content-Length' => (string) filesize($defaultFile),
+                'Cache-Control' => 'public, max-age=300, must-revalidate',
+                'X-Content-Type-Options' => 'nosniff',
+                'Content-Security-Policy' => "default-src 'none'; sandbox",
+            ]);
         }
         $relative = (string) $user['avatar_path'];
         if (!preg_match('~^avatars/' . $userId . '/[a-f0-9]{40}\.(?:jpg|png|webp)$~', $relative)) {
