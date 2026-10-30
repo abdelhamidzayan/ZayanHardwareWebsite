@@ -27,6 +27,10 @@ The IP bucket is hashed before storage. Old buckets are pruned opportunistically
 
 Incoming uploads already use PHP temporary upload files and `move_uploaded_file()`; each upload service validates the temporary file before moving it into private storage. Avatar image re-encoding still requires the image library to decode the bounded 5 MiB source image.
 
-## Account deletion: worker intentionally not added yet
+## Account deletion and technical-content retention
 
-The current account-deletion endpoint disables the account and records a purge date 30 days in the future, but the repository does not yet contain a scheduled purge worker. A generic hard `DELETE users` is unsafe: schema deliberately has `ON DELETE RESTRICT` relations for authored issues, replies, attachments, edit histories, repair-result submissions, reputation events, terms acceptance, and administration audit/reset records. A safe implementation must first define whether authored technical knowledge is removed or retained under an anonymized author, then cover private files, audit records, personal-help conversations, profile data, and cancellation races in one reviewed retention policy. No account or production data is deleted by these changes.
+The account-retention worker now completes the 30-day request by **anonymizing the account identity**, not by deleting the user row. The user ID stays unchanged so every foreign key and attribution link remains valid. Login is disabled, the username is replaced with a generated anonymous handle, the display name becomes `عضو محذوف`, email/phone and profile biography/workshop data are cleared, and push subscription credentials are neutralized.
+
+**No database rows are deleted by the worker.** In particular, all published technical posts, replies, diagnostic updates, repair results, schematics, attachments, edit history, reputation records, published help-library content, private-help messages, notifications, and drafts remain in place. Published help-library author snapshots are changed to the anonymous display name, while the technical text remains untouched. Terms acceptance and security audit records remain, but stored IP hashes and free-form admin reset notes are cleared.
+
+The worker defaults to dry-run. Use `php bin/anonymize-deleted-accounts.php` to inspect due requests and add `--execute` only when the output has been reviewed. See `docs/account-retention.md` for the exact policy and scheduler setup. It has not been run against a production database.
