@@ -9,6 +9,7 @@ use App\Core\Response;
 use App\Models\User;
 use App\Services\AvatarService;
 use App\Services\AuthService;
+use App\Services\RateLimiter;
 
 final class AvatarController extends Controller
 {
@@ -22,7 +23,7 @@ final class AvatarController extends Controller
                 ? (string) $user['avatar_key'] : 'technician-blue';
             $defaultFile = \App\Core\App::root('public/assets/avatars/' . $key . '.svg');
             if (!is_file($defaultFile)) return $this->notFound();
-            return new Response((string) file_get_contents($defaultFile), 200, [
+            return Response::streamFile($defaultFile, 0, (int) filesize($defaultFile), 200, [
                 'Content-Type' => 'image/svg+xml; charset=utf-8',
                 'Content-Length' => (string) filesize($defaultFile),
                 'Cache-Control' => 'public, max-age=0, must-revalidate',
@@ -42,7 +43,7 @@ final class AvatarController extends Controller
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
         if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) return $this->notFound();
-        return new Response((string) file_get_contents($file), 200, [
+        return Response::streamFile($file, 0, (int) filesize($file), 200, [
             'Content-Type' => $mime,
             'Content-Length' => (string) filesize($file),
             'Cache-Control' => 'public, max-age=0, must-revalidate',
@@ -65,6 +66,10 @@ final class AvatarController extends Controller
         $allowed = ['technician-blue', 'technician-cyan', 'technician-violet', 'technician-green', 'technician-orange', 'technician-red'];
         try {
             if (isset($_FILES['avatar_file']) && (int) ($_FILES['avatar_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                if (!RateLimiter::allowForUser('avatar.upload', (int) $user['id'], 6, 3600, 24)) {
+                    $this->flash('error', 'وصلت للحد المسموح لتغيير الصور الشخصية. حاول مرة أخرى لاحقًا.');
+                    return $this->redirect('/settings');
+                }
                 $path = AvatarService::store((int) $user['id'], $_FILES['avatar_file']);
                 User::saveAvatar((int) $user['id'], 'custom', $path);
             } elseif (in_array($avatarKey, $allowed, true)) {
