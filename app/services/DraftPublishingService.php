@@ -162,6 +162,7 @@ final class DraftPublishingService
 
                 $renderedRelative = null;
                 $displayRelative = $newRelative;
+                $displaySize = (int) $item['file_size'];
                 if ($item['media_kind'] === 'image' && !empty($item['rendered_path'])) {
                     $renderedSourceRelative = ltrim(str_replace('\\', '/', (string) $item['rendered_path']), '/');
                     if ($renderedSourceRelative === '' || str_contains($renderedSourceRelative, '..')) {
@@ -182,6 +183,7 @@ final class DraftPublishingService
                     }
                     $renderedRelative = 'issues/' . $issueId . '/' . $renderedFilename;
                     $displayRelative = $renderedRelative;
+                    $displaySize = (int) filesize($renderedDestination);
                     $moved[] = ['from' => $renderedSource, 'to' => $renderedDestination];
                 }
 
@@ -208,7 +210,7 @@ final class DraftPublishingService
                     $editorState = json_encode($editorState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
                 }
                 $insertAttachment->execute([
-                    $issueId, $userId, $displayRelative, (string) $item['mime_type'], (int) $item['file_size'],
+                    $issueId, $userId, $displayRelative, (string) $item['mime_type'], $displaySize,
                     $newRelative, $renderedRelative, $editorState, (int) $item['sort_order'],
                 ]);
             }
