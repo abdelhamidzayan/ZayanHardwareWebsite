@@ -20,6 +20,9 @@ final class FeedController extends Controller
         foreach ($issues as &$issue) {
             $name = trim((string) ($issue['author'] ?? ''));
             $issue['initials'] = $name !== '' ? mb_substr($name, 0, 2, 'UTF-8') : '؟';
+            $issue['avatar_src'] = !empty($issue['author_avatar_path'])
+                ? '/avatar/' . (int) $issue['user_id']
+                : '/assets/avatars/' . rawurlencode((string) ($issue['author_avatar_key'] ?? 'technician-blue')) . '.svg';
             $issue['expert'] = in_array($issue['role'] ?? '', ['admin', 'moderator'], true);
             $issue['type_label'] = match ($issue['content_type'] ?? 'help_request') {
                 'technical_post' => 'معلومة فنية',
