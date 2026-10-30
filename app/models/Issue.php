@@ -32,7 +32,7 @@ final class Issue extends Model
     {
         $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
-            'SELECT i.id, i.title, i.content_type, i.device_model AS device, i.category, i.description,
+            'SELECT i.id, i.user_id, i.title, i.content_type, i.device_model AS device, i.category, i.description,
                     i.status, i.created_at, u.display_name AS author, u.username, u.role,
                     u.avatar_key AS author_avatar_key, u.avatar_path AS author_avatar_path,
                     (SELECT COUNT(*) FROM issue_replies r
