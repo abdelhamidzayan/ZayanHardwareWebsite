@@ -940,6 +940,33 @@
         renderMedia();
     }
 
+    async function recoverPendingAudio(server) {
+        if (server && (server.media || []).some(function (item) { return item.media_kind === 'audio'; })) return;
+        const pending = await pendingAudioSession().catch(function () { return null; });
+        if (!pending || !pending.blob || !pending.blob.size) return;
+        const audioRadio = modeRadios.find(function (item) { return item.value === 'audio'; });
+        if (audioRadio) audioRadio.checked = true;
+        syncModeVisibility();
+        const recovered = {
+            local_id: uuid(),
+            media_uuid: '',
+            media_kind: 'audio',
+            mime_type: pending.mime_type,
+            file_size: pending.blob.size,
+            blob: pending.blob,
+            fileName: 'recovered-voice-note.' + extensionFor(pending.mime_type),
+            url: URL.createObjectURL(pending.blob),
+            sort_order: media.length,
+            editor_state: null
+        };
+        media.push(recovered);
+        audioMeta = { duration_ms: pending.duration_ms, trim_start_ms: 0, trim_end_ms: pending.duration_ms };
+        await persistBlob(recovered);
+        await clearAudioSession();
+        dirty = true;
+        markDirty();
+    }
+
     async function restore() {
         const initialRaw = form.dataset.initial || '{}';
         let initial = {};
@@ -969,6 +996,7 @@
             await hydrateLocalMedia(localMedia, server.media || []);
             conflict = true;
             showConflict({ revision: server.revision, payload: server.payload });
+            await recoverPendingAudio(server);
             setStatus('وجدنا تعديلات محلية ونسخة أحدث على الحساب. اختار النسخة التي تريد استكمالها.', 'conflict');
             return;
         }
@@ -981,6 +1009,7 @@
             dirty = true;
             setStatus('استعدنا آخر تعديلات الجهاز. جاري المزامنة...', 'saving');
             initialized = true;
+            await recoverPendingAudio(server);
             await syncServer(false);
             return;
         }
@@ -997,30 +1026,7 @@
             });
             renderMedia();
         }
-        if (!server || !(server.media || []).some(function (item) { return item.media_kind === 'audio'; })) {
-            const pending = await pendingAudioSession().catch(function () { return null; });
-            if (pending && pending.blob && pending.blob.size) {
-                const audioRadio = modeRadios.find(function (item) { return item.value === 'audio'; });
-                if (audioRadio) audioRadio.checked = true;
-                syncModeVisibility();
-                const recovered = {
-                    local_id: uuid(),
-                    media_uuid: '',
-                    media_kind: 'audio',
-                    mime_type: pending.mime_type,
-                    file_size: pending.blob.size,
-                    blob: pending.blob,
-                    fileName: 'recovered-voice-note.' + extensionFor(pending.mime_type),
-                    url: URL.createObjectURL(pending.blob),
-                    sort_order: media.length,
-                    editor_state: null
-                };
-                media.push(recovered);
-                audioMeta = { duration_ms: pending.duration_ms, trim_start_ms: 0, trim_end_ms: pending.duration_ms };
-                await persistBlob(recovered);
-                await clearAudioSession();
-            }
-        }
+        await recoverPendingAudio(server);
         initialized = true;
         await persistLocal();
         setStatus(navigator.onLine ? 'المسودة جاهزة للحفظ التلقائي' : 'المسودة محفوظة على الجهاز فقط', 'saved');
