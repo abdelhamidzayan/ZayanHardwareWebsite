@@ -158,14 +158,13 @@ final class PostDraft extends Model
     public static function updateMediaEditorState(string $draftId, string $mediaUuid, int $userId, array $state, int $sortOrder): bool
     {
         $json = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        $stmt = self::db()->prepare(
-            'UPDATE post_draft_media m
-             JOIN post_drafts d ON d.id = m.draft_id
-             SET m.editor_state = ?, m.sort_order = ?
-             WHERE m.draft_id = ? AND m.media_uuid = ? AND d.user_id = ?'
-        );
-        $stmt->execute([$json, $sortOrder, $draftId, $mediaUuid, $userId]);
-        return $stmt->rowCount() > 0;
+        if (!self::ownedMedia($draftId, $mediaUuid, $userId)) return false;
+        self::db()->prepare(
+            'UPDATE post_draft_media
+             SET editor_state = ?, sort_order = ?
+             WHERE draft_id = ? AND media_uuid = ?'
+        )->execute([$json, $sortOrder, $draftId, $mediaUuid]);
+        return true;
     }
 
     public static function deleteMedia(string $draftId, string $mediaUuid, int $userId): bool
