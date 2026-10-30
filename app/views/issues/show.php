@@ -5,6 +5,7 @@ $typeLabel = match ($contentType) { 'technical_post' => 'معلومة فنية',
 $resolved = $issue['status'] === 'resolved';
 $awaitingConfirmation = $issue['status'] === 'awaiting_confirmation';
 $closed = in_array($issue['status'], ['resolved', 'closed_unresolved'], true);
+$issueAvatarSrc = !empty($issue['author_avatar_path']) ? '/avatar/' . (int) $issue['user_id'] : '/assets/avatars/' . rawurlencode((string) ($issue['author_avatar_key'] ?? 'technician-blue')) . '.svg';
 $canReply = $currentUser !== null && in_array($issue['status'], ['open', 'in_progress'], true);
 $specializations = [
     'power' => 'Power', 'charging' => 'Charging', 'network' => 'Network',
@@ -31,7 +32,7 @@ foreach ($replies as $reply) {
 <div class="container issue-page">
     <section class="card issue-original">
         <div class="issue-original__author">
-            <span class="avatar"><?= $e(mb_strtoupper(mb_substr($issue['author_name'], 0, 1))) ?></span>
+            <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $issue['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . $issueAvatarSrc) ?>" alt="" width="48" height="48"></a>
             <div class="issue-original__identity">
                 <strong><?= $e($issue['author_name']) ?></strong>
                 <span class="muted"><?= $e($specializations[$issue['specialization'] ?? ''] ?? 'فني هاردوير') ?> · <?= $e($issue['created_at']) ?></span>
@@ -234,8 +235,8 @@ foreach ($replies as $reply) {
             <?php foreach ($topLevelReplies as $reply) : ?>
                 <article id="reply-<?= (int) $reply['id'] ?>" class="card reply-card <?= (int) $reply['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
                     <header class="reply-card__head">
-                        <span class="avatar"><?= $e(mb_strtoupper(mb_substr($reply['display_name'], 0, 1))) ?></span>
-                        <div class="reply-card__identity"><strong><?= $e($reply['display_name']) ?></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
+                        <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $reply['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($reply['avatar_path']) ? '/avatar/' . (int) $reply['user_id'] : '/assets/avatars/' . rawurlencode((string) ($reply['avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="40" height="40" loading="lazy"></a>
+                        <div class="reply-card__identity"><strong><a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $reply['username'])) ?>"><?= $e($reply['display_name']) ?></a></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
                         <?php if (in_array($reply['role'], ['admin', 'moderator'], true)) : ?><span class="badge">خبير معتمد</span><?php endif; ?>
                     </header>
                     <div class="reply-card__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $reply['body'], $attachments, $baseUrl) ?></div>
@@ -286,8 +287,8 @@ foreach ($replies as $reply) {
                             <?php foreach ($childrenByParent[(int) $reply['id']] as $child) : ?>
                                 <article id="reply-<?= (int) $child['id'] ?>" class="reply-card reply-card--nested <?= (int) $child['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
                                     <header class="reply-card__head">
-                                        <span class="avatar"><?= $e(mb_strtoupper(mb_substr($child['display_name'], 0, 1))) ?></span>
-                                        <div class="reply-card__identity"><strong><?= $e($child['display_name']) ?></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
+                                        <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $child['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($child['avatar_path']) ? '/avatar/' . (int) $child['user_id'] : '/assets/avatars/' . rawurlencode((string) ($child['avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="36" height="36" loading="lazy"></a>
+                                        <div class="reply-card__identity"><strong><a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $child['username'])) ?>"><?= $e($child['display_name']) ?></a></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
                                     </header>
                                     <div class="reply-card__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $child['body'], $attachments, $baseUrl) ?></div>
                                     <footer class="reply-card__actions">
