@@ -375,7 +375,7 @@
 (() => {
   'use strict';
 
-  const menus = document.querySelectorAll('.account-menu');
+  const menus = document.querySelectorAll('.account-menu, .notification-menu');
   if (!menus.length) return;
 
   document.addEventListener('click', (event) => {
@@ -389,7 +389,7 @@
     menus.forEach((menu) => {
       if (!menu.open) return;
       menu.open = false;
-      menu.querySelector('.account-menu__trigger')?.focus();
+      menu.querySelector('summary')?.focus();
     });
   });
 })();
