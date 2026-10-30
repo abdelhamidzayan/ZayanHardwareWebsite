@@ -37,7 +37,11 @@ final class AccountController extends Controller
             )->execute([
                 (int) $user['id'],
                 (int) $user['id'],
-                json_encode(['retention_days' => 30], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                json_encode([
+                    'retention_days' => 30,
+                    'after_retention' => 'identity_anonymization',
+                    'technical_content' => 'retained',
+                ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
             ]);
             $pdo->commit();
@@ -47,7 +51,7 @@ final class AccountController extends Controller
         }
 
         AuthService::logout();
-        $this->flash('success', 'تم إخفاء الحساب وتعطيله. ستحتفظ المنصة بالبيانات لمدة 30 يومًا قبل أي حذف نهائي.');
+        $this->flash('success', 'تم إيقاف الحساب وتسجيل طلب إخفاء بياناته الشخصية بعد 30 يومًا. منشوراتك الفنية وردودك ومخططاتك ومرفقاتك وسجل التشخيص ستظل محفوظة باسم «عضو محذوف».');
         return $this->redirect('/');
     }
 
