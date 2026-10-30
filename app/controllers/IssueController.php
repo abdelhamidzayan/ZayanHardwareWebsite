@@ -18,53 +18,31 @@ final class IssueController extends Controller
 {
     public function attachment(int $id): Response
     {
-        if (!AuthService::user()) {
-            return $this->redirect('/login');
-        }
-
+        if (!AuthService::user()) return $this->redirect('/login');
         $attachment = Issue::attachmentById($id);
-        if (!$attachment) {
-            return $this->notFound();
-        }
+        if (!$attachment) return $this->notFound();
+        return $this->privateFileResponse(
+            (string) $attachment['file_path'],
+            'attachment-' . $id,
+            [
+                'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+                'video/mp4', 'video/webm', 'video/quicktime',
+                'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm',
+                'application/pdf',
+            ]
+        );
+    }
 
-        $privateRoot = realpath(\App\Core\App::root('storage/private'));
-        if ($privateRoot === false) {
-            return $this->notFound();
-        }
-
-        $storedPath = str_replace('\\', '/', (string) $attachment['file_path']);
-        $storedPath = ltrim($storedPath, '/');
-        if (str_starts_with($storedPath, 'storage/private/')) {
-            $storedPath = substr($storedPath, strlen('storage/private/'));
-        }
-        if ($storedPath === '' || str_contains($storedPath, '..')) {
-            return $this->notFound();
-        }
-
-        $target = realpath($privateRoot . DIRECTORY_SEPARATOR . $storedPath);
-        if ($target === false || !str_starts_with($target, $privateRoot . DIRECTORY_SEPARATOR) || !is_file($target)) {
-            return $this->notFound();
-        }
-
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($target) ?: 'application/octet-stream';
-        $allowed = [
-            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-            'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm',
-            'application/pdf',
-        ];
-        if (!in_array($mime, $allowed, true)) {
-            return $this->notFound();
-        }
-
-        return new Response((string) file_get_contents($target), 200, [
-            'Content-Type' => $mime,
-            'Content-Length' => (string) filesize($target),
-            'Content-Disposition' => 'inline; filename="attachment-' . $id . '"',
-            'Cache-Control' => 'private, no-store, max-age=0',
-            'X-Content-Type-Options' => 'nosniff',
-            'Content-Security-Policy' => "default-src 'none'; sandbox",
-        ]);
+    public function audio(int $id): Response
+    {
+        if (!AuthService::user()) return $this->redirect('/login');
+        $issue = Issue::find($id);
+        if (!$issue || empty($issue['audio_path'])) return $this->notFound();
+        return $this->privateFileResponse(
+            (string) $issue['audio_path'],
+            'voice-note-' . $id,
+            ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/mp4', 'audio/aac']
+        );
     }
 
     public function create(): Response
@@ -614,6 +592,69 @@ final class IssueController extends Controller
             $this->flash('error', 'يمكن إعادة فتح النقاش لصاحبه فقط بعد مراجعة النتيجة السابقة من الإدارة.');
         }
         return $this->redirect('/issues/' . $id);
+    }
+
+    private function privateFileResponse(string $storedPath, string $filename, array $allowedMimes): Response
+    {
+        $privateRoot = realpath(\\App\\Core\\App::root('storage/private'));
+        if ($privateRoot === false) return $this->notFound();
+
+        $storedPath = str_replace('\\\\', '/', $storedPath);
+        $storedPath = ltrim($storedPath, '/');
+        if (str_starts_with($storedPath, 'storage/private/')) {
+            $storedPath = substr($storedPath, strlen('storage/private/'));
+        }
+        if ($storedPath === '' || str_contains($storedPath, '..')) return $this->notFound();
+
+        $target = realpath($privateRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storedPath));
+        if ($target === false || !str_starts_with($target, $privateRoot . DIRECTORY_SEPARATOR) || !is_file($target)) {
+            return $this->notFound();
+        }
+
+        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($target) ?: 'application/octet-stream';
+        if (!in_array($mime, $allowedMimes, true)) return $this->notFound();
+
+        $size = (int) filesize($target);
+        $start = 0;
+        $end = max(0, $size - 1);
+        $status = 200;
+        $headers = [];
+        $range = $_SERVER['HTTP_RANGE'] ?? '';
+        if (is_string($range) && preg_match('/^bytes=(\\\\d*)-(\\\\d*)$/', trim($range), $match) && $size > 0) {
+            if ($match[1] === '' && $match[2] !== '') {
+                $suffix = (int) $match[2];
+                $start = max(0, $size - $suffix);
+            } else {
+                $start = (int) $match[1];
+                if ($match[2] !== '') $end = min($end, (int) $match[2]);
+            }
+            if ($start > $end || $start >= $size) {
+                return new Response('', 416, [
+                    'Content-Range' => 'bytes */' . $size,
+                    'Cache-Control' => 'private, no-store',
+                ]);
+            }
+            $status = 206;
+            $headers['Content-Range'] = 'bytes ' . $start . '-' . $end . '/' . $size;
+        }
+
+        $length = $end - $start + 1;
+        $handle = fopen($target, 'rb');
+        if ($handle === false) return $this->notFound();
+        if ($start > 0) fseek($handle, $start);
+        $body = $length > 0 ? fread($handle, $length) : '';
+        fclose($handle);
+        if (!is_string($body)) return $this->notFound();
+
+        $headers += [
+            'Content-Type' => $mime,
+            'Content-Length' => (string) strlen($body),
+            'Content-Disposition' => 'inline; filename="' . preg_replace('/[^a-zA-Z0-9._-]/', '', $filename) . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+            'Accept-Ranges' => 'bytes',
+        ];
+        return new Response($body, $status, $headers);
     }
 
     private function string(string $key): string
