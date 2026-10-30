@@ -1,0 +1,121 @@
+<?php
+declare(strict_types=1);
+
+namespace App\\Controllers;
+
+use App\\Core\\Controller;
+use App\\Core\\Csrf;
+use App\\Core\\Response;
+use App\\Services\\AuthService;
+
+final class AdminUpdateController extends Controller
+{
+    private const UPDATE_SCRIPT = '/home/a/bin/zayan-hardware-update.sh';
+    private const PROJECT_DIR = '/opt/lampp/htdocs/zayan_hardware';
+
+    public function index(): Response
+    {
+        if (!$this->isAdmin()) {
+            return $this->redirect('/login');
+        }
+
+        $result = $_SESSION['admin_update_result'] ?? null;
+        unset($_SESSION['admin_update_result']);
+
+        return $this->view('admin/update', [
+            'title' => 'تحديث الموقع',
+            'active' => '',
+            'updateResult' => is_array($result) ? $result : null,
+        ]);
+    }
+
+    public function run(): Response
+    {
+        if (!$this->isAdmin()) {
+            return $this->redirect('/login');
+        }
+
+        if (!Csrf::verify($this->request->input('_token'))) {
+            return $this->fail('انتهت صلاحية الصفحة. حدّثها وحاول مرة أخرى.');
+        }
+
+        if (!function_exists('proc_open')) {
+            return $this->fail('ميزة تشغيل أوامر النظام غير متاحة في إعدادات PHP.');
+        }
+
+        @set_time_limit(120);
+
+        $command = [
+            '/usr/bin/sudo',
+            '-n',
+            '-u',
+            'a',
+            '--',
+            '/usr/bin/bash',
+            self::UPDATE_SCRIPT,
+        ];
+
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['redirect', 1],
+        ];
+
+        $process = false;
+        $output = '';
+        $exitCode = 1;
+
+        try {
+            $process = proc_open($command, $descriptors, $pipes, self::PROJECT_DIR);
+
+            if (!is_resource($process)) {
+                return $this->fail('تعذر بدء عملية التحديث. راجع إعدادات تشغيل PHP.');
+            }
+
+            fclose($pipes[0]);
+            $output = stream_get_contents($pipes[1]) ?: '';
+            fclose($pipes[1]);
+            $exitCode = proc_close($process);
+        } catch (\\Throwable $exception) {
+            if (is_resource($process)) {
+                proc_terminate($process);
+                proc_close($process);
+            }
+
+            return $this->fail('حدث خطأ أثناء تشغيل التحديث: ' . $exception->getMessage());
+        }
+
+        $output = trim($output);
+        if (strlen($output) > 12000) {
+            $output = substr($output, -12000);
+            $output = "[تم اختصار بداية المخرجات]\n" . $output;
+        }
+
+        $_SESSION['admin_update_result'] = [
+            'success' => $exitCode === 0,
+            'output' => $output !== '' ? $output : 'لم تُرجع عملية التحديث تفاصيل.',
+            'finishedAt' => date('Y-m-d H:i:s'),
+        ];
+
+        $this->flash(
+            $exitCode === 0 ? 'success' : 'error',
+            $exitCode === 0
+                ? 'اكتملت عملية تحديث الموقع.'
+                : 'فشل تحديث الموقع. راجع تفاصيل العملية بالأسفل.'
+        );
+
+        return $this->redirect('/admin/update');
+    }
+
+    private function isAdmin(): bool
+    {
+        $user = AuthService::user();
+        return $user !== null && ($user['role'] ?? '') === 'admin';
+    }
+
+    private function fail(string $message): Response
+    {
+        $this->flash('error', $message);
+        return $this->redirect('/admin/update');
+    }
+}
