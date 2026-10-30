@@ -17,7 +17,7 @@ final class AdminUserController extends Controller
 
         $stmt = Database::connection()->query(
             "SELECT u.id, u.username, u.display_name, u.email, u.role, u.account_status, u.created_at,
-                    p.phone,
+                    u.phone,
                     (SELECT MAX(d.scheduled_purge_at) FROM account_deletion_requests d
                      WHERE d.user_id = u.id AND d.status = 'pending') AS scheduled_purge_at
              FROM users u LEFT JOIN technician_profiles p ON p.user_id = u.id
