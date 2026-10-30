@@ -16,6 +16,8 @@ jobs:
             label: MySQL 8.0
           - image: mariadb:10.11
             label: MariaDB 10.11
+          - image: mariadb:10.4.32
+            label: MariaDB 10.4.32
     services:
       db:
         image: ${{ matrix.database.image }}
