@@ -85,7 +85,10 @@ final class AccountRetentionService
                 'role', 'account_status', 'avatar_key', 'avatar_path',
                 'accept_help_requests', 'last_login_at',
             ],
-            'technician_profiles' => ['user_id', 'workshop_name', 'biography'],
+            'technician_profiles' => [
+                'user_id', 'device_focus', 'tech_level', 'board_experience',
+                'level_verified', 'workshop_name', 'biography',
+            ],
             'account_deletion_requests' => ['id', 'user_id', 'status', 'scheduled_purge_at'],
             'terms_acceptances' => ['user_id', 'ip_hash'],
             'security_audit_logs' => ['actor_user_id', 'target_user_id', 'action', 'details_json', 'ip_hash'],
