@@ -126,6 +126,7 @@ final class HelpRequestController extends Controller
         if (!$user) return $this->redirect('/login');
         try {
             HelpRequest::respond($id, (int) $user['id'], $accept);
+            HelpRequest::markRead($id, (int) $user['id']);
             $request = HelpRequest::findForParticipant($id, (int) $user['id']);
             if ($request) {
                 NotificationService::notify(
