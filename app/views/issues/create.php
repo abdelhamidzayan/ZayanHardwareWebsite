@@ -281,7 +281,8 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
             <label>الحجم <input type="range" min="1" max="24" value="4" data-image-size></label>
             <button type="button" data-image-undo aria-label="تراجع">↶</button>
             <button type="button" data-image-redo aria-label="إعادة">↷</button>
-            <button type="button" data-image-clear>مسح التعديلات</button>
+            <button type="button" data-image-delete-selected>حذف المحدد</button>
+            <button type="button" data-image-clear>مسح الكل</button>
         </div>
         <div class="image-editor__text-entry" data-image-text-entry hidden>
             <input type="text" maxlength="120" placeholder="اكتب على الصورة..." data-image-text>
