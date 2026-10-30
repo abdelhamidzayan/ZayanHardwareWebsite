@@ -1,0 +1,157 @@
+# Architecture and dependency map
+
+This document is a source-derived map of the current PHP application. It records the concrete route, controller, service, model, database, and view relationships used in this repository. It is intended to make later reviews traceable; update it whenever a route or major service dependency changes.
+
+> Review method: static source inspection of `public/index.php`, `config/routes.php`, and the referenced PHP classes. This is not a runtime trace, generated Graphify database, or proof that every branch has been exercised.
+
+## Application request path
+
+```mermaid
+flowchart TD
+    Browser[Browser / PWA] --> Front[public/index.php]
+    Front --> Boot[App::boot]
+    Boot --> Request[Request::capture]
+    Front --> Router[Router::dispatch]
+    Router --> Routes[config/routes.php]
+    Routes --> Controllers[Controllers]
+    Controllers --> Services[Application services]
+    Controllers --> Models[Models]
+    Services --> Models
+    Models --> DB[Database::connection / PDO]
+    Controllers --> Views[View::render]
+    Views --> Browser
+```
+
+- `public/index.php` loads Composer autoloading (or its PSR-4 fallback), boots the application, registers `config/routes.php`, captures the request, and dispatches it.
+- `App::boot()` loads environment/configuration, installs error and shutdown logging, prunes expired application log files, and starts a browser session only for non-CLI requests.
+- `Router` applies the guest-route allowlist before matching routes, resolves route parameters, invokes a controller, and returns a `Response`.
+- `Controller` is the shared base for rendering views, internal redirects, 404 responses, and flash messages.
+- `Model` delegates database access to `Database::connection()`; models use PDO prepared statements and transactions where a multi-step write must be atomic.
+
+## Route-to-controller map
+
+| Route family | Entry controller | Main downstream dependencies |
+|---|---|---|
+| Home, feed, workbench, my posts | `HomeController`, `FeedController`, `WorkbenchController`, `MyPostsController` | `Issue`, `User`, view templates |
+| Technical issue lifecycle | `IssueController` | `Issue`, `ContentEditorService`, `RateLimiter`, `NotificationService`, `DraftPublishingService` |
+| Draft composer and media | `DraftController` | `PostDraft`, `RateLimiter`, private file storage |
+| Device catalog and suggestions | `DeviceCatalogController` | `DeviceCatalog`, `RateLimiter`, admin authorization |
+| Login, registration, logout | `AuthController` | `AuthService`, `User`, `PhoneNumber` |
+| Profile and avatar | `ProfileController`, `AvatarController` | `User`, `AvatarService`, private file storage |
+| Personal help and public help library | `HelpRequestController` | `HelpRequest`, `HelpRequestMediaService`, `NotificationService`, `RateLimiter` |
+| Notifications and Web Push | `NotificationController`, `PushController` | `Notification`, `PushSubscription`, `NotificationService`, `WebPushService` |
+| Skill assessments | `SkillTestController`, `AdminSkillTestController` | `SkillTestService`, `User` |
+| Administration | `AdminUserController`, `AdminFeaturedPostsController`, `AdminUpdateController` | user, featured-content, and update models/services |
+| Static help, policies, settings | `PageController` | `User`, views |
+
+The authoritative route declarations are in `config/routes.php`. The router currently restricts unauthenticated requests to the explicit home, login, registration, username lookup, help, and policy routes. Keep the allowlist synchronized with any future public endpoints.
+
+## Core feature dependency flows
+
+### Technical post and discussion lifecycle
+
+```mermaid
+flowchart TD
+    Route[POST /issues/*] --> IC[IssueController]
+    IC --> Limit[RateLimiter]
+    IC --> Editor[ContentEditorService]
+    IC --> Issue[Issue model]
+    IC --> Notify[NotificationService]
+    Issue --> DB[(PDO / database)]
+    Editor --> Private[storage/private/issues]
+    Editor --> Issue
+```
+
+- New posts and discussion actions enter through `IssueController`.
+- Attachments are validated and stored by `ContentEditorService`; inline tokens are resolved to persisted attachment IDs before rendering.
+- `Issue` owns issue, reply, diagnostic update, repair-result, vote, and edit-history persistence.
+- Notifications are emitted through `NotificationService` after successful domain actions.
+- Issue attachments are served through bounded-memory streaming in `Response::streamFile()`, after path-containment and MIME validation.
+
+### Draft composer and publishing
+
+```mermaid
+flowchart TD
+    JS[public/js/post-composer.js] --> DraftRoutes[DraftController routes]
+    DraftRoutes --> DraftController[DraftController]
+    DraftController --> DraftModel[PostDraft]
+    DraftController --> Limit[RateLimiter]
+    DraftModel --> DB[(PDO / database)]
+    DraftModel --> DraftFiles[storage/private/drafts]
+    Publish[DraftPublishingService] --> DraftModel
+    Publish --> Issue[Issue model / issue tables]
+    Publish --> IssueFiles[storage/private/issues]
+```
+
+- The browser composer stores local/offline work and synchronizes server changes with a revision value.
+- `PostDraft` locks the draft row and checks the expected revision for server-side media mutations.
+- `DraftController` validates ownership, CSRF, type, MIME, size, dimensions, count limits, and revision before accepting media.
+- `DraftPublishingService` transfers draft media into permanent issue storage and creates the corresponding issue/attachment records in a database transaction. Its filesystem rename operations are compensated on failure.
+- Draft files may be deleted when the user explicitly deletes a draft or removes a draft attachment. This is distinct from account anonymization: the retention worker must not remove draft rows or technical files.
+
+### Registration and authentication
+
+```mermaid
+flowchart TD
+    Form[register.js + register.php] --> AuthController
+    AuthController --> AuthService
+    AuthService --> User[User model]
+    User --> DB[(PDO transaction)]
+    User --> Terms[terms_acceptances]
+    Login[Login request] --> AuthService
+    AuthService --> Status[account_status check]
+```
+
+- `AuthService::register()` validates contact, credentials, specialization, and explicit terms acceptance.
+- `User::create()` creates the user, technician profile, device specializations, and accepted-terms record in one transaction.
+- `AuthService::user()` reloads the account from the database and rejects every non-active status; credential login also rejects non-active accounts.
+
+### Rate limiting and streamed files
+
+- `RateLimiter::allowForUser()` is called by selected write/upload controller actions. It atomically locks account and hashed-IP buckets in `rate_limit_buckets`, created by migration 014.
+- The bucket cleanup deletes only expired rate-limit metadata; it does not touch posts, user content, or uploads.
+- `Response::streamFile()` handles bounded-memory file output. Controllers must perform authorization, real-path containment, and MIME checks before creating a stream response.
+
+### Account deletion request and 30-day anonymization
+
+```mermaid
+flowchart TD
+    Request[POST /account/deletion-request] --> AccountController
+    AccountController --> DB[(account_deletion_requests + users + audit)]
+    AccountController --> Auth[AuthService::logout]
+    CLI[bin/anonymize-deleted-accounts.php] --> AppBoot[App::boot in CLI mode]
+    AppBoot --> Retention[AccountRetentionService]
+    Retention --> Lock[MySQL advisory lock]
+    Retention --> DB
+    Retention --> AvatarFiles[Private custom avatar files only]
+    Avatar[AvatarController] --> User[User model]
+    User --> DB
+```
+
+- The request controller sets `account_status=deletion_pending`, records a 30-day scheduled date and logs the user out.
+- The CLI worker runs in dry-run mode unless `--execute` is explicit. It re-checks due requests under row locks and anonymizes the existing `users` row in place.
+- The same numeric `users.id` is retained. Login is disabled, the public author name becomes `عضو محذوف`, and a generic avatar is served.
+- The worker does not delete database rows and does not traverse technical content directories. It only removes generated private custom-avatar image files. Public help-library author snapshots are anonymized while their technical article fields remain unchanged.
+- Personal-help and notification foreign keys in existing migrations include cascade rules on user deletion; retaining the user row is therefore essential to preserving those records. Do not replace anonymization with deleting the user row.
+- No cancellation endpoint is currently exposed for pending deletion requests. Do not promise self-service cancellation until that workflow is implemented and tested.
+
+## Data and storage ownership
+
+| Concern | Code owner | Persistent location |
+|---|---|---|
+| Users, profiles, skills, registration consent | `User`, `AuthService`, `SkillTestService` | `users`, `technician_profiles`, related skill tables, `terms_acceptances` |
+| Technical posts, replies, diagnosis, repair results, history | `Issue`, `IssueController` | `issues` and related issue tables |
+| Composer drafts and staged media | `PostDraft`, `DraftController` | `post_drafts`, `post_draft_media`, `storage/private/drafts` |
+| Permanent media and schematics | `ContentEditorService`, `DraftPublishingService` | `issue_attachments`, issue audio fields, `storage/private/issues` |
+| Personal help and publication | `HelpRequest`, `HelpRequestMediaService` | help-request/publication tables, `storage/private/help-requests` |
+| Notifications and push | `Notification`, `PushSubscription`, `WebPushService` | `notifications`, `push_subscriptions` |
+| Runtime and security logs | `App` | `storage/logs/{app,access,security,audit}-YYYY-MM-DD.log` |
+| Rate limits | `RateLimiter` | `rate_limit_buckets` |
+
+## Review and test boundaries
+
+- `php-lint.yml` verifies PHP syntax and JavaScript syntax.
+- `database-migrations.yml` applies the supported migration chain to disposable MySQL 8.0 and MariaDB 10.11 service databases and verifies representative schema writes.
+- These workflows do not currently simulate browser sessions, parallel uploads from multiple devices, actual Web Push delivery, UI behavior on mobile Safari, or the 30-day retention worker against a representative anonymization fixture.
+- A clean migration CI run is not authorization to run migrations on a live installation. Confirm the target schema history and take a backup first.
+- Treat this document as a maintained static dependency map, not as generated Graphify output or a replacement for runtime/integration tests.
