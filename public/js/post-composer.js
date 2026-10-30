@@ -159,6 +159,7 @@
                     mime_type: item.mime_type,
                     file_size: item.file_size,
                     sort_order: item.sort_order,
+                    original_url: item.original_url || item.url || '',
                     editor_state: item.editor_state || null,
                     url: item.url || '',
                     uploaded: Boolean(item.media_uuid)
@@ -189,7 +190,9 @@
             media_kind: item.media_kind,
             mime_type: item.mime_type,
             file_size: item.file_size,
-            blob: item.blob
+            blob: item.blob,
+            rendered_blob: item.renderedBlob || null,
+            editor_state: item.editor_state || null
         });
     }
 
@@ -308,11 +311,18 @@
                 edit.dataset.editImage = '';
                 edit.addEventListener('click', function () {
                     if (window.ZayanImageEditor) {
-                        window.ZayanImageEditor.open(item, function (state) {
-                            item.editor_state = state;
+                        window.ZayanImageEditor.open(item, async function (result) {
+                            item.editor_state = result.state;
+                            item.renderedBlob = result.renderedBlob || null;
+                            if (item.renderedBlob) {
+                                if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
+                                item.url = URL.createObjectURL(item.renderedBlob);
+                            }
                             item.dirtyEditor = true;
                             markDirty();
-                            saveMediaState(item, index);
+                            await persistBlob(item);
+                            await saveMediaState(item, index);
+                            renderMedia();
                         });
                     }
                 });
@@ -417,6 +427,7 @@
                 throw new Error(result.message || 'تعذر مزامنة المرفق.');
             }
             Object.assign(item, result.media[0]);
+            item.original_url = result.media[0].original_url || result.media[0].url;
             item.uploaded = true;
             await persistBlob(item);
             return true;
@@ -441,13 +452,26 @@
             markDirty();
             return;
         }
-        const state = item.editor_state || {};
-        const body = new URLSearchParams({
-            _token: csrf,
-            editor_state: JSON.stringify(state),
-            sort_order: String(index)
-        });
         try {
+            if (item.renderedBlob) {
+                const renderedData = new FormData();
+                renderedData.append('_token', csrf);
+                renderedData.append('rendered', item.renderedBlob, 'edited-image.webp');
+                const renderedResponse = await fetch(
+                    mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/rendered',
+                    { method: 'POST', body: renderedData, credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+                );
+                const renderedResult = await renderedResponse.json();
+                if (!renderedResponse.ok) throw new Error(renderedResult.message || 'تعذر حفظ نسخة الصورة المعدلة.');
+                item.url = renderedResult.rendered_url;
+                item.original_url = renderedResult.original_url;
+                item.renderedBlob = null;
+            }
+            const body = new URLSearchParams({
+                _token: csrf,
+                editor_state: JSON.stringify(item.editor_state || {}),
+                sort_order: String(index)
+            });
             const response = await fetch(
                 mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/editor',
                 { method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
@@ -926,6 +950,8 @@
                 file_size: record.file_size,
                 blob: record.blob || null,
                 url: matched ? matched.url : url,
+                original_url: matched ? (matched.original_url || matched.url) : url,
+                renderedBlob: record.rendered_blob || null,
                 sort_order: matched ? matched.sort_order : record.sort_order,
                 editor_state: matched ? matched.editor_state : null,
                 uploaded: Boolean(matched)
@@ -952,7 +978,7 @@
     });
 
     window.ZayanComposer = {
-        addAudioBlob: async function (blob, durationMs, trimStartMs, trimEndMs) {
+        addAudioBlob: async function (blob, durationMs, trimStartMs, trimEndMs, waveform) {
             const existing = media.find(function (item) { return item.media_kind === 'audio'; });
             if (existing) await removeMedia(existing);
             const item = {
@@ -970,7 +996,8 @@
             audioMeta = {
                 duration_ms: durationMs,
                 trim_start_ms: trimStartMs || 0,
-                trim_end_ms: trimEndMs == null ? durationMs : trimEndMs
+                trim_end_ms: trimEndMs == null ? durationMs : trimEndMs,
+                waveform: Array.isArray(waveform) ? waveform : []
             };
             media.push(item);
             await persistBlob(item);
@@ -989,6 +1016,7 @@
             markDirty();
         },
         getAudio: function () { return media.find(function (item) { return item.media_kind === 'audio'; }) || null; },
+        getAudioMeta: function () { return audioMeta; },
         getDraftId: function () { return draftId; },
         markDirty: markDirty
     };
@@ -1000,6 +1028,7 @@
         initialized = true;
         renderSteps();
         renderMedia();
+        window.dispatchEvent(new CustomEvent('zayan-composer-restored'));
     }).catch(function (error) {
         setStatus(error.message || 'تعذر استعادة المسودة المحلية.', 'error');
         initialized = true;
