@@ -102,13 +102,13 @@ final class AuthController extends Controller
             return $this->redirect('/register');
         }
 
-        $bucket = 'register:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-        if (RateLimiter::tooMany($bucket, 5, 3600)) {
-            App::security('auth.register.rate_limited', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        if (!RateLimiter::allowForIp('auth.register', 5, 3600)) {
+            App::security('auth.register.rate_limited', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد قليل.');
             return $this->redirect('/register');
         }
-        RateLimiter::hit($bucket);
 
         $result = AuthService::register($this->request->body);
         if ($result['errors']) return $this->registerForm($result['errors'], 422);
@@ -129,16 +129,12 @@ final class AuthController extends Controller
 
     public function usernames(): Response
     {
-        $bucket = 'register:usernames:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-        if (RateLimiter::tooMany($bucket, 90, 60)) {
-            RateLimiter::hit($bucket);
-            return new Response(
-                json_encode(['available' => []], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                429,
-                ['Content-Type' => 'application/json; charset=utf-8', 'Cache-Control' => 'no-store']
-            );
+        if (!RateLimiter::allowForIp('auth.usernames', 90, 60)) {
+            App::security('auth.usernames.rate_limited', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
+            return Response::json(['available' => []], 429);
         }
-        RateLimiter::hit($bucket);
 
         $names = $this->request->query['names'] ?? [];
         if (!is_array($names)) $names = [];
