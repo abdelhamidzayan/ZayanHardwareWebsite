@@ -1001,7 +1001,7 @@
             setStatus('وجدنا تعديلات محلية ونسخة أحدث على الحساب. اختار النسخة التي تريد استكمالها.', 'conflict');
             return;
         }
-        if (local && local.dirty && (!server || Number(local.serverRevision || 0) === Number(server.revision || 0))) {
+        if (local && (!server || (local.dirty && Number(local.serverRevision || 0) === Number(server.revision || 0)))) {
             applyPayload(local.payload || {});
             revision = Number(server?.revision || local.serverRevision || 0);
             revisionInput.value = String(revision);
