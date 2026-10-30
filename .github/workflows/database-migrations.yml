@@ -53,6 +53,7 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -uroot -proot zayan_migration_test < database/migrations/011_profiles_personal_help_and_publication.sql
           mysql -h 127.0.0.1 -uroot -proot zayan_migration_test < database/migrations/012_post_composer_drafts_and_device_catalog.sql
+          mysql -h 127.0.0.1 -uroot -proot zayan_migration_test < database/migrations/013_terms_acceptance_audit.sql
 
       - name: Verify schema and foreign-key compatibility
         env:
@@ -79,10 +80,13 @@ jobs:
               VALUES
               (1, 1, 'issues/1/rendered.webp', 'image/webp', 512, 'issues/1/original.jpg',
                'image/jpeg', 'issues/1/rendered.webp', 'image/webp', JSON_OBJECT('version', 1), 0);
+            INSERT INTO terms_acceptances (user_id, terms_version, ip_hash)
+              VALUES (1, '2026-10-28', REPEAT('b', 64));
           "
 
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM device_manufacturers;")" -ge 15
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'issue_attachments' AND column_name IN ('original_file_path','original_mime_type','rendered_file_path','rendered_mime_type','editor_state','sort_order');")" -eq 6
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM post_draft_media WHERE rendered_mime_type = 'image/webp';")" -eq 1
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM issue_attachments WHERE original_mime_type = 'image/jpeg' AND rendered_mime_type = 'image/webp';")" -eq 1
+          test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM terms_acceptances WHERE terms_version = '2026-10-28';")" -eq 1
           echo "Migration smoke tests passed on ${{ matrix.database.label }}"
