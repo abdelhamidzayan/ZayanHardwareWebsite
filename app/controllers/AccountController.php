@@ -22,12 +22,13 @@ final class AccountController extends Controller
         if (!$user) return $this->redirect('/login');
 
         $pdo = Database::connection();
+        $adminDeletionLockAcquired = false;
         $pdo->beginTransaction();
         try {
             // Serialize concurrent deletion requests on the existing user row.
             $accountLock = $pdo->prepare('SELECT account_status, role FROM users WHERE id = ? FOR UPDATE');
             $accountLock->execute([(int) $user['id']]);
-            $account = $accountLock->fetch(\\PDO::FETCH_ASSOC);
+            $account = $accountLock->fetch(\PDO::FETCH_ASSOC);
             if (!$account || $account['account_status'] !== 'active') {
                 $pdo->rollBack();
                 $this->flash('info', 'طلب إيقاف الحساب أو حذفه مسجل بالفعل.');
@@ -41,8 +42,9 @@ final class AccountController extends Controller
                     "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
                 )->fetchColumn();
                 if ($adminLock !== 1) {
-                    throw new \\RuntimeException('Could not acquire the administrator deletion lock.');
+                    throw new \RuntimeException('Could not acquire the administrator deletion lock.');
                 }
+                $adminDeletionLockAcquired = true;
 
                 $otherAdmins = $pdo->prepare(
                     "SELECT COUNT(*) FROM users
@@ -51,11 +53,9 @@ final class AccountController extends Controller
                 $otherAdmins->execute([(int) $user['id']]);
                 if ((int) $otherAdmins->fetchColumn() < 1) {
                     $pdo->rollBack();
-                    $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
                     $this->flash('error', 'قبل طلب حذف حساب المدير، يجب تعيين مدير نشط آخر.');
                     return $this->redirect('/');
                 }
-                $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
             }
 
             $stmt = $pdo->prepare(
@@ -82,6 +82,10 @@ final class AccountController extends Controller
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
+        } finally {
+            if ($adminDeletionLockAcquired) {
+                $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
+            }
         }
 
         AuthService::logout();
