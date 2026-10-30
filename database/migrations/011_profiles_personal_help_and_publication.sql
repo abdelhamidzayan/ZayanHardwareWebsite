@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS help_request_messages (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_help_messages_request_created (request_id, created_at, id),
+    KEY idx_help_messages_unread (request_id, sender_id, created_at),
     CONSTRAINT fk_help_messages_request FOREIGN KEY (request_id) REFERENCES help_requests(id) ON DELETE CASCADE,
     CONSTRAINT fk_help_messages_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
