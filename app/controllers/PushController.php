@@ -14,7 +14,7 @@ final class PushController extends Controller
 {
     public function publicKey(): Response
     {
-        if (!class_exists(\\Minishlink\\WebPush\\WebPush::class)) {
+        if (!class_exists(\Minishlink\WebPush\WebPush::class)) {
             return $this->json([
                 'error' => 'push_dependency_missing',
                 'message' => 'مكتبة Web Push غير مثبتة على الخادم. نفّذ composer install من مجلد المشروع.',
