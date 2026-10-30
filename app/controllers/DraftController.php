@@ -245,7 +245,7 @@ final class DraftController extends Controller
 
         $tmp = (string) $file['tmp_name'];
         $size = (int) ($file['size'] ?? 0);
-        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
         if ($size < 1 || $size > 12 * 1024 * 1024
             || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)
             || !is_array(@getimagesize($tmp))) {
@@ -334,7 +334,7 @@ final class DraftController extends Controller
             return $this->notFound();
         }
 
-        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
         $allowed = [
             'image/jpeg', 'image/png', 'image/webp',
             'video/mp4', 'video/webm', 'video/quicktime',
@@ -418,8 +418,9 @@ final class DraftController extends Controller
         return $clean;
     }
 
-    private function mediaUrl(string $draftId, string $mediaUuid): string
+    private function mediaUrl(string $draftId, string $mediaUuid, bool $rendered = false): string
     {
-        return \App\Core\Request::basePath() . '/drafts/' . rawurlencode($draftId) . '/media/' . rawurlencode($mediaUuid);
+        $url = \App\Core\Request::basePath() . '/drafts/' . rawurlencode($draftId) . '/media/' . rawurlencode($mediaUuid);
+        return $rendered ? $url . '?variant=rendered' : $url;
     }
 }
