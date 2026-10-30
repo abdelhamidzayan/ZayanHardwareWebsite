@@ -96,5 +96,56 @@ CREATE TABLE child (
         self.assertTrue(any("Duplicate migration prefix 002" in warning for warning in graph.warnings))
 
 
+    def test_maps_model_sql_reads_and_writes_to_tables(self) -> None:
+        self.write("app/models/IssueModel.php", """<?php
+final class IssueModel {
+    public function readAndWrite(): void {
+        $this->db->prepare('SELECT i.id FROM issues i JOIN issue_replies r ON r.issue_id = i.id');
+        $this->db->prepare('INSERT INTO issue_results (issue_id, was_repaired) VALUES (?, ?)');
+    }
+}
+""")
+        graph = self.graph()
+        model_id = next(n["id"] for n in graph.nodes.values()
+                        if n["kind"] == "file" and n["key"] == "app/models/IssueModel.php")
+        issues = next(n["id"] for n in graph.nodes.values()
+                      if n["kind"] == "table" and n["key"] == "issues")
+        replies = next(n["id"] for n in graph.nodes.values()
+                       if n["kind"] == "table" and n["key"] == "issue_replies")
+        results = next(n["id"] for n in graph.nodes.values()
+                       if n["kind"] == "table" and n["key"] == "issue_results")
+        self.assertIn((model_id, issues, "queries_table"), graph.edges)
+        self.assertIn((model_id, replies, "queries_table"), graph.edges)
+        self.assertIn((model_id, results, "writes_table"), graph.edges)
+
+    def test_maps_javascript_fetch_to_matching_php_route(self) -> None:
+        self.write("app/controllers/ExampleController.php", """<?php
+namespace App\\Controllers;
+final class ExampleController { public function reply(): void {} }
+""")
+        self.write("config/routes.php", """<?php
+use App\\Controllers\\ExampleController;
+$router->post('/issues/{id}/reply', [ExampleController::class, 'reply']);
+""")
+        self.write("public/js/replies.js", """fetch('/issues/42/reply', { method: 'POST' });
+""")
+        graph = self.graph()
+        route_id = next(n["id"] for n in graph.nodes.values() if n["kind"] == "route")
+        api_id = next(n["id"] for n in graph.nodes.values() if n["kind"] == "api_call")
+        js_id = next(n["id"] for n in graph.nodes.values()
+                     if n["kind"] == "file" and n["key"] == "public/js/replies.js")
+        self.assertEqual(graph.api_calls_linked, 1)
+        self.assertIn((js_id, api_id, "calls_api"), graph.edges)
+        self.assertIn((api_id, route_id, "calls_route"), graph.edges)
+
+    def test_keeps_dynamic_javascript_api_calls_unresolved(self) -> None:
+        self.write("public/js/dynamic.js", "fetch(apiBase + '/some/path');")
+        graph = self.graph()
+        api_node = next(n for n in graph.nodes.values() if n["kind"] == "api_call")
+        self.assertEqual(api_node["resolution"], "dynamic")
+        self.assertEqual(graph.api_calls_linked, 0)
+        self.assertEqual(graph.api_calls_unresolved, 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
