@@ -15,6 +15,9 @@ if (!isset($unreadCount)) {
 } else {
     $unreadCount = (int) $unreadCount;
 }
+$headerNotifications = is_array($currentUser) && isset($currentUser['id'])
+    ? \\App\\Models\\Notification::forUser((int) $currentUser['id'], 5)
+    : [];
 ?>
 <!DOCTYPE html>
 <html lang="<?= $e($lang) ?>" dir="<?= $e($dir) ?>">
