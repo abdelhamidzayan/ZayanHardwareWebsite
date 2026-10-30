@@ -11,6 +11,7 @@ Current limits use fixed windows:
 | New technical post | 5 | 10 minutes | 25 |
 | Diagnostic update | 8 | 10 minutes | 30 |
 | Reply / comment | 15 | 5 minutes | 60 |
+| Edit a post | 10 | 10 minutes | 30 |
 | Personal help request | 3 | 1 hour | 15 |
 | Personal help message | 24 | 5 minutes | 100 |
 | Device model suggestion | 5 | 1 hour | 25 |
