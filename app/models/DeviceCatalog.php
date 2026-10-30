@@ -54,7 +54,7 @@ final class DeviceCatalog extends Model
         $aliases = trim($aliases);
         $note = trim($note);
         if (mb_strlen($commercialName) < 2 || mb_strlen($commercialName) > 140) {
-            throw new \\DomainException('invalid_model_name');
+            throw new \DomainException('invalid_model_name');
         }
 
         $pdo = self::db();
