@@ -984,6 +984,19 @@
             await syncServer(false);
             return;
         }
+        if (server) {
+            await applyServerData(server);
+            const localMedia = await loadLocalMedia();
+            await hydrateLocalMedia(localMedia, server.media || []);
+        } else if (initial.payload && Object.keys(initial.payload).length) {
+            applyPayload(initial.payload);
+            revision = Number(initial.revision || 0);
+            revisionInput.value = String(revision);
+            media = (initial.media || []).map(function (item) {
+                return Object.assign({}, item, { blob: null, local_id: item.media_uuid, uploaded: true });
+            });
+            renderMedia();
+        }
         if (!server || !(server.media || []).some(function (item) { return item.media_kind === 'audio'; })) {
             const pending = await pendingAudioSession().catch(function () { return null; });
             if (pending && pending.blob && pending.blob.size) {
@@ -1007,19 +1020,6 @@
                 await persistBlob(recovered);
                 await clearAudioSession();
             }
-        }
-        if (server) {
-            await applyServerData(server);
-            const localMedia = await loadLocalMedia();
-            await hydrateLocalMedia(localMedia, server.media || []);
-        } else if (initial.payload && Object.keys(initial.payload).length) {
-            applyPayload(initial.payload);
-            revision = Number(initial.revision || 0);
-            revisionInput.value = String(revision);
-            media = (initial.media || []).map(function (item) {
-                return Object.assign({}, item, { blob: null, local_id: item.media_uuid, uploaded: true });
-            });
-            renderMedia();
         }
         initialized = true;
         await persistLocal();
