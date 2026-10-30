@@ -440,3 +440,9 @@
 
 
 .help-request-menu__new { justify-self:start; width:max-content; padding:.1rem .45rem; border-radius:var(--radius-pill); background:var(--color-primary-soft); color:var(--color-primary); font-size:.68rem; font-style:normal; font-weight:700; }
+
+
+.help-publication-preview { display:grid; gap:var(--space-3); padding:var(--space-4); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-bg); }
+.help-publication-preview h3 { font-size:var(--text-lg); }
+.help-publication-preview section { display:grid; gap:.3rem; }
+.help-publication-preview section p { line-height:1.75; white-space:pre-wrap; overflow-wrap:anywhere; }
