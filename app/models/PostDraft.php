@@ -136,10 +136,11 @@ final class PostDraft extends Model
         string $sha256,
         ?int $durationMs,
         int $sortOrder,
+        int $userId,
         int $expectedRevision
     ): int {
         $pdo = self::db();
-        self::beginRevisionMutation($draftId, $userId = self::draftOwnerId($draftId), $expectedRevision);
+        self::beginRevisionMutation($draftId, $userId, $expectedRevision);
         try {
             $pdo->prepare(
                 'INSERT INTO post_draft_media
@@ -209,15 +210,18 @@ final class PostDraft extends Model
         $pdo = self::db();
         self::beginRevisionMutation($draftId, $userId, $expectedRevision);
         try {
-            $stmt = $pdo->prepare(
-                'UPDATE post_draft_media SET editor_state = ?, sort_order = ?
-                 WHERE draft_id = ? AND media_uuid = ?'
+            $exists = $pdo->prepare(
+                'SELECT id FROM post_draft_media WHERE draft_id = ? AND media_uuid = ? LIMIT 1'
             );
-            $stmt->execute([$json, $sortOrder, $draftId, $mediaUuid]);
-            if ($stmt->rowCount() < 1) {
+            $exists->execute([$draftId, $mediaUuid]);
+            if (!$exists->fetchColumn()) {
                 self::rollbackRevisionMutation();
                 return null;
             }
+            $pdo->prepare(
+                'UPDATE post_draft_media SET editor_state = ?, sort_order = ?
+                 WHERE draft_id = ? AND media_uuid = ?'
+            )->execute([$json, $sortOrder, $draftId, $mediaUuid]);
 
             return self::finishRevisionMutation($draftId, $userId);
         } catch (\\Throwable $e) {
@@ -302,18 +306,23 @@ final class PostDraft extends Model
     {
         $pdo = self::db();
         $pdo->beginTransaction();
-        $stmt = $pdo->prepare(
-            'SELECT revision FROM post_drafts WHERE id = ? AND user_id = ? FOR UPDATE'
-        );
-        $stmt->execute([$draftId, $userId]);
-        $revision = $stmt->fetchColumn();
-        if ($revision === false) {
-            $pdo->rollBack();
-            throw new \\DomainException('draft_not_found');
-        }
-        if ((int) $revision !== $expectedRevision) {
-            $pdo->rollBack();
-            throw new \\DomainException('draft_revision_conflict');
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT revision FROM post_drafts WHERE id = ? AND user_id = ? FOR UPDATE'
+            );
+            $stmt->execute([$draftId, $userId]);
+            $revision = $stmt->fetchColumn();
+            if ($revision === false) {
+                $pdo->rollBack();
+                throw new \\DomainException('draft_not_found');
+            }
+            if ((int) $revision !== $expectedRevision) {
+                $pdo->rollBack();
+                throw new \\DomainException('draft_revision_conflict');
+            }
+        } catch (\\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
         }
     }
 
@@ -335,15 +344,6 @@ final class PostDraft extends Model
     {
         $pdo = self::db();
         if ($pdo->inTransaction()) $pdo->rollBack();
-    }
-
-    private static function draftOwnerId(string $draftId): int
-    {
-        $stmt = self::db()->prepare('SELECT user_id FROM post_drafts WHERE id = ? LIMIT 1');
-        $stmt->execute([$draftId]);
-        $ownerId = $stmt->fetchColumn();
-        if ($ownerId === false) throw new \\DomainException('draft_not_found');
-        return (int) $ownerId;
     }
 
     public static function deleteForUser(string $id, int $userId): bool
