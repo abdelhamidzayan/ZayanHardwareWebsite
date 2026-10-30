@@ -171,12 +171,18 @@ final class AccountRetentionService
             if ($entry === '.' || $entry === '..') continue;
             if (!preg_match('/^[a-f0-9]{40}\\.(?:jpg|png|webp)$/i', $entry)) continue;
 
-            $file = realpath($directory . DIRECTORY_SEPARATOR . $entry);
+            $candidateFile = $directory . DIRECTORY_SEPARATOR . $entry;
+            if (is_link($candidateFile)) {
+                if (!@unlink($candidateFile)) throw new RuntimeException('Unable to remove a private avatar symlink.');
+                continue;
+            }
+
+            $file = realpath($candidateFile);
             if ($file === false) continue;
             if (!str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) {
                 throw new RuntimeException('Avatar file resolved outside private storage.');
             }
-            if (!@unlink($file)) throw new RuntimeException('Unable to remove a private avatar image.');
+            if (!@unlink($candidateFile)) throw new RuntimeException('Unable to remove a private avatar image.');
         }
 
         $remaining = scandir($directory);
