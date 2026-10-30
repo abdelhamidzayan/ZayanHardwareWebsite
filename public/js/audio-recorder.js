@@ -271,7 +271,6 @@
         elapsedBeforeCurrentRun = 0;
         currentTrimStart = 0;
         currentTrimEnd = 0;
-        audioMeta = null;
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = '';
         preview.removeAttribute('src');
