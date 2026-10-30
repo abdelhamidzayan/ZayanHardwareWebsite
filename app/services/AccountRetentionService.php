@@ -24,6 +24,7 @@ final class AccountRetentionService
     {
         $limit = max(1, min(500, $limit));
         $pdo = Database::connection();
+        self::assertRequiredSchema($pdo);
         $due = self::dueRequests($pdo, $limit);
 
         if (!$execute) {
@@ -69,6 +70,81 @@ final class AccountRetentionService
             'skipped' => $skipped,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Fail closed before processing anything when the core anonymization schema
+     * is incomplete. Optional feature tables are checked separately and skipped
+     * only when that feature is not installed.
+     */
+    private static function assertRequiredSchema(PDO $pdo): void
+    {
+        $required = [
+            'users' => [
+                'id', 'username', 'display_name', 'email', 'phone', 'password_hash',
+                'role', 'account_status', 'avatar_key', 'avatar_path',
+                'accept_help_requests', 'last_login_at',
+            ],
+            'account_deletion_requests' => ['id', 'user_id', 'status', 'scheduled_purge_at'],
+            'terms_acceptances' => ['user_id', 'ip_hash'],
+            'security_audit_logs' => ['actor_user_id', 'target_user_id', 'action', 'details_json', 'ip_hash'],
+            'admin_password_resets' => ['user_id', 'admin_id', 'note'],
+        ];
+
+        $columnQuery = $pdo->prepare(
+            'SELECT COLUMN_NAME FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
+        );
+        $problems = [];
+        foreach ($required as $table => $expectedColumns) {
+            $columnQuery->execute([$table]);
+            $actualColumns = $columnQuery->fetchAll(PDO::FETCH_COLUMN);
+            $missingColumns = array_values(array_diff($expectedColumns, $actualColumns));
+            if ($missingColumns) {
+                $problems[] = $table . ' missing columns: ' . implode(', ', $missingColumns);
+            }
+        }
+
+        $optional = [
+            'help_public_posts' => [
+                'requester_user_id', 'helper_user_id', 'requester_display_name',
+                'helper_display_name', 'requester_avatar_key', 'helper_avatar_key',
+            ],
+            'push_subscriptions' => [
+                'id', 'user_id', 'endpoint', 'endpoint_hash', 'public_key',
+                'auth_token', 'user_agent', 'last_used_at',
+            ],
+        ];
+        $tableQuery = $pdo->prepare(
+            'SELECT 1 FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1'
+        );
+        foreach ($optional as $table => $expectedColumns) {
+            $tableQuery->execute([$table]);
+            if ($tableQuery->fetchColumn() === false) continue;
+            $columnQuery->execute([$table]);
+            $actualColumns = $columnQuery->fetchAll(PDO::FETCH_COLUMN);
+            $missingColumns = array_values(array_diff($expectedColumns, $actualColumns));
+            if ($missingColumns) {
+                $problems[] = $table . ' missing columns: ' . implode(', ', $missingColumns);
+            }
+        }
+
+        if ($problems) {
+            throw new RuntimeException(
+                'Account-retention schema is incomplete; no accounts were processed. ' . implode('; ', $problems)
+            );
+        }
+    }
+
+    private static function tableExists(PDO $pdo, string $table): bool
+    {
+        $stmt = $pdo->prepare(
+            'SELECT 1 FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1'
+        );
+        $stmt->execute([$table]);
+        return $stmt->fetchColumn() !== false;
     }
 
     private static function dueRequests(PDO $pdo, int $limit): array
@@ -230,17 +306,19 @@ final class AccountRetentionService
 
     private static function anonymizePublicHelpAuthor(PDO $pdo, int $userId): void
     {
+        if (!self::tableExists($pdo, 'help_public_posts')) return;
+
         $pdo->prepare(
             "UPDATE help_public_posts
              SET requester_display_name = 'عضو محذوف',
-                 requester_avatar_key = 'technician-blue',
+                 requester_avatar_key = 'technician-blue'
              WHERE requester_user_id = ?"
         )->execute([$userId]);
 
         $pdo->prepare(
             "UPDATE help_public_posts
              SET helper_display_name = 'عضو محذوف',
-                 helper_avatar_key = 'technician-blue',
+                 helper_avatar_key = 'technician-blue'
              WHERE helper_user_id = ?"
         )->execute([$userId]);
     }
@@ -277,6 +355,8 @@ final class AccountRetentionService
 
     private static function disablePushSubscriptions(PDO $pdo, int $userId): void
     {
+        if (!self::tableExists($pdo, 'push_subscriptions')) return;
+
         $pdo->prepare(
             "UPDATE push_subscriptions
              SET endpoint = CONCAT('https://deleted.invalid/', user_id, '/', id),
