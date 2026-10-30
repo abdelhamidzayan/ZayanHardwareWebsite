@@ -16,7 +16,7 @@ Application logs are written outside the public web root under `storage/logs/` a
 
 - `app-YYYY-MM-DD.log`: PHP warnings, uncaught exceptions, and fatal errors.
 - `access-YYYY-MM-DD.log`: completed HTTP requests, response status, duration, route, user ID, and request ID.
-- `security-YYYY-MM-DD.log`: failed/successful sign-ins, rate limits, blocked accounts, and rejected CSRF attempts.
+- `security-YYYY-MM-DD.log`: failed/successful sign-ins, rate limits, blocked accounts, and rejected CSRF attempts. These records include the client IP for abuse investigation.
 - `audit-YYYY-MM-DD.log`: important account events such as registration and logout.
 
 The default retention period is 30 days. Set `LOG_RETENTION_DAYS` in `.env` to change it. Log timestamps use UTC. Never move these files into `public/` or expose them through a web route. Passwords, session IDs, CSRF tokens, and secret-like context fields are redacted.
