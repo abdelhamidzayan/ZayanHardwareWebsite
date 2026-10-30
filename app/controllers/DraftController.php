@@ -200,7 +200,7 @@ final class DraftController extends Controller
                 }
 
                 try {
-                    PostDraft::addMedia(
+                    $currentRevision = PostDraft::addMedia(
                         $draftId,
                         $uuid,
                         $kind,
@@ -213,7 +213,6 @@ final class DraftController extends Controller
                         (int) $user['id'],
                         $currentRevision
                     );
-                    $currentRevision = PostDraft::currentRevision($draftId, (int) $user['id']);
                 } catch (\Throwable $e) {
                     @unlink($destination);
                     throw $e;
