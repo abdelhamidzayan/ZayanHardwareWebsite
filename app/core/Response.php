@@ -55,6 +55,7 @@ final class Response
                 if (!is_string($chunk) || $chunk === '') break;
                 echo $chunk;
                 $remaining -= strlen($chunk);
+                if (ob_get_level() > 0) @ob_flush();
                 flush();
             }
             fclose($handle);
