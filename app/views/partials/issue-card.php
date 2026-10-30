@@ -45,7 +45,9 @@ for ($i = 0; $i < 32; $i++) {
     </div>
 
     <?php if ($hasAudio) : ?>
-        <div class="audio" data-audio<?= $audioSrc !== '' ? ' data-src="' . $e($audioSrc) . '"' : '' ?>>
+        <div class="audio" data-audio<?= $audioSrc !== '' ? ' data-src="' . $e($audioSrc) . '"' : '' ?>
+            data-trim-start="<?= (int) ($issue['audio_trim_start_ms'] ?? 0) ?>"
+            data-trim-end="<?= (int) ($issue['audio_trim_end_ms'] ?? $issue['audio_duration_ms'] ?? 0) ?>">
             <button class="audio__btn" type="button" aria-label="تشغيل الملاحظة الصوتية"<?= $audioSrc === '' ? ' disabled' : '' ?>>
                 <svg class="icon audio__icon audio__icon--play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>
                 <svg class="icon audio__icon audio__icon--pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></svg>
