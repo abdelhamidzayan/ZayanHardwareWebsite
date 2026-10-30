@@ -19,6 +19,7 @@
     let pointerStart = null;
     let activeObject = null;
     let activeAction = '';
+    let resizeStartFontSize = 46;
     let undoStack = [];
     let redoStack = [];
     let renderScale = 1;
@@ -297,6 +298,9 @@
                 const handleX = bounds.x + bounds.width;
                 const handleY = bounds.y + bounds.height;
                 if (Math.abs(clickPoint.x - handleX) <= 18 && Math.abs(clickPoint.y - handleY) <= 18) activeAction = 'resize';
+                resizeStartFontSize = Number(target.fontSize || 46);
+                colorInput.value = target.color || '#2563eb';
+                sizeInput.value = String(target.size || 4);
                 pushHistory();
             }
             textEntry.hidden = !(target && target.type === 'text');
@@ -366,10 +370,9 @@
 
     function resizeObject(object, point) {
         if (object.type === 'text') {
-            const delta = point.x - Number(object.x2 || object.x);
-            object.fontSize = Math.max(18, Math.min(220, (Number(object.fontSize) || 46) + delta * 0.45));
+            const delta = point.x - pointerStart.x;
+            object.fontSize = Math.max(18, Math.min(220, resizeStartFontSize + delta * 0.45));
             object.size = Math.max(1, Math.min(24, object.fontSize / 12));
-            object.x2 = point.x;
             return;
         }
         object.x2 = point.x;
@@ -506,6 +509,15 @@
     dialog.querySelector('[data-image-add-text]').addEventListener('click', addText);
     dialog.querySelector('[data-image-undo]').addEventListener('click', undo);
     dialog.querySelector('[data-image-redo]').addEventListener('click', redo);
+    dialog.querySelector('[data-image-delete-selected]').addEventListener('click', function () {
+        if (!state || !selectedId) return;
+        pushHistory();
+        state.objects = state.objects.filter(function (item) { return item.id !== selectedId; });
+        selectedId = null;
+        textEntry.hidden = true;
+        draw();
+        saveProgress();
+    });
     dialog.querySelector('[data-image-clear]').addEventListener('click', function () {
         if (!state) return;
         if (!window.confirm('مسح كل الكتابة والرسومات وإلغاء القص؟')) return;
