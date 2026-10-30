@@ -43,7 +43,7 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
             <input type="hidden" name="avatar_key" value="<?= $e((string) ($currentUser['avatar_key'] ?? 'technician-blue')) ?>" data-avatar-key>
             <div class="avatar-settings__upload">
                 <label class="btn btn--secondary" for="avatar-file">رفع صورة شخصية</label>
-                <input id="avatar-file" class="sr-only" type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp" data-avatar-file>
+                <input id="avatar-file" class="sr-only" type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" data-avatar-file>
                 <span class="field__hint">JPG أو PNG أو WEBP · حتى 5 ميجابايت. هنفتح أداة قص قبل الحفظ.</span>
             </div>
             <div class="avatar-crop" data-avatar-crop hidden>
