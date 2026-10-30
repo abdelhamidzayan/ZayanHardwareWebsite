@@ -290,4 +290,16 @@ final class HelpRequestController extends Controller
             'post' => $post,
         ]);
     }
+    private function string(string $key): string
+    {
+        $value = $this->request->input($key);
+        return is_string($value) ? $value : '';
+    }
+
+    private function fail(string $path, string $message): Response
+    {
+        $this->flash('error', $message);
+        return $this->redirect($path);
+    }
+
 }
