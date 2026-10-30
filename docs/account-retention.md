@@ -47,7 +47,7 @@ php bin/anonymize-deleted-accounts.php --execute --limit=100
 A daily scheduler can run after the first manual preview:
 
 \`\`\`cron
-40 2 * * * cd /absolute/path/to/ZayanHardwareWebsite && /usr/bin/php bin/anonymize-deleted-accounts.php --execute --limit=100 >> storage/logs/account-retention-worker.log 2>&1
+40 2 * * * cd /absolute/path/to/ZayanHardwareWebsite && mkdir -p storage/logs && /usr/bin/php bin/anonymize-deleted-accounts.php --execute --limit=100 >> storage/logs/account-retention-worker.log 2>&1
 \`\`\`
 
 Use the actual project path and PHP binary on the server. The worker has not been run against production data. CI currently checks PHP syntax; production-scale and live-database behavior still require a staging test before enabling cron.
