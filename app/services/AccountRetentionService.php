@@ -109,7 +109,7 @@ final class AccountRetentionService
             }
 
             $userId = (int) $request['user_id'];
-            $anonymousUsername = 'deleted' . base_convert((string) $userId, 10, 36);
+            $anonymousUsername = self::uniqueAnonymousUsername($pdo, $userId);
 
             // Remove account avatar binaries only; technical attachments are untouched.
             self::removePrivateAvatarFiles($userId);
@@ -259,6 +259,17 @@ final class AccountRetentionService
             'UPDATE admin_password_resets SET note = NULL
              WHERE user_id = ? OR admin_id = ?'
         )->execute([$userId, $userId]);
+    }
+
+    private static function uniqueAnonymousUsername(PDO $pdo, int $userId): string
+    {
+        $check = $pdo->prepare('SELECT 1 FROM users WHERE username = ? AND id <> ? LIMIT 1');
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            $candidate = 'deleted_' . bin2hex(random_bytes(6));
+            $check->execute([$candidate, $userId]);
+            if ($check->fetchColumn() === false) return $candidate;
+        }
+        throw new RuntimeException('Unable to reserve a unique anonymous username.');
     }
 
     private static function anonymizeUserRow(PDO $pdo, int $userId, string $username): void
