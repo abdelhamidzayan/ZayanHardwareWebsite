@@ -173,10 +173,20 @@
                 animateWave();
             }
 
+            const chunkWrites = [];
             recorder.addEventListener('dataavailable', function (event) {
-                if (event.data && event.data.size > 0) chunks.push(event.data);
+                if (event.data && event.data.size > 0) {
+                    chunks.push(event.data);
+                    if (window.ZayanComposer && window.ZayanComposer.saveAudioChunk) {
+                        chunkWrites.push(window.ZayanComposer.saveAudioChunk(event.data, recorder.mimeType || mimeType));
+                    }
+                }
+                if (window.ZayanComposer && window.ZayanComposer.saveAudioProgress) {
+                    window.ZayanComposer.saveAudioProgress(currentElapsed(), recorder.mimeType || mimeType).catch(function () {});
+                }
             });
             recorder.addEventListener('stop', async function () {
+                await Promise.allSettled(chunkWrites);
                 cancelAnimationFrame(animation);
                 clearInterval(timer);
                 durationMs = Math.max(0, elapsedBeforeCurrentRun);
@@ -198,6 +208,7 @@
                 setRecordingUi('preview');
                 if (window.ZayanComposer) {
                     await window.ZayanComposer.addAudioBlob(blob, durationMs, 0, durationMs, currentWaveform);
+                    await window.ZayanComposer.clearAudioSession();
                 }
                 if (audioContext && audioContext.state !== 'closed') await audioContext.close().catch(function () {});
                 audioContext = null;
@@ -280,7 +291,7 @@
         trimStart.value = '0';
         trimEnd.value = '100';
         setRecordingUi('ready');
-        if (removeFromDraft && window.ZayanComposer) window.ZayanComposer.removeAudio();
+        if (removeFromDraft && window.ZayanComposer) { window.ZayanComposer.removeAudio(); window.ZayanComposer.clearAudioSession(); }
     }
 
     function bindExistingAudio() {
