@@ -621,6 +621,8 @@ retentionExpect(
 $adminGuardRequest = $pdo->prepare('SELECT status FROM account_deletion_requests WHERE id = ?');
 $adminGuardRequest->execute([$lastAdminRequestId]);
 retentionExpect($adminGuardRequest->fetchColumn() === 'pending', 'Blocked last-admin request must remain pending.');
+$pdo->prepare("UPDATE users SET account_status = 'active' WHERE id = ?")->execute([$lastAdminId]);
+$pdo->prepare("UPDATE account_deletion_requests SET status = 'cancelled' WHERE id = ?")->execute([$lastAdminRequestId]);
 
 // A failure at the final audit insert must roll back every identity and profile change.
 $rollbackPublic = createPublicHelpPost($pdo, $rollbackUserId, $helperId, 'Rollback public article');
