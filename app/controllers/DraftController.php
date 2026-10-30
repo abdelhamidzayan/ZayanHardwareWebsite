@@ -395,7 +395,7 @@ final class DraftController extends Controller
 
     private function normalizePayload(array $payload): array
     {
-        $stringFields = ['content_type', 'title', 'manufacturer_id', 'device_model_id', 'device_model_label', 'details_mode', 'description'];
+        $stringFields = ['content_type', 'title', 'manufacturer_id', 'device_model_id', 'device_model_label', 'category', 'details_mode', 'description'];
         $clean = [];
         foreach ($stringFields as $field) {
             $value = $payload[$field] ?? '';
