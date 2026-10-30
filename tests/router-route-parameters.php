@@ -22,13 +22,13 @@ $add->invoke($router, 'GET', '/drafts/{draftId}/media/{mediaUuid}', static fn ()
 $routesProperty = new ReflectionProperty(Router::class, 'routes');
 $routes = $routesProperty->getValue($router);
 $avatarPattern = $routes[0][1];
-$draftPattern = $routes[1][1];
+$draftPattern = $routes[3][1];
 
 check(preg_match($avatarPattern, '/avatar/42', $avatarMatches) === 1, 'Numeric userId should match the avatar route.');
 check(($avatarMatches['userId'] ?? null) === '42', 'The route should capture userId by its declared name.');
 check(preg_match($avatarPattern, '/avatar/not-a-number') === 0, 'Non-numeric userId must not match the avatar route.');
-$replyPattern = $routes[2][1];
-$diagnosticPattern = $routes[3][1];
+$replyPattern = $routes[1][1];
+$diagnosticPattern = $routes[2][1];
 check(preg_match($replyPattern, '/issues/7/replies/19/edit', $replyMatches) === 1, 'Numeric replyId should match the reply route.');
 check(preg_match($replyPattern, '/issues/7/replies/not-a-number/edit') === 0, 'Non-numeric replyId must not match the reply route.');
 check(preg_match($diagnosticPattern, '/issues/7/diagnostic-updates/23/edit', $diagnosticMatches) === 1, 'Numeric updateId should match the diagnostic route.');
