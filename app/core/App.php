@@ -259,12 +259,27 @@ final class App
         });
 
         set_exception_handler(static function (\Throwable $e): void {
-            self::log('ERROR', 'app.uncaught_exception', [
+            $exceptionContext = [
                 'exception' => $e::class,
-                'message'   => $e->getMessage(),
                 'file'      => $e->getFile(),
                 'line'      => $e->getLine(),
-            ]);
+            ];
+
+            if ($e instanceof \\PDOException) {
+                // PDO messages can contain SQL fragments or user-supplied values.
+                // Keep diagnostic codes and location, but never persist the raw query error.
+                $exceptionContext['message'] = 'Database exception; raw details omitted';
+                if (isset($e->errorInfo[0])) {
+                    $exceptionContext['sql_state'] = (string) $e->errorInfo[0];
+                }
+                if (isset($e->errorInfo[1])) {
+                    $exceptionContext['driver_code'] = (int) $e->errorInfo[1];
+                }
+            } else {
+                $exceptionContext['message'] = $e->getMessage();
+            }
+
+            self::log('ERROR', 'app.uncaught_exception', $exceptionContext);
 
             if (!headers_sent()) {
                 http_response_code(500);
