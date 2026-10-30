@@ -38,7 +38,7 @@ final class Issue extends Model
         $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
             'SELECT i.id, i.user_id, i.title, i.content_type, i.device_model AS device, i.category, i.description,
-                    i.details_mode, i.audio_path, i.audio_duration_ms,
+                    i.details_mode, i.audio_path, i.audio_duration_ms, i.audio_trim_start_ms, i.audio_trim_end_ms,
                     dm.display_name AS manufacturer_name, m.commercial_name AS model_commercial_name, m.model_code AS model_code,
                     i.status, i.created_at, u.display_name AS author, u.username, u.role,
                     u.avatar_key AS author_avatar_key, u.avatar_path AS author_avatar_path,
