@@ -12,6 +12,9 @@ final class Issue extends Model
         $stmt = self::db()->prepare(
             'SELECT i.*, u.username, u.display_name AS author_name, u.role AS author_role,
                     u.avatar_key AS author_avatar_key, u.avatar_path AS author_avatar_path,
+                    dm.display_name AS manufacturer_name, dm.slug AS manufacturer_slug,
+                    dm.logo_path AS manufacturer_logo_path,
+                    m.commercial_name AS model_commercial_name, m.model_code AS model_code,
                     (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
                     (SELECT ir.id FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_id,
                     (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_review,
@@ -21,6 +24,8 @@ final class Issue extends Model
                     (SELECT ir.submitted_by FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_submitter
              FROM issues i
              JOIN users u ON u.id = i.user_id
+             LEFT JOIN device_manufacturers dm ON dm.id = i.manufacturer_id
+             LEFT JOIN device_models m ON m.id = i.device_model_id
              WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -33,12 +38,16 @@ final class Issue extends Model
         $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
             'SELECT i.id, i.user_id, i.title, i.content_type, i.device_model AS device, i.category, i.description,
+                    i.details_mode, i.audio_path, i.audio_duration_ms,
+                    dm.display_name AS manufacturer_name, m.commercial_name AS model_commercial_name, m.model_code AS model_code,
                     i.status, i.created_at, u.display_name AS author, u.username, u.role,
                     u.avatar_key AS author_avatar_key, u.avatar_path AS author_avatar_path,
                     (SELECT COUNT(*) FROM issue_replies r
                      WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS comments
              FROM issues i
               JOIN users u ON u.id = i.user_id
+              LEFT JOIN device_manufacturers dm ON dm.id = i.manufacturer_id
+              LEFT JOIN device_models m ON m.id = i.device_model_id
               WHERE i.deleted_at IS NULL
               ORDER BY i.created_at DESC, i.id DESC
              LIMIT ' . $limit
@@ -230,14 +239,14 @@ final class Issue extends Model
 
     public static function attachments(int $issueId): array
     {
-        $stmt = self::db()->prepare('SELECT id, file_path, mime_type, file_size, is_inline FROM issue_attachments WHERE issue_id = ? ORDER BY id');
+        $stmt = self::db()->prepare('SELECT id, issue_id, file_path, original_file_path, rendered_file_path, editor_state, sort_order, mime_type, file_size, is_inline FROM issue_attachments WHERE issue_id = ? ORDER BY sort_order, id');
         $stmt->execute([$issueId]);
         return $stmt->fetchAll();
     }
 
     public static function attachmentById(int $attachmentId): ?array
     {
-        $stmt = self::db()->prepare('SELECT a.id, a.file_path, a.mime_type, a.file_size, a.issue_id FROM issue_attachments a JOIN issues i ON i.id = a.issue_id WHERE a.id = ? AND i.deleted_at IS NULL LIMIT 1');
+        $stmt = self::db()->prepare('SELECT a.id, a.file_path, a.original_file_path, a.rendered_file_path, a.editor_state, a.mime_type, a.file_size, a.issue_id FROM issue_attachments a JOIN issues i ON i.id = a.issue_id WHERE a.id = ? AND i.deleted_at IS NULL LIMIT 1');
         $stmt->execute([$attachmentId]);
         return $stmt->fetch() ?: null;
     }
