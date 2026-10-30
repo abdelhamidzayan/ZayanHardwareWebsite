@@ -45,6 +45,7 @@
     let dirty = false;
     let initialized = false;
     let conflict = false;
+    const pendingDeletes = new Set();
     let currentAbort = null;
     let dbPromise = null;
     let audioChunkSeq = 0;
@@ -211,6 +212,7 @@
                 };
             }),
             dirty: dirty,
+            pendingDeletes: Array.from(pendingDeletes),
             updatedAt: Date.now()
         };
     }
@@ -238,6 +240,18 @@
             blob: item.blob || null,
             rendered_blob: item.renderedBlob || null,
             editor_state: item.editor_state || null
+        });
+    }
+
+    async function clearLocalMediaForDraft(id) {
+        const records = await dbGetAll('media');
+        const db = await openDb();
+        return new Promise(function (resolve, reject) {
+            const transaction = db.transaction('media', 'readwrite');
+            const store = transaction.objectStore('media');
+            records.filter(function (item) { return item.draft_id === id; }).forEach(function (item) { store.delete(item.key); });
+            transaction.oncomplete = function () { resolve(true); };
+            transaction.onerror = function () { reject(transaction.error); };
         });
     }
 
@@ -435,15 +449,18 @@
 
     async function removeMedia(item) {
         if (item.media_uuid) {
-            const body = new URLSearchParams({ _token: csrf });
-            try {
-                const response = await fetch(mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/delete', {
-                    method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' }
-                });
-                if (!response.ok) throw new Error('تعذر حذف المرفق من المسودة.');
-            } catch (error) {
-                setStatus(error.message || 'تعذر حذف المرفق.', 'error');
-                return;
+            if (navigator.onLine) {
+                const body = new URLSearchParams({ _token: csrf });
+                try {
+                    const response = await fetch(mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/delete', {
+                        method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' }
+                    });
+                    if (!response.ok && response.status !== 404) throw new Error('تعذر حذف المرفق من المسودة.');
+                } catch (_) {
+                    pendingDeletes.add(item.media_uuid);
+                }
+            } else {
+                pendingDeletes.add(item.media_uuid);
             }
         }
         media = media.filter(function (entry) { return entry !== item; });
@@ -455,6 +472,24 @@
         }
         renderMedia();
         markDirty();
+    }
+
+    async function syncPendingDeletes() {
+        if (!navigator.onLine || !pendingDeletes.size) return true;
+        for (const mediaUuid of Array.from(pendingDeletes)) {
+            const body = new URLSearchParams({ _token: csrf });
+            try {
+                const response = await fetch(
+                    mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(mediaUuid) + '/delete',
+                    { method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+                );
+                if (response.ok || response.status === 404) pendingDeletes.delete(mediaUuid);
+                else return false;
+            } catch (_) {
+                return false;
+            }
+        }
+        return true;
     }
 
     async function uploadItem(item) {
@@ -560,6 +595,7 @@
         setStatus('جاري حفظ المسودة...', 'saving');
         try {
             await createServerDraftIfNeeded();
+            if (!(await syncPendingDeletes())) throw new Error('فيه مرفقات محذوفة محليًا ولم تكتمل مزامنة حذفها.');
             const body = new URLSearchParams();
             body.set('_token', csrf);
             body.set('draft_id', draftId);
@@ -632,26 +668,60 @@
             keepLocal.textContent = 'الاحتفاظ بنسختي كمسودة جديدة';
             useServer.addEventListener('click', async function () {
                 if (!server) return;
-                applyPayload(server.payload || {});
-                revision = Number(server.revision || 0);
-                revisionInput.value = String(revision);
-                conflict = false;
-                box.remove();
-                markDirty();
-                await syncServer(true);
+                try {
+                    const response = await fetch(mediaBase + '/' + encodeURIComponent(draftId) + '/data', {
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (!response.ok) throw new Error('تعذر تحميل نسخة الحساب كاملة.');
+                    const latest = await response.json();
+                    await applyServerData(latest);
+                    await clearLocalMediaForDraft(draftId);
+                    await clearAudioSession();
+                    revisionInput.value = String(revision);
+                    pendingDeletes.clear();
+                    conflict = false;
+                    dirty = false;
+                    box.remove();
+                    await persistLocal();
+                    setStatus('تم استرجاع نسخة الحساب كاملة', 'saved');
+                } catch (error) {
+                    setStatus(error.message || 'تعذر استرجاع النسخة الأحدث.', 'error');
+                }
             });
             keepLocal.addEventListener('click', async function () {
+                const hasRemoteOnlyMedia = media.some(function (item) {
+                    return Boolean(item.media_uuid) && !item.blob;
+                });
+                if (hasRemoteOnlyMedia) {
+                    setStatus('لا يمكن إنشاء نسخة محلية جديدة لأن بعض المرفقات لا توجد على هذا الجهاز. اختار نسخة الحساب للحفاظ عليها.', 'error');
+                    return;
+                }
+                const oldDraftId = draftId;
                 draftId = uuid();
                 draftIdInput.value = draftId;
                 revision = 0;
                 revisionInput.value = '0';
+                pendingDeletes.clear();
+                media.forEach(function (item) {
+                    item.media_uuid = '';
+                    item.uploaded = false;
+                    if (item.blob) {
+                        item.url = URL.createObjectURL(item.renderedBlob || item.blob);
+                        item.original_url = URL.createObjectURL(item.blob);
+                    }
+                });
                 conflict = false;
                 box.remove();
                 const url = new URL(window.location.href);
                 url.searchParams.set('draft', draftId);
                 history.replaceState({}, '', url.toString());
+                for (const item of media) {
+                    if (item.blob) await persistBlob(item);
+                }
                 await persistLocal();
                 await syncServer(true);
+                setStatus('تم إنشاء مسودة مستقلة من تعديلاتك', 'saved');
             });
             box.append(message, useServer, keepLocal);
             form.insertBefore(box, form.firstChild);
@@ -991,6 +1061,7 @@
             } catch (_) {}
         }
 
+        if (local && Array.isArray(local.pendingDeletes)) local.pendingDeletes.forEach(function (id) { pendingDeletes.add(String(id)); });
         if (local && local.dirty && server && Number(local.serverRevision || 0) < Number(server.revision || 0)) {
             applyPayload(local.payload || {});
             const localMedia = await loadLocalMedia();
