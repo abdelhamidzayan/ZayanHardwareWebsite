@@ -1,0 +1,56 @@
+name: Graphify full-system code relationship audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - audit/full-system-20261030
+    paths:
+      - "app/**"
+      - "config/**"
+      - "database/migrations/**"
+      - "public/**"
+      - "tests/router-route-parameters.php"
+      - ".github/scripts/graphify_audit.py"
+      - ".github/workflows/graphify-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  graphify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout audited source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+      - name: Verify PHP syntax
+        run: find app config public tests -type f -name "*.php" -print0 | xargs -0 -n1 php -l
+      - name: Verify JavaScript syntax
+        run: find public/js -type f -name "*.js" -print0 | xargs -0 -n1 node --check
+      - name: Verify route parameter contract
+        run: php tests/router-route-parameters.php
+      - name: Install Graphify
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "graphifyy[sql,leiden]==0.9.97"
+      - name: Build source relationship graph
+        run: |
+          python .github/scripts/graphify_audit.py
+          graphify export html
+      - name: Upload Graphify audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zayan-hardware-graphify-audit
+          path: graphify-out/
+          if-no-files-found: warn
+          retention-days: 14

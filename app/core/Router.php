@@ -8,6 +8,9 @@ use App\Services\AuthService;
 final class Router
 {
     /** @var array<int, array{0:string,1:string,2:array|callable}> */
+    /** Route placeholders whose controller parameters are declared as integers. */
+    private const INTEGER_ROUTE_PARAMETERS = ['id', 'userId'];
+
     private array $routes = [];
 
     public function get(string $path, array|callable $handler): void
@@ -39,10 +42,7 @@ final class Router
                 continue;
             }
 
-            $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
-            if (isset($params['id'])) {
-                $params['id'] = (int) $params['id'];
-            }
+            $params = $this->normalizeParams(array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
 
             return $this->invoke($handler, $request, $params);
         }
@@ -76,6 +76,18 @@ final class Router
         return in_array($request->method . ' ' . $request->path, $allowedRoutes, true);
     }
 
+    /** Convert only explicitly declared integer route placeholders; UUID/text IDs remain strings. */
+    private function normalizeParams(array $params): array
+    {
+        foreach (self::INTEGER_ROUTE_PARAMETERS as $name) {
+            if (isset($params[$name])) {
+                $params[$name] = (int) $params[$name];
+            }
+        }
+
+        return $params;
+    }
+
     private function add(string $method, string $path, array|callable $handler): void
     {
         // {id} matches digits only; any other {name} matches one path segment.
@@ -83,7 +95,8 @@ final class Router
             if (!isset($m[1])) {
                 return preg_quote($m[0], '#');
             }
-            return '(?P<' . $m[1] . '>' . ($m[1] === 'id' ? '\d+' : '[^/]+') . ')';
+            $pattern = in_array($m[1], self::INTEGER_ROUTE_PARAMETERS, true) ? '\d+' : '[^/]+';
+            return '(?P<' . $m[1] . '>' . $pattern . ')';
         }, $path);
 
         $this->routes[] = [$method, '#^' . $regex . '$#', $handler];
