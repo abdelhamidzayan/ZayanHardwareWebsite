@@ -228,6 +228,14 @@ final class User extends Model
                 }
             }
 
+            $pdo->prepare(
+                'INSERT INTO terms_acceptances (user_id, terms_version, ip_hash) VALUES (?, ?, ?)'
+            )->execute([
+                $id,
+                (string) ($account['terms_version'] ?? ''),
+                $account['terms_ip_hash'] ?? null,
+            ]);
+
             $pdo->commit();
             return $id;
         } catch (\Throwable $e) {
