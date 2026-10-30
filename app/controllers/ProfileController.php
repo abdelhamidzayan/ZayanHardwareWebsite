@@ -64,6 +64,6 @@ final class ProfileController extends Controller
             ],
             'profilePosts' => Issue::profilePosts((int) $profile['id']),
             'publicHelpPosts' => HelpRequest::publicPostsByUser((int) $profile['id']),
-        ]);
+        ], 200, $me !== null ? 'app' : 'guest');
     }
 }
