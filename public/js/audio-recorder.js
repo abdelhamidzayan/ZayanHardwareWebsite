@@ -307,6 +307,12 @@
         trimEnd.value = String(durationMs ? currentTrimEnd / durationMs * 100 : 100);
         currentWaveform = Array.isArray(meta?.waveform) ? meta.waveform : [];
         drawBars(currentWaveform);
+        if (!currentWaveform.length && item.blob) {
+            makeWaveform(item.blob).then(function (values) {
+                currentWaveform = values;
+                drawBars(values);
+            });
+        }
         setRecordingUi('preview');
     }
 
