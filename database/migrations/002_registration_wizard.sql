@@ -4,7 +4,7 @@ ALTER TABLE users
     ADD COLUMN phone VARCHAR(20) NULL AFTER email,
     ADD UNIQUE KEY uq_users_phone (phone);
 
--- The previous schema stored phone on technician_profiles. Copy it before
+-- The pre-wizard schema stores phone on technician_profiles. Copy it before
 -- dropping that column; the preceding migration made source phone values unique.
 UPDATE users u
 JOIN technician_profiles p ON p.user_id = u.id
@@ -28,8 +28,25 @@ UPDATE technician_profiles
 SET board_experience = experience
 WHERE experience IS NOT NULL;
 
--- specialization was copied into user_skill_domains by
--- 002_final_registration_permissions.sql before this migration runs.
+-- Preserve the exact legacy specialization string as a historical source value.
+-- Known slugs were normalized by 002_final_registration_permissions.sql; values
+-- that do not match today's catalog must remain recoverable instead of being lost.
+CREATE TABLE IF NOT EXISTS technician_profile_specialization_history (
+    user_id BIGINT UNSIGNED NOT NULL,
+    specialization_value VARCHAR(50) NOT NULL,
+    captured_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    CONSTRAINT fk_legacy_specialization_user
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO technician_profile_specialization_history (user_id, specialization_value)
+SELECT user_id, specialization
+FROM technician_profiles
+WHERE specialization IS NOT NULL AND specialization <> '';
+
+-- specialization values were copied to user_skill_domains when they matched a
+-- current catalog slug. The source value is also retained in the history table.
 ALTER TABLE technician_profiles
     DROP COLUMN specialization,
     DROP COLUMN experience,
