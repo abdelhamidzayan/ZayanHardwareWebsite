@@ -274,22 +274,24 @@ final class HelpRequestController extends Controller
 
     public function library(): Response
     {
+        $user = AuthService::user();
         return $this->view('help-library/index', [
             'title' => 'مكتبة المساعدات الفنية',
             'active' => 'help-library',
             'posts' => HelpRequest::publicPosts(),
-        ]);
+        ], 200, $user !== null ? 'app' : 'guest');
     }
 
     public function publicPost(int $id): Response
     {
+        $user = AuthService::user();
         $post = HelpRequest::publicPost($id);
         if (!$post) return $this->notFound();
         return $this->view('help-library/show', [
             'title' => $post['title'],
             'active' => 'help-library',
             'post' => $post,
-        ]);
+        ], 200, $user !== null ? 'app' : 'guest');
     }
     private function string(string $key): string
     {
