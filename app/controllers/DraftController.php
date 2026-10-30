@@ -9,6 +9,7 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\PostDraft;
 use App\Services\AuthService;
+use App\Services\RateLimiter;
 
 final class DraftController extends Controller
 {
@@ -108,6 +109,9 @@ final class DraftController extends Controller
         if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
         if (!Csrf::verify($this->request->input('_token'))) {
             return Response::json(['error' => 'csrf_failed'], 419);
+        }
+        if (!RateLimiter::allowForUser('draft.upload', (int) $user['id'], 12, 600, 50)) {
+            return Response::json(['error' => 'rate_limited', 'message' => 'وصلت للحد المسموح لعمليات الرفع. انتظر قليلًا ثم حاول مرة أخرى.'], 429);
         }
         $draft = PostDraft::findForUser($draftId, (int) $user['id']);
         if (!$draft) return Response::json(['error' => 'draft_not_found'], 404);
@@ -264,6 +268,9 @@ final class DraftController extends Controller
         if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
         if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
 
+        if (!RateLimiter::allowForUser('draft.rendered_upload', (int) $user['id'], 20, 600, 80)) {
+            return Response::json(['error' => 'rate_limited', 'message' => 'وصلت للحد المسموح لحفظ الصور المعدلة. حاول مرة أخرى بعد قليل.'], 429);
+        }
         $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
         if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
         $media = PostDraft::ownedMedia($draftId, $mediaUuid, (int) $user['id']);
@@ -424,24 +431,17 @@ final class DraftController extends Controller
             $status = 206;
             $headers['Content-Range'] = 'bytes ' . $start . '-' . $end . '/' . $size;
         }
-        $length = $end - $start + 1;
-        $handle = fopen($file, 'rb');
-        if ($handle === false) return $this->notFound();
-        if ($start > 0) fseek($handle, $start);
-        $body = $length > 0 ? fread($handle, $length) : '';
-        fclose($handle);
-        if (!is_string($body)) return $this->notFound();
-
+        $length = $size > 0 ? $end - $start + 1 : 0;
         $headers += [
             'Content-Type' => $mime,
-            'Content-Length' => (string) strlen($body),
+            'Content-Length' => (string) $length,
             'Content-Disposition' => 'inline; filename="draft-media-' . preg_replace('/[^a-f0-9-]/i', '', $mediaUuid) . '"',
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
             'Accept-Ranges' => 'bytes',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
         ];
-        return new Response($body, $status, $headers);
+        return Response::streamFile($file, $start, $length, $status, $headers);
     }
 
     public function delete(string $draftId): Response
