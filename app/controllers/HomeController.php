@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace App\\Controllers;
+namespace App\Controllers;
 
-use App\\Core\\Controller;
-use App\\Core\\Response;
-use App\\Models\\DemoData;
-use App\\Services\\AuthService;
+use App\Core\Controller;
+use App\Core\Response;
+use App\Models\DemoData;
+use App\Services\AuthService;
 
 final class HomeController extends Controller
 {
