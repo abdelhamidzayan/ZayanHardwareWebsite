@@ -29,7 +29,7 @@ Incoming uploads already use PHP temporary upload files and `move_uploaded_file(
 
 ## Account deletion and technical-content retention
 
-The account-retention worker now completes the 30-day request by **anonymizing the account identity**, not by deleting the user row. The user ID stays unchanged so every foreign key and attribution link remains valid. Login is disabled, the username is replaced with a generated anonymous handle, the display name becomes `عضو محذوف`, email/phone and profile biography/workshop data are cleared, and push subscription credentials are neutralized.
+The account-retention worker now completes the 30-day request by **anonymizing the account identity**, not by deleting the user row. The user ID stays unchanged so every foreign key and attribution link remains valid. Login is disabled, the username is replaced with a generated anonymous handle, the display name becomes `عضو محذوف`, email/phone and profile biography/workshop data are cleared, custom avatar binaries are removed, and push subscription credentials are neutralized.
 
 **No database rows are deleted by the worker.** In particular, all published technical posts, replies, diagnostic updates, repair results, schematics, attachments, edit history, reputation records, published help-library content, private-help messages, notifications, and drafts remain in place. Published help-library author snapshots are changed to the anonymous display name, while the technical text remains untouched. Terms acceptance and security audit records remain, but stored IP hashes and free-form admin reset notes are cleared.
 
