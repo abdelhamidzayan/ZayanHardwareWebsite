@@ -181,7 +181,7 @@
     }
 
     async function persistBlob(item) {
-        if (!item.blob || !item.local_id) return;
+        if (!item.local_id) return;
         await dbPut('media', {
             key: draftId + ':' + item.local_id,
             draft_id: draftId,
@@ -190,7 +190,7 @@
             media_kind: item.media_kind,
             mime_type: item.mime_type,
             file_size: item.file_size,
-            blob: item.blob,
+            blob: item.blob || null,
             rendered_blob: item.renderedBlob || null,
             editor_state: item.editor_state || null
         });
@@ -292,8 +292,7 @@
 
     function renderMedia() {
         mediaList.replaceChildren();
-        media.forEach(function (item, index) {
-            if (item.media_kind === 'audio') return;
+        media.filter(function (item) { return item.media_kind !== 'audio'; }).forEach(function (item, index) {
             const card = document.createElement('article');
             card.className = 'post-composer__media-item';
             card.dataset.mediaItem = '';
@@ -784,7 +783,7 @@
         const incoming = Array.from(mediaInput.files || []);
         mediaInput.value = '';
         for (const file of incoming) {
-            if (media.filter(function (item) { return item.media_kind !== 'audio'; }).length >= 8) {
+            if (media.length >= 8) {
                 setStatus('الحد الأقصى 8 صور وفيديوهات لكل منشور.', 'error');
                 break;
             }
@@ -953,7 +952,8 @@
                 original_url: matched ? (matched.original_url || matched.url) : url,
                 renderedBlob: record.rendered_blob || null,
                 sort_order: matched ? matched.sort_order : record.sort_order,
-                editor_state: matched ? matched.editor_state : null,
+                editor_state: record.editor_state || (matched ? matched.editor_state : null),
+                renderedBlob: record.rendered_blob || null,
                 uploaded: Boolean(matched)
             });
         }
@@ -1012,12 +1012,18 @@
             markDirty();
         },
         updateAudioTrim: function (startMs, endMs, durationMs) {
-            audioMeta = { duration_ms: durationMs, trim_start_ms: startMs, trim_end_ms: endMs };
+            audioMeta = Object.assign({}, audioMeta || {}, { duration_ms: durationMs, trim_start_ms: startMs, trim_end_ms: endMs });
             markDirty();
         },
         getAudio: function () { return media.find(function (item) { return item.media_kind === 'audio'; }) || null; },
         getAudioMeta: function () { return audioMeta; },
         getDraftId: function () { return draftId; },
+        saveImageEditorDraft: function (item, state) {
+            item.editor_state = state;
+            item.dirtyEditor = true;
+            persistBlob(item);
+            markDirty();
+        },
         markDirty: markDirty
     };
 
