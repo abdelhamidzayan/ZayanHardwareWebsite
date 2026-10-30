@@ -118,7 +118,7 @@ final class User extends Model
     {
         $allowed = ['technician-blue', 'technician-cyan', 'technician-violet', 'technician-green', 'technician-orange', 'technician-red'];
         if ($avatarPath === null && !in_array($avatarKey, $allowed, true)) {
-            throw new \\InvalidArgumentException('Invalid avatar key.');
+            throw new \InvalidArgumentException('Invalid avatar key.');
         }
         self::db()->prepare('UPDATE users SET avatar_key = ?, avatar_path = ? WHERE id = ?')
             ->execute([$avatarKey, $avatarPath, $userId]);
