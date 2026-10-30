@@ -13,6 +13,30 @@ use App\Services\NotificationService;
 
 final class HelpRequestController extends Controller
 {
+    public function attachment(int $id): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        $attachment = HelpRequest::attachmentForParticipant($id, (int) $user['id']);
+        if (!$attachment) return $this->notFound();
+        $root = realpath(\\App\\Core\\App::root('storage/private'));
+        if ($root === false) return $this->notFound();
+        $relative = ltrim(str_replace('\\\\', '/', (string) $attachment['file_path']), '/');
+        if ($relative === '' || str_contains($relative, '..')) return $this->notFound();
+        $file = realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative));
+        if ($file === false || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) return $this->notFound();
+        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($file) ?: 'application/octet-stream';
+        if (!in_array($mime, ['image/jpeg','image/png','image/webp','image/gif','application/pdf'], true)) return $this->notFound();
+        return new Response((string) file_get_contents($file), 200, [
+            'Content-Type' => $mime,
+            'Content-Length' => (string) filesize($file),
+            'Content-Disposition' => 'inline; filename="help-attachment-' . $id . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+        ]);
+    }
+
     public function index(): Response
     {
         $user = AuthService::user();
@@ -31,12 +55,15 @@ final class HelpRequestController extends Controller
         if (!$user) return $this->redirect('/login');
         $request = HelpRequest::findForParticipant($id, (int) $user['id']);
         if (!$request) return $this->notFound();
+        $messages = HelpRequest::messages($id);
+        foreach ($messages as &$message) $message['attachments'] = HelpRequest::attachmentsForMessage((int) $message['id']);
+        unset($message);
         return $this->view('help-requests/show', [
             'title' => $request['subject'],
             'active' => 'messages',
             'currentUser' => $user,
             'helpRequest' => $request,
-            'messages' => HelpRequest::messages($id),
+            'messages' => $messages,
             'isRequester' => (int) $request['requester_id'] === (int) $user['id'],
             'isHelper' => (int) $request['helper_id'] === (int) $user['id'],
         ]);
@@ -105,11 +132,24 @@ final class HelpRequestController extends Controller
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
         $body = trim($this->string('body'));
-        if (mb_strlen($body) < 1 || mb_strlen($body) > 5000) {
-            return $this->fail('/help-requests/' . $id, 'اكتب رسالة من 1 إلى 5000 حرف.');
+        try {
+            $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
+        } catch (\\DomainException $e) {
+            $message = match ($e->getMessage()) {
+                'too_many_attachments' => 'الحد الأقصى 8 مرفقات في الرسالة.',
+                'invalid_attachment_size' => 'أحد المرفقات أكبر من 8 ميجابايت أو غير صالح.',
+                'invalid_attachment_type' => 'المسموح صور JPG/PNG/WEBP/GIF أو ملفات PDF فقط.',
+                default => 'تعذر قراءة المرفقات.',
+            };
+            return $this->fail('/help-requests/' . $id, $message);
+        }
+        if ((mb_strlen($body) < 1 && !$uploads) || mb_strlen($body) > 5000) {
+            return $this->fail('/help-requests/' . $id, 'اكتب رسالة أو أرفق صورة، وبحد أقصى 5000 حرف.');
         }
         try {
-            HelpRequest::sendMessage($id, (int) $user['id'], $body);
+            $messageId = HelpRequest::sendMessage($id, (int) $user['id'], $body);
+            $failedUploads = HelpRequestMediaService::store($id, $messageId, (int) $user['id'], $uploads);
+            if ($failedUploads > 0) $this->flash('info', 'تم إرسال الرسالة، لكن تعذر حفظ بعض المرفقات.');
             $request = HelpRequest::findForParticipant($id, (int) $user['id']);
             if ($request) {
                 $recipient = (int) $request['requester_id'] === (int) $user['id']
