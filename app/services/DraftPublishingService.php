@@ -78,7 +78,7 @@ final class DraftPublishingService
             if (!$modelRow) throw new \DomainException('device_model_unavailable');
 
             $mediaRows = $pdo->prepare(
-                'SELECT id, media_uuid, media_kind, storage_path, rendered_path, mime_type, file_size, editor_state,
+                'SELECT id, media_uuid, media_kind, storage_path, rendered_path, mime_type, rendered_mime_type, file_size, editor_state,
                         sort_order, duration_ms
                  FROM post_draft_media WHERE draft_id = ? ORDER BY sort_order, id FOR UPDATE'
             );
@@ -134,8 +134,8 @@ final class DraftPublishingService
             $insertAttachment = $pdo->prepare(
                 'INSERT INTO issue_attachments
                     (issue_id, uploaded_by, file_path, mime_type, file_size, is_inline,
-                     original_file_path, rendered_file_path, editor_state, sort_order)
-                 VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)'
+                     original_file_path, original_mime_type, rendered_file_path, rendered_mime_type, editor_state, sort_order)
+                 VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)'
             );
             $audioUpdate = $pdo->prepare(
                 'UPDATE issues SET audio_path = ?, audio_mime_type = ?, audio_file_size = ?,
@@ -163,6 +163,8 @@ final class DraftPublishingService
                 $renderedRelative = null;
                 $displayRelative = $newRelative;
                 $displaySize = (int) $item['file_size'];
+                $displayMime = (string) $item['mime_type'];
+                $renderedMime = null;
                 if ($item['media_kind'] === 'image' && !empty($item['rendered_path'])) {
                     $renderedSourceRelative = ltrim(str_replace('\\', '/', (string) $item['rendered_path']), '/');
                     if ($renderedSourceRelative === '' || str_contains($renderedSourceRelative, '..')) {
@@ -184,6 +186,8 @@ final class DraftPublishingService
                     $renderedRelative = 'issues/' . $issueId . '/' . $renderedFilename;
                     $displayRelative = $renderedRelative;
                     $displaySize = (int) filesize($renderedDestination);
+                    $renderedMime = (string) ($item['rendered_mime_type'] ?? 'image/webp');
+                    $displayMime = $renderedMime;
                     $moved[] = ['from' => $renderedSource, 'to' => $renderedDestination];
                 }
 
@@ -210,8 +214,8 @@ final class DraftPublishingService
                     $editorState = json_encode($editorState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
                 }
                 $insertAttachment->execute([
-                    $issueId, $userId, $displayRelative, (string) $item['mime_type'], $displaySize,
-                    $newRelative, $renderedRelative, $editorState, (int) $item['sort_order'],
+                    $issueId, $userId, $displayRelative, $displayMime, $displaySize,
+                    $newRelative, (string) $item['mime_type'], $renderedRelative, $renderedMime, $editorState, (int) $item['sort_order'],
                 ]);
             }
 
