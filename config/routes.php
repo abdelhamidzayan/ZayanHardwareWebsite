@@ -5,6 +5,7 @@ use App\Controllers\AuthController;
 use App\Controllers\AccountController;
 use App\Controllers\AdminUserController;
 use App\Controllers\AdminFeaturedPostsController;
+use App\Controllers\AdminUpdateController;
 use App\Controllers\AdminSkillTestController;
 use App\Controllers\FeedController;
 use App\Controllers\HomeController;
@@ -66,7 +67,9 @@ return static function (Router $router): void {
     $router->post('/admin/skill-tests/{id}/status', [AdminSkillTestController::class, 'setStatus']);
     $router->get('/skills/tests/{id}', [SkillTestController::class, 'show']);
     $router->post('/skills/tests/{id}/submit', [SkillTestController::class, 'submit']);
-    $router->get('/admin', [AdminFeaturedPostsController::class, 'index']);\n    $router->get('/admin/update', [AdminUpdateController::class, 'index']);\n    $router->post('/admin/update', [AdminUpdateController::class, 'run']);
+    $router->get('/admin', [AdminFeaturedPostsController::class, 'index']);
+    $router->get('/admin/update', [AdminUpdateController::class, 'index']);
+    $router->post('/admin/update', [AdminUpdateController::class, 'run']);
     $router->post('/admin/featured-posts/{id}', [AdminFeaturedPostsController::class, 'update']);
     $router->get('/admin/users', [AdminUserController::class, 'index']);
     $router->post('/admin/users/{id}/password-reset', [AdminUserController::class, 'resetPassword']);
