@@ -3,7 +3,7 @@ name: Database migration integration
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, feature/profiles-help-media, fix/audit-priority-issues]
 
 jobs:
   migrations:
