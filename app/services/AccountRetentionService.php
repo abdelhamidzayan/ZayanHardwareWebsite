@@ -156,12 +156,26 @@ final class AccountRetentionService
         $root = realpath(App::root('storage/private'));
         if ($root === false) throw new RuntimeException('Private storage directory is unavailable.');
 
-        $relative = 'avatars/' . $userId;
-        $candidate = $root . DIRECTORY_SEPARATOR . $relative;
+        $avatarRootCandidate = $root . DIRECTORY_SEPARATOR . 'avatars';
+        if (is_link($avatarRootCandidate)) {
+            throw new RuntimeException('Avatar root must not be a symbolic link.');
+        }
+        if (!is_dir($avatarRootCandidate)) return;
+
+        $avatarRoot = realpath($avatarRootCandidate);
+        if ($avatarRoot === false || !str_starts_with($avatarRoot, $root . DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('Avatar root is outside private storage.');
+        }
+
+        $candidate = $avatarRoot . DIRECTORY_SEPARATOR . $userId;
+        if (is_link($candidate)) {
+            throw new RuntimeException('Account avatar directory must not be a symbolic link.');
+        }
         if (!is_dir($candidate)) return;
 
         $directory = realpath($candidate);
-        if ($directory === false || !str_starts_with($directory, $root . DIRECTORY_SEPARATOR)) {
+        if ($directory === false || $directory !== $candidate
+            || !str_starts_with($directory, $root . DIRECTORY_SEPARATOR)) {
             throw new RuntimeException('Avatar directory is outside private storage.');
         }
 
