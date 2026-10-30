@@ -375,7 +375,7 @@
 (() => {
   'use strict';
 
-  const menus = document.querySelectorAll('.account-menu, .notification-menu');
+  const menus = document.querySelectorAll('.account-menu, .notification-menu, .help-request-menu');
   if (!menus.length) return;
 
   document.addEventListener('click', (event) => {
