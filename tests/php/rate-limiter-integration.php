@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+use App\Core\App;
+use App\Models\Database;
+use App\Services\RateLimiter;
+
 $root = dirname(__DIR__, 2);
 spl_autoload_register(static function (string $class) use ($root): void {
     $map = [
@@ -18,10 +22,6 @@ spl_autoload_register(static function (string $class) use ($root): void {
         }
     }
 });
-
-use App\Core\App;
-use App\Models\Database;
-use App\Services\RateLimiter;
 
 function expectRateLimit(bool $condition, string $message): void
 {
