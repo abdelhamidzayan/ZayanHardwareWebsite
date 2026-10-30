@@ -50,7 +50,7 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
                             <form class="notification-menu__form" method="post" action="<?= $e($baseUrl) ?>/notifications/<?= (int) $headerNotification['id'] ?>/open">
                                 <?= $csrf() ?>
                                 <button class="notification-menu__item <?= (int) $headerNotification['is_read'] === 1 ? 'is-read' : 'is-unread' ?>" type="submit">
-                                    <span class="notification-menu__item-mark" aria-hidden="true"></span>
+                                    <?php if (!empty($headerNotification['actor_user_id'])) : ?><img class="avatar avatar--xs avatar-image notification-menu__avatar" src="<?= $e($baseUrl . (!empty($headerNotification['actor_avatar_path']) ? '/avatar/' . (int) $headerNotification['actor_user_id'] : '/assets/avatars/' . rawurlencode((string) ($headerNotification['actor_avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="32" height="32"><?php else : ?><span class="notification-menu__item-mark" aria-hidden="true"></span><?php endif; ?>
                                     <span class="notification-menu__item-copy">
                                         <strong><?= $e($headerNotification['title']) ?></strong>
                                         <span><?= $e($headerNotification['body']) ?></span>
