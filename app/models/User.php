@@ -166,7 +166,8 @@ final class User extends Model
             $pdo->prepare('UPDATE technician_profiles SET workshop_name = ?, specialization = ? WHERE user_id = ?')
                 ->execute([$workshop !== '' ? $workshop : null, $skills[0] ?? null, $userId]);
             $pdo->prepare('DELETE FROM user_skill_domains WHERE user_id = ?')->execute([$userId]);
-            $pdo->prepare('DELETE FROM user_skill_ratings WHERE user_id = ?')->execute([$userId]);
+            // Ratings are backed by approved assessments. Editing the self-selected
+            // skill list must never erase earned assessment history or reset scores.
             $domainStmt = $pdo->prepare('INSERT INTO user_skill_domains (user_id, skill_domain_id) SELECT ?, id FROM skill_domains WHERE slug = ? AND is_active = 1');
             $ratingStmt = $pdo->prepare('INSERT IGNORE INTO user_skill_ratings (user_id, skill_domain_id, rating) SELECT ?, id, 0 FROM skill_domains WHERE slug = ? AND is_active = 1');
             foreach (array_unique($skills) as $skill) {
