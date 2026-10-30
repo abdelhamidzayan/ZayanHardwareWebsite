@@ -54,6 +54,7 @@ jobs:
           mysql -h 127.0.0.1 -uroot -proot zayan_migration_test < database/migrations/011_profiles_personal_help_and_publication.sql
           mysql -h 127.0.0.1 -uroot -proot zayan_migration_test < database/migrations/012_post_composer_drafts_and_device_catalog.sql
           mysql -h 127.0.0.1 -uroot -proot zayan_migration_test < database/migrations/013_terms_acceptance_audit.sql
+          mysql -h 127.0.0.1 -uroot -proot zayan_migration_test < database/migrations/014_rate_limit_buckets.sql
 
       - name: Verify schema and foreign-key compatibility
         env:
@@ -82,6 +83,10 @@ jobs:
                'image/jpeg', 'issues/1/rendered.webp', 'image/webp', JSON_OBJECT('version', 1), 0);
             INSERT INTO terms_acceptances (user_id, terms_version, ip_hash)
               VALUES (1, '2026-10-28', REPEAT('b', 64));
+            INSERT INTO rate_limit_buckets (bucket, window_started_at, hit_count)
+              VALUES ('ci-rate-limit-smoke', UTC_TIMESTAMP(), 1);
+            UPDATE rate_limit_buckets SET hit_count = hit_count + 1
+              WHERE bucket = 'ci-rate-limit-smoke';
           "
 
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM device_manufacturers;")" -ge 15
@@ -89,4 +94,6 @@ jobs:
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM post_draft_media WHERE rendered_mime_type = 'image/webp';")" -eq 1
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM issue_attachments WHERE original_mime_type = 'image/jpeg' AND rendered_mime_type = 'image/webp';")" -eq 1
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM terms_acceptances WHERE terms_version = '2026-10-28';")" -eq 1
+          test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT hit_count FROM rate_limit_buckets WHERE bucket = 'ci-rate-limit-smoke';")" -eq 2
+          mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM rate_limit_buckets WHERE bucket = 'ci-rate-limit-smoke';"
           echo "Migration smoke tests passed on ${{ matrix.database.label }}"
