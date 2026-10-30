@@ -248,7 +248,11 @@ final class DraftController extends Controller
                 'storage_unavailable', 'storage_failed' => 'تعذر حفظ الملف على الخادم.',
                 default => 'تعذر رفع الملف. حاول مرة أخرى.',
             };
-            return Response::json(['error' => $e->getMessage(), 'message' => $message], 422);
+            return Response::json([
+                'error' => $e->getMessage(),
+                'message' => $message,
+                'revision' => PostDraft::currentRevision($draftId, (int) $user['id']),
+            ], 422);
         }
 
         return Response::json(['media' => $saved, 'revision' => $currentRevision], 201);
