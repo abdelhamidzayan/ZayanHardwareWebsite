@@ -29,12 +29,7 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                    aria-label="بحث">
         </form>
 
-        <a class="icon-btn" href="<?= $e($baseUrl) ?>/notifications"
-           aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-            <?php if ($unreadCount > 0) : ?><span class="icon-btn__dot" aria-hidden="true"></span><?php endif; ?>
-        </a>
-
+        <div class="header-actions">
         <details class="account-menu">
             <summary class="account-menu__trigger" aria-label="قائمة الحساب">
                 <span class="avatar account-menu__avatar" aria-hidden="true"><?= $e($avatarInitials) ?></span>
@@ -97,5 +92,17 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                 </form>
             </div>
         </details>
+
+        <a class="icon-btn notification-btn" href="<?= $e($baseUrl) ?>/notifications"
+           aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
+            <svg class="icon notification-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/>
+                <path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/>
+            </svg>
+            <?php if ($unreadCount > 0) : ?>
+                <span class="notification-btn__count" aria-label="<?= $e((string) $unreadCount) ?> إشعارات غير مقروءة"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span>
+            <?php endif; ?>
+        </a>
+        </div>
     </div>
 </header>
