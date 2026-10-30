@@ -11,6 +11,7 @@ $username = (string) ($currentUser['username'] ?? '');
 $profileHref = $username !== '' ? $baseUrl . '/profile/' . rawurlencode($username) : $baseUrl . '/login';
 $nameParts = preg_split('/\\s+/u', $displayName) ?: [$displayName];
 $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset($nameParts[1]) ? mb_substr($nameParts[1], 0, 1) : ''));
+$avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int) $currentUser['id'] : $baseUrl . '/assets/avatars/' . rawurlencode((string) ($currentUser['avatar_key'] ?? 'technician-blue')) . '.svg';
 ?>
 <header class="app-header">
     <div class="topbar">
@@ -20,14 +21,6 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
             </span>
             <span class="brand__name"><?= $e($appName) ?></span>
         </a>
-
-        <form class="searchbar topbar__search" action="<?= $e($baseUrl) ?>/search" method="get" role="search">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input class="searchbar__input" type="search" name="q" maxlength="100"
-                   value="<?= $e($searchQuery) ?>"
-                   placeholder="ابحث عن عطل أو موديل"
-                   aria-label="بحث">
-        </form>
 
         <div class="header-actions">
         <details class="notification-menu">
@@ -73,13 +66,13 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
         </details>
         <details class="account-menu">
             <summary class="account-menu__trigger" aria-label="قائمة الحساب">
-                <span class="avatar account-menu__avatar" aria-hidden="true"><?= $e($avatarInitials) ?></span>
+                <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="38" height="38">
                 <span class="account-menu__name"><?= $e($displayName) ?></span>
                 <svg class="icon account-menu__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
             </summary>
             <div class="account-menu__panel">
                 <div class="account-menu__identity">
-                    <span class="avatar" aria-hidden="true"><?= $e($avatarInitials) ?></span>
+                    <img class="avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="48" height="48">
                     <div class="account-menu__identity-copy">
                         <strong><?= $e($displayName) ?></strong>
                         <?php if ($username !== '') : ?><span dir="ltr">@<?= $e($username) ?></span><?php endif; ?>
