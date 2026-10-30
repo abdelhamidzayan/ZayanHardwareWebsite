@@ -60,6 +60,9 @@ jobs:
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM user_skill_domains usd JOIN skill_domains sd ON sd.id = usd.skill_domain_id WHERE usd.user_id = 1 AND sd.slug = 'power';")" -eq 1
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM user_skill_ratings WHERE user_id = 1;")" -eq 1
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT role FROM users WHERE id = 1;")" = "admin"
+          test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT phone FROM users WHERE id = 2;")" = "+201000000002"
+          test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT board_experience FROM technician_profiles WHERE user_id = 2;")" = "1-3"
+          test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT specialization_value FROM technician_profile_specialization_history WHERE user_id = 2;")" = "legacy_board_repair"
 
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'technician_profiles' AND column_name IN ('phone','specialization','experience');")" -eq 0
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'technician_profiles' AND column_name IN ('device_focus','tech_level','board_experience','level_verified');")" -eq 4
