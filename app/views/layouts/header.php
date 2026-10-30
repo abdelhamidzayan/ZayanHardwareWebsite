@@ -112,6 +112,10 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg>
                     <span>طاولتي</span>
                 </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/drafts">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg>
+                    <span>مسوداتي</span>
+                </a>
                 <a class="account-menu__item" href="<?= $e($baseUrl) ?>/my-posts">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
                     <span>مشاركاتي</span>
@@ -150,6 +154,10 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
                     <span>الإعدادات</span>
                 </a>
                 <?php if (($currentUser['role'] ?? '') === 'admin') : ?>
+                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin/device-model-suggestions">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5M8 17h8"/></svg>
+                        <span>مراجعة موديلات الأجهزة</span>
+                    </a>
                     <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
                         <span>الإدارة</span>
