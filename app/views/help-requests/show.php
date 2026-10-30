@@ -100,7 +100,13 @@ $statusLabel = match ($helpRequest['status']) { 'pending' => 'في انتظار 
     <?php elseif ($publication && $publication['status'] === 'pending' && $isRequester) : ?>
         <section class="card help-publication-consent">
             <h2>موافقتك على نشر المساعدة</h2>
-            <p>الطرف الآخر يقترح تحويل ملخص المساعدة إلى مرجع عام. الرسائل الخاصة نفسها لن تُنشر.</p>
+            <p>الطرف الآخر يقترح تحويل الملخص التالي إلى مرجع عام. راجع المحتوى قبل اتخاذ قرارك؛ الرسائل الخاصة نفسها لن تُنشر.</p>
+            <div class="help-publication-preview">
+                <h3><?= $e($publication['draft_title']) ?></h3>
+                <section><strong>المشكلة</strong><p><?= nl2br($e($publication['problem_summary'])) ?></p></section>
+                <section><strong>التشخيص والقياسات</strong><p><?= nl2br($e($publication['diagnosis_summary'])) ?></p></section>
+                <section><strong>الحل النهائي</strong><p><?= nl2br($e($publication['solution_summary'])) ?></p></section>
+            </div>
             <form method="post" action="<?= $e($baseUrl) ?>/help-publications/<?= (int) $publication['id'] ?>/respond" data-publication-consent-form>
                 <?= $csrf() ?>
                 <fieldset class="field"><legend class="field__label">هل توافق على نشر ملخص المساعدة للعامة؟</legend>
