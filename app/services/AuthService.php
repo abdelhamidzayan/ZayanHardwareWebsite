@@ -8,6 +8,8 @@ use App\Models\User;
 
 final class AuthService
 {
+    private const TERMS_VERSION = '2026-10-28';
+
     public const EXPERIENCE = ['lt1', '1-3', '3-5', '5-10', 'gt10'];
 
     /**
@@ -53,6 +55,9 @@ final class AuthService
         $reserved = ['admin', 'administrator', 'moderator', 'support', 'root', 'system', 'staff', 'zayan', 'hardware', 'hardwaretech'];
         $errors = [];
 
+        if (self::str($input, 'accept_terms') !== '1') {
+            $errors['terms_acceptance'] = 'يجب الموافقة على قواعد المنصة وسياسة الخصوصية لإنشاء الحساب.';
+        }
         if (mb_strlen($displayName) < 2 || mb_strlen($displayName) > 60) {
             $errors['display_name'] = 'الاسم من 2 إلى 60 حرفًا';
         }
@@ -98,6 +103,8 @@ final class AuthService
                 'email' => $emailValue !== '' ? $emailValue : null,
                 'phone' => $phone,
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'terms_version' => self::TERMS_VERSION,
+                'terms_ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
             ], [
                 'device_focus' => $deviceFocus,
                 'device_focuses' => $deviceFocuses,
