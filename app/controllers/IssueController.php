@@ -14,6 +14,7 @@ use App\Services\ContentEditorService;
 use App\Services\DraftPublishingService;
 use App\Services\NotificationService;
 use App\Services\AuthService;
+use App\Services\RateLimiter;
 
 final class IssueController extends Controller
 {
@@ -67,6 +68,10 @@ final class IssueController extends Controller
 
         if (!Csrf::verify($this->request->input('_token'))) {
             return $this->fail('/issues/create', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        }
+
+        if (!RateLimiter::allowForUser('issues.create', (int) $user['id'], 5, 600, 25)) {
+            return $this->fail('/issues/create', 'عدد المنشورات في فترة قصيرة تجاوز الحد المسموح. انتظر قليلًا ثم حاول مرة أخرى.');
         }
 
         $draftId = $this->request->input('draft_id');
@@ -198,6 +203,9 @@ final class IssueController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+        if (!RateLimiter::allowForUser('issues.diagnostic', (int) $user['id'], 8, 600, 30)) {
+            return $this->fail('/issues/' . $id, 'أضفت تحديثات تشخيص كثيرة في وقت قصير. انتظر قليلًا ثم حاول مرة أخرى.');
+        }
         $body = trim($this->string('body'));
         if (mb_strlen($body) < 3 || mb_strlen($body) > 5000) {
             return $this->fail('/issues/' . $id, 'تحديث التشخيص يجب أن يكون بين 3 و5000 حرف.');
@@ -381,6 +389,9 @@ final class IssueController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+        if (!RateLimiter::allowForUser('issues.reply', (int) $user['id'], 15, 300, 60)) {
+            return $this->fail('/issues/' . $id . '#discussion', 'عدد الردود في فترة قصيرة تجاوز الحد المسموح. انتظر قليلًا ثم حاول مرة أخرى.');
+        }
         $body = trim($this->string('body'));
         if (mb_strlen($body) < 2 || mb_strlen($body) > 5000) return $this->fail('/issues/' . $id, 'الرد يجب أن يكون بين حرفين و5000 حرف.');
         $parentRaw = $this->string('parent_reply_id');
@@ -640,23 +651,16 @@ final class IssueController extends Controller
             $headers['Content-Range'] = 'bytes ' . $start . '-' . $end . '/' . $size;
         }
 
-        $length = $end - $start + 1;
-        $handle = fopen($target, 'rb');
-        if ($handle === false) return $this->notFound();
-        if ($start > 0) fseek($handle, $start);
-        $body = $length > 0 ? fread($handle, $length) : '';
-        fclose($handle);
-        if (!is_string($body)) return $this->notFound();
-
+        $length = $size > 0 ? $end - $start + 1 : 0;
         $headers += [
             'Content-Type' => $mime,
-            'Content-Length' => (string) strlen($body),
+            'Content-Length' => (string) $length,
             'Content-Disposition' => 'inline; filename="' . preg_replace('/[^a-zA-Z0-9._-]/', '', $filename) . '"',
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
             'Accept-Ranges' => 'bytes',
         ];
-        return new Response($body, $status, $headers);
+        return Response::streamFile($target, $start, $length, $status, $headers);
     }
 
     private function string(string $key): string
