@@ -36,6 +36,7 @@ class Graph:
         self.api_calls_found = 0
         self.api_calls_linked = 0
         self.api_calls_unresolved = 0
+        self.pending_static_calls: list[tuple[str, str, str, str, int]] = []
 
     def add_node(self, kind: str, key: str, label: str, path: str | None = None, **attrs: Any) -> str:
         node_id = stable_id(kind, key)
@@ -116,6 +117,15 @@ class Graph:
             token = token.lstrip("\\")
             short = token.rsplit("\\", 1)[-1]
             return imports.get(token, imports.get(short, token if "\\" in token else (f"{namespace}\\{token}" if namespace else token)))
+
+        for call in re.finditer(
+            r"(?<![A-Za-z0-9_$])([\\\\A-Za-z_][\\\\A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)\\s*\\(",
+            source,
+        ):
+            class_name = resolve_class(call.group(1))
+            if class_name in self.php_classes:
+                line = source.count("\\n", 0, call.start()) + 1
+                self.pending_static_calls.append((owner_id, class_name, call.group(2), rel, line))
 
         for data in classes:
             for clause in re.finditer(r"\b(?:extends|implements)\s+([\\A-Za-z_][\\A-Za-z0-9_,\\\s]*)", source):
@@ -507,6 +517,36 @@ class Graph:
                 self.api_calls_linked += 1
                 self.api_calls_unresolved = max(0, self.api_calls_unresolved - 1)
 
+    def resolve_static_calls(self) -> None:
+        parents: dict[str, list[str]] = defaultdict(list)
+        id_to_class = {node_id: name for name, node_id in self.php_classes.items()}
+        for edge in self.edges.values():
+            if edge["kind"] == "extends_or_implements" and edge["source"] in id_to_class and edge["target"] in id_to_class:
+                parents[id_to_class[edge["source"]]].append(id_to_class[edge["target"]])
+
+        for owner_id, class_name, method_name, path, line in self.pending_static_calls:
+            pending = [class_name]
+            visited: set[str] = set()
+            method_id = None
+            while pending:
+                candidate = pending.pop()
+                if candidate in visited:
+                    continue
+                visited.add(candidate)
+                candidate_method = stable_id("method", f"{candidate}::{method_name}")
+                if candidate_method in self.nodes:
+                    method_id = candidate_method
+                    break
+                pending.extend(parents.get(candidate, []))
+
+            if method_id:
+                self.add_edge(owner_id, method_id, "calls_method")
+            else:
+                self.warnings.append(
+                    f"Unresolved static method call in {path}:{line}: {class_name}::{method_name}(). "
+                    "Check the class API or dynamic/inherited dispatch."
+                )
+
     def build(self) -> None:
         self.discover()
         sources: dict[Path, str] = {}
@@ -534,6 +574,7 @@ class Graph:
             elif suffix == ".sql":
                 self.analyze_sql(path, source)
 
+        self.resolve_static_calls()
         source_by_rel = {self.relative(path): source for path, source in sources.items()}
         for path, source in sources.items():
             if self.relative(path).startswith("app/views/"):
