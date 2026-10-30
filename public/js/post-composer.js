@@ -469,9 +469,9 @@
             return item.media_kind === 'audio' ? item : visible[position++];
         });
         media.forEach(function (item, index) { item.sort_order = index; });
+        media.forEach(function (item, index) { item.dirtyEditor = true; });
         renderMedia();
         markDirty();
-        syncAllEditorStates();
     }
 
     function moveMedia(index, direction) {
@@ -485,9 +485,9 @@
         media[actualA] = other;
         media[actualB] = item;
         media.forEach(function (entry, i) { entry.sort_order = i; });
+        media.forEach(function (entry) { entry.dirtyEditor = true; });
         renderMedia();
         markDirty();
-        syncAllEditorStates();
     }
 
     async function removeMedia(item) {
@@ -641,8 +641,11 @@
             item.sort_order = index;
             item.dirtyEditor = false;
             await persistBlob(item);
+            await persistLocal();
             return true;
         } catch (error) {
+            dirty = true;
+            await persistLocal();
             setStatus(error.message || 'تعذر حفظ التعديلات.', 'error');
             return false;
         }
@@ -650,7 +653,7 @@
 
     async function syncAllEditorStates() {
         for (let i = 0; i < media.length; i++) {
-            if (media[i].media_kind === 'image' && !(await saveMediaState(media[i], i))) return false;
+            if (media[i].media_uuid && !(await saveMediaState(media[i], i))) return false;
         }
         return true;
     }
@@ -708,7 +711,11 @@
                     if (!uploaded) { dirty = true; await persistLocal(); return false; }
                 }
             }
-            if (!(await syncAllEditorStates())) return false;
+            if (!(await syncAllEditorStates())) {
+                dirty = true;
+                await persistLocal();
+                return false;
+            }
             setStatus('تم الحفظ والمزامنة', 'saved');
             return true;
         } catch (error) {
