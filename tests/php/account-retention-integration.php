@@ -49,6 +49,7 @@ function retentionCount(PDO $pdo, string $table): int
         'issue_diagnostic_update_edit_history', 'reply_votes', 'reputation_events',
         'help_requests', 'help_request_messages', 'help_request_attachments',
         'help_request_publications', 'help_public_posts', 'post_drafts', 'post_draft_media',
+        'user_device_specializations', 'user_skill_domains', 'user_skill_ratings', 'skill_tests', 'skill_test_attempts',
     ];
     if (!in_array($table, $allowed, true)) throw new InvalidArgumentException('Invalid test table.');
     return (int) $pdo->query("SELECT COUNT(*) FROM `$table`")->fetchColumn();
@@ -275,6 +276,31 @@ try {
          VALUES (?, ?, 'iphone', '5-10', 'board', '5-10', 'Owner Workshop', 'Profile biography', 'board', 1)"
     )->execute([$ownerId, '+201000000001']);
 
+    // Expertise and verified assessment history are technical contributions,
+    // not account identity; all of them must survive anonymization.
+    $powerDomainId = (int) $pdo->query("SELECT id FROM skill_domains WHERE slug = 'power' LIMIT 1")->fetchColumn();
+    retentionExpect($powerDomainId > 0, 'The power skill domain must exist in the test schema.');
+    $pdo->prepare(
+        "INSERT INTO user_device_specializations (user_id, device_type) VALUES (?, 'iphone')"
+    )->execute([$ownerId]);
+    $pdo->prepare(
+        'INSERT INTO user_skill_domains (user_id, skill_domain_id) VALUES (?, ?)'
+    )->execute([$ownerId, $powerDomainId]);
+    $pdo->prepare(
+        'INSERT INTO user_skill_ratings (user_id, skill_domain_id, rating, approved_assessments) VALUES (?, ?, 88.50, 4)'
+    )->execute([$ownerId, $powerDomainId]);
+    $pdo->prepare(
+        'INSERT INTO skill_tests
+            (skill_domain_id, title, version, questions_json, pass_score, max_attempts, cooldown_minutes, is_active, created_by)
+         VALUES (?, ?, ?, ?, 70, 3, 1440, 1, ?)'
+    )->execute([$powerDomainId, 'Retention CI power test', 'retention-v1', '{"questions":[]}', $ownerId]);
+    $skillTestId = (int) $pdo->lastInsertId();
+    $pdo->prepare(
+        'INSERT INTO skill_test_attempts
+            (user_id, skill_test_id, attempt_number, answers_json, score, passed, submitted_at)
+         VALUES (?, ?, 1, ?, 92.50, 1, UTC_TIMESTAMP())'
+    )->execute([$ownerId, $skillTestId, '{"q1":"answer-a"}']);
+
     $pdo->prepare(
         "INSERT INTO issues (user_id, title, device_model, description)
          VALUES (?, 'Retained board repair', 'Infinix X605', 'Original technical diagnosis')"
@@ -443,6 +469,24 @@ retentionExpect(
     && (int) $profile['level_verified'] === 1,
     'Technical specialization, experience, and verification must remain unchanged.'
 );
+
+$deviceStmt = $pdo->prepare('SELECT device_type FROM user_device_specializations WHERE user_id = ?');
+$deviceStmt->execute([$ownerId]);
+retentionExpect($deviceStmt->fetchAll(PDO::FETCH_COLUMN) === ['iphone'], 'Device specializations must remain unchanged.');
+$skillDomainStmt = $pdo->prepare('SELECT skill_domain_id FROM user_skill_domains WHERE user_id = ?');
+$skillDomainStmt->execute([$ownerId]);
+retentionExpect($skillDomainStmt->fetchAll(PDO::FETCH_COLUMN) === [$powerDomainId], 'User skill-domain assignments must remain unchanged.');
+$ratingStmt = $pdo->prepare('SELECT rating, approved_assessments FROM user_skill_ratings WHERE user_id = ? AND skill_domain_id = ?');
+$ratingStmt->execute([$ownerId, $powerDomainId]);
+$rating = $ratingStmt->fetch(PDO::FETCH_ASSOC);
+retentionExpect($rating['rating'] === '88.50' && (int) $rating['approved_assessments'] === 4, 'Verified skill ratings must remain unchanged.');
+$attemptStmt = $pdo->prepare('SELECT score, passed, answers_json FROM skill_test_attempts WHERE user_id = ? AND skill_test_id = ?');
+$attemptStmt->execute([$ownerId, $skillTestId]);
+$attempt = $attemptStmt->fetch(PDO::FETCH_ASSOC);
+retentionExpect($attempt['score'] === '92.50' && (int) $attempt['passed'] === 1 && $attempt['answers_json'] === '{"q1":"answer-a"}', 'Skill assessment attempts and answers must remain unchanged.');
+$skillTestStmt = $pdo->prepare('SELECT created_by FROM skill_tests WHERE id = ?');
+$skillTestStmt->execute([$skillTestId]);
+retentionExpect((int) $skillTestStmt->fetchColumn() === $ownerId, 'Technical test authorship must retain the stable user ID.');
 
 $publicStmt = $pdo->prepare(
     'SELECT id, requester_user_id, helper_user_id, requester_display_name, helper_display_name
