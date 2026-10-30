@@ -265,7 +265,7 @@ final class App
                 'line'      => $e->getLine(),
             ];
 
-            if ($e instanceof \\PDOException) {
+            if ($e instanceof \PDOException) {
                 // PDO messages can contain SQL fragments or user-supplied values.
                 // Keep diagnostic codes and location, but never persist the raw query error.
                 $exceptionContext['message'] = 'Database exception; raw details omitted';
