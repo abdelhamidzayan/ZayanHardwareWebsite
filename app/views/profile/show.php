@@ -45,6 +45,7 @@
                     <form class="profile-help-request__form" method="post" action="<?= $e($baseUrl) ?>/help-requests/create" enctype="multipart/form-data">
                         <?= $csrf() ?>
                         <input type="hidden" name="helper_id" value="<?= (int) $profile['id'] ?>">
+                        <input type="hidden" name="return_to" value="<?= $e('/profile/' . rawurlencode($profile['username'])) ?>">
                         <label class="field"><span class="field__label">موضوع طلب المساعدة</span><input class="field__input" name="subject" minlength="4" maxlength="180" placeholder="مثال: عطل شحن iPhone 13" required></label>
                         <label class="field"><span class="field__label">اشرح المشكلة</span><textarea class="field__input" name="body" minlength="10" maxlength="5000" rows="5" placeholder="اكتب تفاصيل العطل والقياسات والتجارب التي قمت بها..." required></textarea></label>
                         <label class="field"><span class="field__label">صور أو مخططات (اختياري)</span><input class="field__input" type="file" name="attachments[]" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple></label>
