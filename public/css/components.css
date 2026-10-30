@@ -437,3 +437,6 @@
 .notification-item__identity > .avatar { flex:none; }
 .help-library-person { display:inline-flex; align-items:center; gap:var(--space-2); }
 .help-library-person .avatar { width:2rem; height:2rem; }
+
+
+.help-request-menu__new { justify-self:start; width:max-content; padding:.1rem .45rem; border-radius:var(--radius-pill); background:var(--color-primary-soft); color:var(--color-primary); font-size:.68rem; font-style:normal; font-weight:700; }
