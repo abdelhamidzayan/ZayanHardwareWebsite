@@ -135,10 +135,22 @@ final class HelpRequest extends Model
 
     public static function addAttachment(int $requestId, int $messageId, int $userId, string $path, string $mime, int $size): void
     {
-        self::db()->prepare(
-            'INSERT INTO help_request_attachments (request_id, message_id, uploaded_by, file_path, mime_type, file_size)
-             VALUES (?, ?, ?, ?, ?, ?)'
-        )->execute([$requestId, $messageId, $userId, $path, $mime, $size]);
+        $stmt = self::db()->prepare(
+            'INSERT INTO help_request_attachments
+                (request_id, message_id, uploaded_by, file_path, mime_type, file_size)
+             SELECT ?, m.id, ?, ?, ?, ?
+             FROM help_request_messages m
+             INNER JOIN help_requests h ON h.id = m.request_id
+             WHERE m.id = ? AND m.request_id = ? AND m.sender_id = ?
+               AND (h.requester_id = ? OR h.helper_id = ?)'
+        );
+        $stmt->execute([
+            $requestId, $userId, $path, $mime, $size,
+            $messageId, $requestId, $userId, $userId, $userId,
+        ]);
+        if ($stmt->rowCount() !== 1) {
+            throw new \DomainException('attachment_message_mismatch');
+        }
     }
 
     public static function attachmentsForMessage(int $messageId): array
