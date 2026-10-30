@@ -149,7 +149,7 @@ final class PostDraft extends Model
             )->execute([$draftId, $mediaUuid, $kind, $path, $mime, $size, $sha256, $durationMs, $sortOrder]);
 
             return self::finishRevisionMutation($draftId, $userId);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             self::rollbackRevisionMutation();
             throw $e;
         }
@@ -181,7 +181,7 @@ final class PostDraft extends Model
             )->execute([$path, $mimeType, $sha256, $draftId, $mediaUuid]);
 
             return self::finishRevisionMutation($draftId, $userId);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             self::rollbackRevisionMutation();
             throw $e;
         }
@@ -224,7 +224,7 @@ final class PostDraft extends Model
             )->execute([$json, $sortOrder, $draftId, $mediaUuid]);
 
             return self::finishRevisionMutation($draftId, $userId);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             self::rollbackRevisionMutation();
             throw $e;
         }
@@ -258,7 +258,7 @@ final class PostDraft extends Model
             self::removePrivateFile((string) $media['storage_path']);
             if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);
             return $nextRevision;
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             self::rollbackRevisionMutation();
             throw $e;
         }
@@ -296,7 +296,7 @@ final class PostDraft extends Model
 
             self::removePrivateFile((string) $media['storage_path']);
             if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -314,13 +314,13 @@ final class PostDraft extends Model
             $revision = $stmt->fetchColumn();
             if ($revision === false) {
                 $pdo->rollBack();
-                throw new \\DomainException('draft_not_found');
+                throw new \DomainException('draft_not_found');
             }
             if ((int) $revision !== $expectedRevision) {
                 $pdo->rollBack();
-                throw new \\DomainException('draft_revision_conflict');
+                throw new \DomainException('draft_revision_conflict');
             }
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
