@@ -78,7 +78,7 @@ final class DraftPublishingService
             if (!$modelRow) throw new \DomainException('device_model_unavailable');
 
             $mediaRows = $pdo->prepare(
-                'SELECT id, media_uuid, media_kind, storage_path, mime_type, file_size, editor_state,
+                'SELECT id, media_uuid, media_kind, storage_path, rendered_path, mime_type, file_size, editor_state,
                         sort_order, duration_ms
                  FROM post_draft_media WHERE draft_id = ? ORDER BY sort_order, id FOR UPDATE'
             );
@@ -129,8 +129,8 @@ final class DraftPublishingService
             $insertAttachment = $pdo->prepare(
                 'INSERT INTO issue_attachments
                     (issue_id, uploaded_by, file_path, mime_type, file_size, is_inline,
-                     original_file_path, editor_state, sort_order)
-                 VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)'
+                     original_file_path, rendered_file_path, editor_state, sort_order)
+                 VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)'
             );
             $audioUpdate = $pdo->prepare(
                 'UPDATE issues SET audio_path = ?, audio_mime_type = ?, audio_file_size = ?,
@@ -155,6 +155,31 @@ final class DraftPublishingService
                 $newRelative = 'issues/' . $issueId . '/' . $filename;
                 $moved[] = ['from' => $source, 'to' => $destination];
 
+                $renderedRelative = null;
+                $displayRelative = $newRelative;
+                if ($item['media_kind'] === 'image' && !empty($item['rendered_path'])) {
+                    $renderedSourceRelative = ltrim(str_replace('\\\\', '/', (string) $item['rendered_path']), '/');
+                    if ($renderedSourceRelative === '' || str_contains($renderedSourceRelative, '..')) {
+                        throw new \\DomainException('draft_media_path_invalid');
+                    }
+                    $renderedSource = realpath($privateRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $renderedSourceRelative));
+                    if ($renderedSource === false || !str_starts_with($renderedSource, $privateRoot . DIRECTORY_SEPARATOR) || !is_file($renderedSource)) {
+                        throw new \\DomainException('draft_media_missing');
+                    }
+                    $renderedExtension = strtolower(pathinfo($renderedSource, PATHINFO_EXTENSION));
+                    if (!preg_match('/^[a-z0-9]{2,6}$/', $renderedExtension)) {
+                        throw new \\DomainException('draft_media_path_invalid');
+                    }
+                    $renderedFilename = bin2hex(random_bytes(16)) . '-preview.' . $renderedExtension;
+                    $renderedDestination = $issueDirectory . DIRECTORY_SEPARATOR . $renderedFilename;
+                    if (!rename($renderedSource, $renderedDestination)) {
+                        throw new \\DomainException('draft_media_move_failed');
+                    }
+                    $renderedRelative = 'issues/' . $issueId . '/' . $renderedFilename;
+                    $displayRelative = $renderedRelative;
+                    $moved[] = ['from' => $renderedSource, 'to' => $renderedDestination];
+                }
+
                 if ($item['media_kind'] === 'audio') {
                     $audioMeta = is_array($payload['audio'] ?? null) ? $payload['audio'] : [];
                     $duration = max(0, (int) ($audioMeta['duration_ms'] ?? $item['duration_ms'] ?? 0));
@@ -178,8 +203,8 @@ final class DraftPublishingService
                     $editorState = json_encode($editorState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
                 }
                 $insertAttachment->execute([
-                    $issueId, $userId, $newRelative, (string) $item['mime_type'], (int) $item['file_size'],
-                    $newRelative, $editorState, (int) $item['sort_order'],
+                    $issueId, $userId, $displayRelative, (string) $item['mime_type'], (int) $item['file_size'],
+                    $newRelative, $renderedRelative, $editorState, (int) $item['sort_order'],
                 ]);
             }
 
