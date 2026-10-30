@@ -26,6 +26,7 @@ return static function (Router $router): void {
     $router->get('/help', [PageController::class, 'help']);
     $router->get('/policies', [PageController::class, 'policies']);
     $router->get('/settings', [PageController::class, 'settings']);
+    $router->post('/settings/help-availability', [PageController::class, 'saveHelpAvailability']);
     $router->get('/feed', [FeedController::class, 'index']);
     $router->get('/workbench', [WorkbenchController::class, 'index']);
     $router->get('/my-posts', [MyPostsController::class, 'index']);
