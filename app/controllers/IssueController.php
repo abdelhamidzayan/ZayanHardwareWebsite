@@ -596,10 +596,10 @@ final class IssueController extends Controller
 
     private function privateFileResponse(string $storedPath, string $filename, array $allowedMimes): Response
     {
-        $privateRoot = realpath(\\App\\Core\\App::root('storage/private'));
+        $privateRoot = realpath(\App\\Core\App::root('storage/private'));
         if ($privateRoot === false) return $this->notFound();
 
-        $storedPath = str_replace('\\\\', '/', $storedPath);
+        $storedPath = str_replace('\\', '/', $storedPath);
         $storedPath = ltrim($storedPath, '/');
         if (str_starts_with($storedPath, 'storage/private/')) {
             $storedPath = substr($storedPath, strlen('storage/private/'));
@@ -611,7 +611,7 @@ final class IssueController extends Controller
             return $this->notFound();
         }
 
-        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($target) ?: 'application/octet-stream';
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($target) ?: 'application/octet-stream';
         if (!in_array($mime, $allowedMimes, true)) return $this->notFound();
 
         $size = (int) filesize($target);
@@ -620,7 +620,7 @@ final class IssueController extends Controller
         $status = 200;
         $headers = [];
         $range = $_SERVER['HTTP_RANGE'] ?? '';
-        if (is_string($range) && preg_match('/^bytes=(\\\\d*)-(\\\\d*)$/', trim($range), $match) && $size > 0) {
+        if (is_string($range) && preg_match('/^bytes=(\\d*)-(\\d*)$/', trim($range), $match) && $size > 0) {
             if ($match[1] === '' && $match[2] !== '') {
                 $suffix = (int) $match[2];
                 $start = max(0, $size - $suffix);
