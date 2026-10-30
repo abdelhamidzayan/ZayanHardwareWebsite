@@ -7,10 +7,10 @@ use App\Services\AuthService;
 
 final class Router
 {
-    /** @var array<int, array{0:string,1:string,2:array|callable}> */
     /** Route placeholders whose controller parameters are declared as integers. */
     private const INTEGER_ROUTE_PARAMETERS = ['id', 'userId'];
 
+    /** @var array<int, array{0:string,1:string,2:array|callable}> */
     private array $routes = [];
 
     public function get(string $path, array|callable $handler): void
@@ -90,7 +90,7 @@ final class Router
 
     private function add(string $method, string $path, array|callable $handler): void
     {
-        // {id} matches digits only; any other {name} matches one path segment.
+        // Integer placeholders listed above match digits only; other placeholders match one path segment.
         $regex = preg_replace_callback('#\{(\w+)\}|[^{]+#', static function (array $m): string {
             if (!isset($m[1])) {
                 return preg_quote($m[0], '#');
