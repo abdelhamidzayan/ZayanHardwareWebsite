@@ -83,6 +83,7 @@ return static function (Router $router): void {
     $router->post('/profile/avatar', [AvatarController::class, 'update']);
     $router->get('/avatar/{userId}', [AvatarController::class, 'show']);
     $router->get('/help-requests', [HelpRequestController::class, 'index']);
+    $router->get('/help-requests/attachments/{id}', [HelpRequestController::class, 'attachment']);
     $router->get('/help-requests/{id}', [HelpRequestController::class, 'show']);
     $router->post('/help-requests/create', [HelpRequestController::class, 'create']);
     $router->post('/help-requests/{id}/accept', [HelpRequestController::class, 'accept']);
