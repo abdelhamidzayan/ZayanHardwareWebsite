@@ -6,6 +6,8 @@
 $solved    = !empty($issue['solved']);
 $hasAudio  = !empty($issue['audio']);
 $audioSrc  = !empty($issue['audio_src']) ? $baseUrl . $issue['audio_src'] : '';
+$username  = trim((string) ($issue['username'] ?? ''));
+$avatarSrc = (string) ($issue['avatar_src'] ?? '/assets/avatars/technician-blue.svg');
 
 // Deterministic waveform (32 bars) so the same card always looks the same.
 $seed = (int) $issue['id'];
@@ -18,10 +20,18 @@ for ($i = 0; $i < 32; $i++) {
 ?>
 <article class="card issue-card">
     <header class="issue-card__head">
-        <a class="issue-card__avatar-link" href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $issue['username'])) ?>" aria-label="الملف الشخصي لـ <?= $e($issue['author']) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . $issue['avatar_src']) ?>" alt="" width="48" height="48" loading="lazy"></a>
+        <?php if ($username !== '') : ?>
+            <a class="issue-card__avatar-link" href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode($username)) ?>" aria-label="الملف الشخصي لـ <?= $e($issue['author']) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . $avatarSrc) ?>" alt="" width="48" height="48" loading="lazy"></a>
+        <?php else : ?>
+            <span class="issue-card__avatar-link"><img class="avatar avatar-image" src="<?= $e($baseUrl . $avatarSrc) ?>" alt="" width="48" height="48" loading="lazy"></span>
+        <?php endif; ?>
         <div class="issue-card__who">
             <p class="issue-card__name">
-                <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $issue['username'])) ?>"><?= $e($issue['author']) ?></a>
+                <?php if ($username !== '') : ?>
+                    <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode($username)) ?>"><?= $e($issue['author']) ?></a>
+                <?php else : ?>
+                    <?= $e($issue['author']) ?>
+                <?php endif; ?>
                 <?php if (!empty($issue['expert'])) : ?>
                     <span class="badge">
                         <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
