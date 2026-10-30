@@ -946,7 +946,7 @@
                     return;
                 }
                 const audio = media.find(function (item) { return item.media_kind === 'audio'; });
-                if (audio) removeMedia(audio);
+                if (audio) await removeMedia(audio);
             }
             syncModeVisibility();
             markDirty();
@@ -967,7 +967,7 @@
         const incoming = Array.from(mediaInput.files || []);
         mediaInput.value = '';
         for (const file of incoming) {
-            if (media.length >= 8) {
+            if (media.filter(function (item) { return item.media_kind !== 'audio'; }).length >= 8) {
                 setStatus('الحد الأقصى 8 صور وفيديوهات لكل منشور.', 'error');
                 break;
             }
