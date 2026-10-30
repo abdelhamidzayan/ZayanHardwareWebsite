@@ -30,7 +30,7 @@ final class HelpRequest extends Model
             $pdo->prepare(
                 'INSERT INTO help_request_messages (request_id, sender_id, body) VALUES (?, ?, ?)'
             )->execute([$requestId, $requesterId, $body]);
-            $pdo->prepare('UPDATE help_requests SET last_message_at = UTC_TIMESTAMP() WHERE id = ?')
+            $pdo->prepare('UPDATE help_requests SET last_message_at = UTC_TIMESTAMP(), requester_last_seen_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$requestId]);
             $pdo->commit();
             return $requestId;
@@ -92,11 +92,16 @@ final class HelpRequest extends Model
             'outgoing' => 'h.requester_id = ?',
             default => '(h.helper_id = ? OR h.requester_id = ?)',
         };
-        $params = $scope === 'all' ? [$userId, $userId] : [$userId];
+        $params = array_merge([$userId, $userId, $userId], $scope === 'all' ? [$userId, $userId] : [$userId]);
         $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
             'SELECT h.id, h.subject, h.status, h.created_at, h.updated_at, h.last_message_at,
                     h.requester_id, h.helper_id,
+                    CASE
+                      WHEN h.helper_id = ? AND h.status = 'pending' THEN 1
+                      WHEN h.helper_id = ? AND EXISTS (SELECT 1 FROM help_request_messages um WHERE um.request_id = h.id AND um.sender_id = h.requester_id AND (h.helper_last_seen_at IS NULL OR um.created_at > h.helper_last_seen_at)) THEN 1
+                      WHEN h.requester_id = ? AND EXISTS (SELECT 1 FROM help_request_messages um WHERE um.request_id = h.id AND um.sender_id = h.helper_id AND (h.requester_last_seen_at IS NULL OR um.created_at > h.requester_last_seen_at)) THEN 1
+                      ELSE 0 END AS has_unread,
                     requester.display_name AS requester_name, requester.username AS requester_username,
                     requester.avatar_key AS requester_avatar_key, requester.avatar_path AS requester_avatar_path,
                     helper.display_name AS helper_name, helper.username AS helper_username,
@@ -314,13 +319,34 @@ final class HelpRequest extends Model
         return $stmt->fetchAll();
     }
 
+    public static function markRead(int $requestId, int $userId): void
+    {
+        self::db()->prepare(
+            'UPDATE help_requests SET
+                requester_last_seen_at = CASE WHEN requester_id = ? THEN UTC_TIMESTAMP() ELSE requester_last_seen_at END,
+                helper_last_seen_at = CASE WHEN helper_id = ? THEN UTC_TIMESTAMP() ELSE helper_last_seen_at END
+             WHERE id = ? AND (requester_id = ? OR helper_id = ?)'
+        )->execute([$userId, $userId, $requestId, $userId, $userId]);
+    }
+
     public static function unreadCount(int $userId): int
     {
         $stmt = self::db()->prepare(
             "SELECT COUNT(*) FROM help_requests h
-             WHERE h.status = 'pending' AND h.helper_id = ?"
+             WHERE (h.helper_id = ? AND (
+                    h.status = 'pending' OR EXISTS (
+                        SELECT 1 FROM help_request_messages m
+                        WHERE m.request_id = h.id AND m.sender_id = h.requester_id
+                          AND (h.helper_last_seen_at IS NULL OR m.created_at > h.helper_last_seen_at)
+                    )
+                ))
+                OR (h.requester_id = ? AND EXISTS (
+                    SELECT 1 FROM help_request_messages m
+                    WHERE m.request_id = h.id AND m.sender_id = h.helper_id
+                      AND (h.requester_last_seen_at IS NULL OR m.created_at > h.requester_last_seen_at)
+                ))"
         );
-        $stmt->execute([$userId]);
+        $stmt->execute([$userId, $userId]);
         return (int) $stmt->fetchColumn();
     }
 }
