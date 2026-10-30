@@ -7,7 +7,10 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Issue;
+use App\Models\DeviceCatalog;
+use App\Models\PostDraft;
 use App\Services\ContentEditorService;
+use App\Services\DraftPublishingService;
 use App\Services\NotificationService;
 use App\Services\AuthService;
 
@@ -96,7 +99,7 @@ final class IssueController extends Controller
                 $issueId = DraftPublishingService::publish(strtolower($draftId), (int) $user['id'], $revision);
                 $this->flash('success', 'تم نشر المعلومة الفنية بنجاح.');
                 return $this->redirect('/issues/' . $issueId);
-            } catch (\\DomainException $e) {
+            } catch (\DomainException $e) {
                 $message = match ($e->getMessage()) {
                     'draft_revision_conflict' => 'المسودة اتعدلت من جهاز آخر. افتح المسودة وراجع آخر نسخة قبل النشر.',
                     'draft_not_found' => 'المسودة غير موجودة أو لم تعد متاحة.',
