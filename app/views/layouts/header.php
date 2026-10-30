@@ -116,6 +116,14 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
                     <span>مشاركاتي</span>
                 </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help-requests">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg>
+                    <span>طلبات المساعدة الشخصية</span>
+                </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help-library">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M4 6h16M8 10h8M8 14h6"/></svg>
+                    <span>مكتبة المساعدات</span>
+                </a>
                 <details class="account-menu__group">
                     <summary class="account-menu__item account-menu__group-trigger">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.2-1.8 2.7M12 17h.01"/></svg>
