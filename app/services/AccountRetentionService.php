@@ -111,8 +111,7 @@ final class AccountRetentionService
             $userId = (int) $request['user_id'];
             $anonymousUsername = self::uniqueAnonymousUsername($pdo, $userId);
 
-            // Remove account avatar binaries only; technical attachments are untouched.
-            self::removePrivateAvatarFiles($userId);
+            // Technical attachments are never touched by this worker.
             self::anonymizePublicHelpAuthor($pdo, $userId);
             self::anonymizeTechnicianProfile($pdo, $userId);
             self::disablePushSubscriptions($pdo, $userId);
@@ -140,11 +139,27 @@ final class AccountRetentionService
                     'attachments_schematics_and_history' => 'retained',
                     'personal_help_content_and_drafts' => 'retained',
                     'account_identity_and_profile' => 'anonymized',
-                    'custom_avatar_binary' => 'removed',
+                    'private_avatar_cleanup' => 'post_commit_best_effort',
                 ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             ]);
 
             $pdo->commit();
+
+            // Filesystem changes cannot participate in the SQL transaction. Run
+            // private-avatar cleanup only after the identity update is committed,
+            // so a later SQL failure can never leave a still-active account
+            // missing its avatar. AvatarController serves a generic avatar for
+            // inactive accounts even if this best-effort cleanup must be retried.
+            try {
+                self::removePrivateAvatarFiles($userId);
+            } catch (Throwable $cleanupError) {
+                App::log('WARNING', 'account.retention.avatar_cleanup_failed', [
+                    'user_id' => $userId,
+                    'exception' => $cleanupError::class,
+                    'message' => $cleanupError->getMessage(),
+                ]);
+            }
+
             return true;
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
