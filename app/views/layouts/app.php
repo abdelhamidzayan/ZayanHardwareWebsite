@@ -51,6 +51,7 @@ $unreadHelpCount = is_array($currentUser) && isset($currentUser['id'])
 
 </div>
 <script src="<?= $e($baseUrl) ?>/js/content-editor.js" defer></script>
+<script src="<?= $e($baseUrl) ?>/js/image-viewer.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/avatar-crop.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/pwa-guide.js" defer></script>
