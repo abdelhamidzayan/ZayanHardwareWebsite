@@ -19,3 +19,15 @@ Before applying, confirm the database selected by the local `.env` is the intend
 After each migration, verify the expected columns/tables exist before proceeding. If a migration fails partway through, stop and inspect the schema; do not blindly rerun it because the `ALTER TABLE ADD COLUMN` statements are intentionally one-time changes.
 
 The migrations preserve existing issue IDs, replies, attachments, issue-result records, edit history, and reputation events. Existing issues default to `help_request`, so old requests remain visible in the new content system.
+
+## Profile, composer and consent migrations
+
+After the confirmed baseline through migration 010, the feature branch adds:
+
+1. `011_profiles_personal_help_and_publication.sql`
+2. `012_post_composer_drafts_and_device_catalog.sql`
+3. `013_terms_acceptance_audit.sql`
+
+Migration 013 uses `CREATE TABLE IF NOT EXISTS` so it is safe when `002_final_registration_permissions.sql` already created `terms_acceptances`; it also repairs installations that selected the alternate 002 migration and therefore do not have the table. It must still be reviewed and applied manually to the intended database after a backup.
+
+The two `002` files remain alternative schema histories, not sequential migrations. Confirm which one was applied to the target database before running any migration that depends on its profile/account schema.
