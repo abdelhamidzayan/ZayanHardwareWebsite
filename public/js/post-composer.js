@@ -494,6 +494,10 @@
         // mutations in one serialized sync pipeline and remains safe offline.
         if (item.media_uuid) pendingDeletes.add(item.media_uuid);
         media = media.filter(function (entry) { return entry !== item; });
+        media.forEach(function (entry, index) {
+            entry.sort_order = index;
+            if (entry.media_uuid) entry.dirtyEditor = true;
+        });
         if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
         if (item.local_id) await dbDelete('media', draftId + ':' + item.local_id).catch(function () {});
         if (item.media_kind === 'audio') {
@@ -550,6 +554,7 @@
             Object.assign(item, result.media[0]);
             item.original_url = result.media[0].original_url || result.media[0].url;
             item.uploaded = true;
+            item.dirtyEditor = true;
             await persistBlob(item);
             return true;
         } catch (error) {
@@ -640,7 +645,7 @@
 
     async function syncAllEditorStates() {
         for (let i = 0; i < media.length; i++) {
-            if (media[i].media_uuid && !(await saveMediaState(media[i], i))) return false;
+            if (media[i].media_uuid && media[i].dirtyEditor && !(await saveMediaState(media[i], i))) return false;
         }
         return true;
     }
