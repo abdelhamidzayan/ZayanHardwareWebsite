@@ -123,10 +123,10 @@ final class DraftController extends Controller
         $sizes = is_array($files['size'] ?? null) ? $files['size'] : [$files['size'] ?? 0];
 
         $existing = $draft['media'];
-        if (count($existing) + count($names) > 8) {
-            return Response::json(['error' => 'media_limit', 'message' => 'الحد الأقصى 8 مرفقات للمنشور.'], 422);
-        }
-
+        $existingNonAudio = count(array_filter(
+            $existing,
+            static fn (array $item): bool => $item['media_kind'] !== 'audio'
+        ));
         $existingAudio = count(array_filter($existing, static fn (array $item): bool => $item['media_kind'] === 'audio')) > 0;
         $privateRoot = App::root('storage/private/drafts/' . $draftId);
         if (!is_dir($privateRoot) && !mkdir($privateRoot, 0750, true) && !is_dir($privateRoot)) {
@@ -172,6 +172,13 @@ final class DraftController extends Controller
                     throw new \DomainException('mime_invalid');
                 }
                 if ($size > $maxBytes) throw new \DomainException('file_too_large');
+                $savedNonAudio = count(array_filter(
+                    $saved,
+                    static fn (array $item): bool => $item['kind'] !== 'audio'
+                ));
+                if ($kind !== 'audio' && $existingNonAudio + $savedNonAudio >= 8) {
+                    throw new \DomainException('media_limit');
+                }
                 if ($kind === 'audio' && ($existingAudio || count(array_filter($saved, static fn (array $item): bool => $item['kind'] === 'audio')) > 0)) {
                     throw new \DomainException('single_audio_only');
                 }
@@ -214,8 +221,16 @@ final class DraftController extends Controller
                     'original_url' => $this->mediaUrl($draftId, $uuid),
                 ];
             }
-        } catch (\DomainException $e) {
+        } catch (\Throwable $e) {
+            // Remove media already stored by this request when any later file fails.
+            foreach ($saved as $item) {
+                PostDraft::deleteMedia($draftId, (string) $item['media_uuid'], (int) $user['id']);
+            }
+            if (!$e instanceof \DomainException) {
+                throw $e;
+            }
             $message = match ($e->getMessage()) {
+                'media_limit' => 'الحد الأقصى 8 صور وفيديوهات، ويسمح بتسجيل صوتي واحد منفصل.',
                 'mime_invalid' => 'نوع الملف غير مدعوم. استخدم صور JPG/PNG/WEBP أو فيديو MP4/WEBM أو تسجيلًا صوتيًا.',
                 'file_too_large' => 'حجم الملف تجاوز الحد المسموح لنوعه.',
                 'image_dimensions_invalid' => 'أبعاد الصورة غير صالحة أو كبيرة جدًا.',
