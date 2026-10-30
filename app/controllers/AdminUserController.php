@@ -84,8 +84,16 @@ final class AdminUserController extends Controller
         }
 
         $pdo = Database::connection();
-        $pdo->beginTransaction();
+        $adminRosterLockAcquired = false;
         try {
+            $adminLock = (int) $pdo->query(
+                "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
+            )->fetchColumn();
+            if ($adminLock !== 1) {
+                throw new \RuntimeException('Could not acquire the account-administration lock.');
+            }
+            $adminRosterLockAcquired = true;
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare("UPDATE users SET account_status = ? WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([$status, $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found_or_unchanged');
@@ -108,6 +116,10 @@ final class AdminUserController extends Controller
             if ($pdo->inTransaction()) $pdo->rollBack();
             if ($e instanceof \DomainException) return $this->fail('/admin/users', 'الحساب غير موجود أو لم تتغير حالته.');
             throw $e;
+        } finally {
+            if ($adminRosterLockAcquired) {
+                $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
+            }
         }
 
         return $this->fail('/admin/users', 'تم تحديث حالة الحساب وتسجيل العملية.');
@@ -126,8 +138,16 @@ final class AdminUserController extends Controller
         }
 
         $pdo = Database::connection();
-        $pdo->beginTransaction();
+        $adminRosterLockAcquired = false;
         try {
+            $adminLock = (int) $pdo->query(
+                "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
+            )->fetchColumn();
+            if ($adminLock !== 1) {
+                throw new \RuntimeException('Could not acquire the account-administration lock.');
+            }
+            $adminRosterLockAcquired = true;
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare('SELECT role FROM users WHERE id = ? AND account_status <> \'deleted\' FOR UPDATE');
             $stmt->execute([$id]);
             $oldRole = $stmt->fetchColumn();
@@ -156,6 +176,10 @@ final class AdminUserController extends Controller
                     : 'الحساب غير موجود أو محذوف نهائيًا.');
             }
             throw $e;
+        } finally {
+            if ($adminRosterLockAcquired) {
+                $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
+            }
         }
 
         return $this->fail('/admin/users', 'تم تحديث دور الحساب وتسجيل العملية.');
