@@ -119,8 +119,12 @@ final class DraftPublishingService
             ]);
             $issueId = (int) $pdo->lastInsertId();
 
-            $privateRoot = realpath(App::root('storage/private'));
-            if ($privateRoot === false) throw new \DomainException('draft_storage_unavailable');
+            $privateRootPath = App::root('storage/private');
+            if (!is_dir($privateRootPath) && !mkdir($privateRootPath, 0750, true) && !is_dir($privateRootPath)) {
+                throw new \\DomainException('draft_storage_unavailable');
+            }
+            $privateRoot = realpath($privateRootPath);
+            if ($privateRoot === false) throw new \\DomainException('draft_storage_unavailable');
             $issueDirectory = App::root('storage/private/issues/' . $issueId);
             if (!is_dir($issueDirectory) && !mkdir($issueDirectory, 0750, true) && !is_dir($issueDirectory)) {
                 throw new \DomainException('draft_storage_unavailable');
