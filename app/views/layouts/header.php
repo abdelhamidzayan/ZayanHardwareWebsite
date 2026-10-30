@@ -45,7 +45,7 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
                             ?>
                             <a class="help-request-menu__item" href="<?= $e($baseUrl) ?>/help-requests/<?= (int) $headerRequest['id'] ?>">
                                 <img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($otherAvatarPath) ? '/avatar/' . (int) $otherUserId : '/assets/avatars/' . rawurlencode((string) ($otherAvatarKey ?? 'technician-blue')) . '.svg')) ?>" alt="" width="36" height="36">
-                                <span class="help-request-menu__item-copy"><strong><?= $e($otherName) ?></strong><span><?= $e($headerRequest['subject']) ?></span><small><?= $e($requestStatus) ?> · <?= $e($headerRequest['last_message_at']) ?></small></span>
+                                <span class="help-request-menu__item-copy"><strong><?= $e($otherName) ?></strong><span><?= $e($headerRequest['subject']) ?></span><small><?= $e($requestStatus) ?> · <?= $e($headerRequest['last_message_at']) ?></small><?php if (!empty($headerRequest['has_unread'])) : ?><em class="help-request-menu__new">جديد</em><?php endif; ?></span>
                             </a>
                         <?php endforeach; ?>
                     </div>
