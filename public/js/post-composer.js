@@ -407,9 +407,8 @@
                                 item.url = URL.createObjectURL(item.renderedBlob);
                             }
                             item.dirtyEditor = true;
-                            if (!item.media_uuid) markDirty();
                             await persistBlob(item);
-                            await saveMediaState(item, index);
+                            markDirty();
                             renderMedia();
                         });
                     }
@@ -491,24 +490,9 @@
     }
 
     async function removeMedia(item) {
-        if (item.media_uuid) {
-            if (navigator.onLine) {
-                const body = new URLSearchParams({ _token: csrf, revision: String(revision) });
-                try {
-                    const response = await fetch(mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/delete', {
-                        method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' }
-                    });
-                    const result = await response.json();
-                    if (handleRevisionConflict(response, result)) return false;
-                    if (!response.ok && response.status !== 404) throw new Error('تعذر حذف المرفق من المسودة.');
-                    if (response.ok) updateDraftRevision(result);
-                } catch (_) {
-                    pendingDeletes.add(item.media_uuid);
-                }
-            } else {
-                pendingDeletes.add(item.media_uuid);
-            }
-        }
+        // Queue the deletion with the next draft save. This keeps all revision
+        // mutations in one serialized sync pipeline and remains safe offline.
+        if (item.media_uuid) pendingDeletes.add(item.media_uuid);
         media = media.filter(function (entry) { return entry !== item; });
         if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
         if (item.local_id) await dbDelete('media', draftId + ':' + item.local_id).catch(function () {});
