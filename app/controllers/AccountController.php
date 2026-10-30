@@ -25,13 +25,37 @@ final class AccountController extends Controller
         $pdo->beginTransaction();
         try {
             // Serialize concurrent deletion requests on the existing user row.
-            $accountLock = $pdo->prepare('SELECT account_status FROM users WHERE id = ? FOR UPDATE');
+            $accountLock = $pdo->prepare('SELECT account_status, role FROM users WHERE id = ? FOR UPDATE');
             $accountLock->execute([(int) $user['id']]);
-            $accountStatus = $accountLock->fetchColumn();
-            if ($accountStatus !== 'active') {
+            $account = $accountLock->fetch(\\PDO::FETCH_ASSOC);
+            if (!$account || $account['account_status'] !== 'active') {
                 $pdo->rollBack();
                 $this->flash('info', 'طلب إيقاف الحساب أو حذفه مسجل بالفعل.');
                 return $this->redirect('/');
+            }
+
+            // Serialize administrator deletion requests so two admins cannot
+            // simultaneously schedule the deletion of the last active admin.
+            if ($account['role'] === 'admin') {
+                $adminLock = (int) $pdo->query(
+                    "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
+                )->fetchColumn();
+                if ($adminLock !== 1) {
+                    throw new \\RuntimeException('Could not acquire the administrator deletion lock.');
+                }
+
+                $otherAdmins = $pdo->prepare(
+                    "SELECT COUNT(*) FROM users
+                     WHERE role = 'admin' AND account_status = 'active' AND id <> ?"
+                );
+                $otherAdmins->execute([(int) $user['id']]);
+                if ((int) $otherAdmins->fetchColumn() < 1) {
+                    $pdo->rollBack();
+                    $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
+                    $this->flash('error', 'قبل طلب حذف حساب المدير، يجب تعيين مدير نشط آخر.');
+                    return $this->redirect('/');
+                }
+                $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
             }
 
             $stmt = $pdo->prepare(
