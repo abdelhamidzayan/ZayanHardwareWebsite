@@ -51,6 +51,7 @@ return static function (Router $router): void {
 
     $router->get('/issues/{id}', [IssueController::class, 'show']);
     $router->get('/attachments/{id}', [IssueController::class, 'attachment']);
+    $router->get('/issues/{id}/audio', [IssueController::class, 'audio']);
     $router->post('/issues/{id}/reply', [IssueController::class, 'reply']);
     $router->post('/issues/{id}/replies/{replyId}/edit', [IssueController::class, 'editReply']);
     $router->post('/issues/{id}/replies/{replyId}/delete', [IssueController::class, 'deleteReply']);
