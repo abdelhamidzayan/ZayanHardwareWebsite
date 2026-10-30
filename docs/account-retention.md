@@ -13,9 +13,9 @@ The retention worker is not a schema migration tool. Before deploying it or sche
 The two files share the `002_` prefix but are a **sequential pair**, not alternative migrations. For a database that starts from the pre-registration schema, apply them in this exact order:
 
 1. `002_final_registration_permissions.sql` — creates the account-deletion/security-audit tables and the normalized skill-domain tables, and copies the legacy `technician_profiles.specialization` value into `user_skill_domains`.
-2. `002_registration_wizard.sql` — copies legacy `technician_profiles.phone` into `users.phone`, copies `experience` into `board_experience`, then removes the old profile columns.
+2. `002_registration_wizard.sql` — copies legacy `technician_profiles.phone` into `users.phone`, copies `experience` into `board_experience`, archives the exact original specialization string, then removes the old profile columns.
 
-Do not sort or reorder these two files by number alone. The database CI workflow now applies this exact sequence and checks that phone, experience and skill-domain data survive on MySQL 8.0 and MariaDB 10.11. This verifies a synthetic pre-registration baseline; it does not prove which migrations have already been applied to the live database.
+Do not sort or reorder these two files by number alone. The database CI workflow now applies this exact sequence and checks that phone, experience and normalized skill-domain data survive on MySQL 8.0 and MariaDB 10.11. Legacy specialization strings that do not match a current skill-domain slug remain in `technician_profile_specialization_history` for future mapping. This verifies a synthetic pre-registration baseline; it does not prove which migrations have already been applied to the live database.
 
 **Administrative bootstrap warning:** the first migration promotes the oldest user to `admin` only when no admin exists. Before applying it to a real database, inspect the oldest account and verify that it belongs to the trusted platform owner. Do not rely on this automatic promotion without that check.
 
