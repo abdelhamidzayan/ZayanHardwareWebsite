@@ -8,6 +8,7 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\DeviceCatalog;
 use App\Services\AuthService;
+use App\Services\RateLimiter;
 
 final class DeviceCatalogController extends Controller
 {
@@ -33,6 +34,10 @@ final class DeviceCatalogController extends Controller
         $user = AuthService::user();
         if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
         if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
+
+        if (!RateLimiter::allowForUser('devices.suggest', (int) $user['id'], 5, 3600, 25)) {
+            return Response::json(['error' => 'rate_limited', 'message' => 'وصلت للحد المسموح من اقتراحات الموديلات. حاول مرة أخرى لاحقًا.'], 429);
+        }
 
         $manufacturerId = filter_var($this->request->input('manufacturer_id'), FILTER_VALIDATE_INT);
         $commercialName = trim($this->string('commercial_name'));
