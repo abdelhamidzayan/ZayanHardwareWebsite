@@ -493,12 +493,15 @@
     async function removeMedia(item) {
         if (item.media_uuid) {
             if (navigator.onLine) {
-                const body = new URLSearchParams({ _token: csrf });
+                const body = new URLSearchParams({ _token: csrf, revision: String(revision) });
                 try {
                     const response = await fetch(mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/delete', {
                         method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' }
                     });
+                    const result = await response.json();
+                    if (handleRevisionConflict(response, result)) return false;
                     if (!response.ok && response.status !== 404) throw new Error('تعذر حذف المرفق من المسودة.');
+                    if (response.ok) updateDraftRevision(result);
                 } catch (_) {
                     pendingDeletes.add(item.media_uuid);
                 }
@@ -515,17 +518,21 @@
         }
         renderMedia();
         markDirty();
+        return true;
     }
 
     async function syncPendingDeletes() {
         if (!navigator.onLine || !pendingDeletes.size) return true;
         for (const mediaUuid of Array.from(pendingDeletes)) {
-            const body = new URLSearchParams({ _token: csrf });
+            const body = new URLSearchParams({ _token: csrf, revision: String(revision) });
             try {
                 const response = await fetch(
                     mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(mediaUuid) + '/delete',
                     { method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
                 );
+                const result = await response.json();
+                if (handleRevisionConflict(response, result)) return false;
+                if (response.ok) updateDraftRevision(result);
                 if (response.ok || response.status === 404) pendingDeletes.delete(mediaUuid);
                 else return false;
             } catch (_) {
@@ -540,6 +547,7 @@
         if (!navigator.onLine) return false;
         const data = new FormData();
         data.append('_token', csrf);
+        data.append('revision', String(revision));
         data.append('media[]', item.blob, item.fileName || ('attachment.' + extensionFor(item.mime_type)));
         try {
             const response = await fetch(mediaBase + '/' + encodeURIComponent(draftId) + '/media', {
@@ -549,9 +557,11 @@
                 headers: { 'Accept': 'application/json' }
             });
             const result = await response.json();
+            if (handleRevisionConflict(response, result)) return false;
             if (!response.ok || !result.media || !result.media[0]) {
                 throw new Error(result.message || 'تعذر مزامنة المرفق.');
             }
+            updateDraftRevision(result);
             Object.assign(item, result.media[0]);
             item.original_url = result.media[0].original_url || result.media[0].url;
             item.uploaded = true;
@@ -561,6 +571,22 @@
             setStatus(error.message || 'تعذر مزامنة المرفق.', 'error');
             return false;
         }
+    }
+
+    function updateDraftRevision(result) {
+        const nextRevision = Number(result && result.revision);
+        if (Number.isInteger(nextRevision) && nextRevision >= 0) {
+            revision = nextRevision;
+            revisionInput.value = String(revision);
+        }
+    }
+
+    function handleRevisionConflict(response, result) {
+        if (response.status !== 409 || !result || result.error !== 'revision_conflict') return false;
+        conflict = true;
+        showConflict(result);
+        setStatus('المسودة اتعدلت من جهاز آخر. لم نستبدل أي تغييرات.', 'conflict');
+        return true;
     }
 
     function extensionFor(mime) {
@@ -576,19 +602,22 @@
     async function saveMediaState(item, index) {
         if (!item.media_uuid) {
             markDirty();
-            return;
+            return true;
         }
         try {
             if (item.renderedBlob) {
                 const renderedData = new FormData();
                 renderedData.append('_token', csrf);
+                renderedData.append('revision', String(revision));
                 renderedData.append('rendered', item.renderedBlob, 'edited-image.webp');
                 const renderedResponse = await fetch(
                     mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/rendered',
                     { method: 'POST', body: renderedData, credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
                 );
                 const renderedResult = await renderedResponse.json();
+                if (handleRevisionConflict(renderedResponse, renderedResult)) return false;
                 if (!renderedResponse.ok) throw new Error(renderedResult.message || 'تعذر حفظ نسخة الصورة المعدلة.');
+                updateDraftRevision(renderedResult);
                 item.url = renderedResult.rendered_url;
                 item.original_url = renderedResult.original_url;
                 item.renderedBlob = null;
@@ -597,6 +626,7 @@
             }
             const body = new URLSearchParams({
                 _token: csrf,
+                revision: String(revision),
                 editor_state: JSON.stringify(item.editor_state || {}),
                 sort_order: String(index)
             });
@@ -604,18 +634,25 @@
                 mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/editor',
                 { method: 'POST', body, credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
             );
-            if (!response.ok) throw new Error('تعذر حفظ تعديلات الصورة.');
+            const result = await response.json();
+            if (handleRevisionConflict(response, result)) return false;
+            if (!response.ok) throw new Error(result.message || 'تعذر حفظ تعديلات الصورة.');
+            updateDraftRevision(result);
+            item.sort_order = index;
             item.dirtyEditor = false;
             await persistBlob(item);
+            return true;
         } catch (error) {
             setStatus(error.message || 'تعذر حفظ التعديلات.', 'error');
+            return false;
         }
     }
 
     async function syncAllEditorStates() {
         for (let i = 0; i < media.length; i++) {
-            if (media[i].media_kind === 'image') await saveMediaState(media[i], i);
+            if (media[i].media_kind === 'image' && !(await saveMediaState(media[i], i))) return false;
         }
+        return true;
     }
 
     async function createServerDraftIfNeeded() {
@@ -671,7 +708,7 @@
                     if (!uploaded) { dirty = true; await persistLocal(); return false; }
                 }
             }
-            await syncAllEditorStates();
+            if (!(await syncAllEditorStates())) return false;
             setStatus('تم الحفظ والمزامنة', 'saved');
             return true;
         } catch (error) {
@@ -932,7 +969,7 @@
         radio.addEventListener('change', function () { syncModeVisibility(); markDirty(); });
     });
     modeRadios.forEach(function (radio) {
-        radio.addEventListener('change', function () {
+        radio.addEventListener('change', async function () {
             if (radio.checked && radio.value === 'audio' && detailsInput.value.trim()) {
                 if (!window.confirm('الكتابة والتسجيل اختيار واحد. التحويل للتسجيل هيمسح نص التفاصيل الحالي. تكمل؟')) {
                     modeRadios.find(function (item) { return item.value === 'text'; }).checked = true;
@@ -946,7 +983,11 @@
                     return;
                 }
                 const audio = media.find(function (item) { return item.media_kind === 'audio'; });
-                if (audio) await removeMedia(audio);
+                if (audio && !(await removeMedia(audio))) {
+                    modeRadios.find(function (item) { return item.value === 'audio'; }).checked = true;
+                    syncModeVisibility();
+                    return;
+                }
             }
             syncModeVisibility();
             markDirty();
