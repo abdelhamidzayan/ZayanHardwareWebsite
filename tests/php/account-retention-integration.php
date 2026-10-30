@@ -9,15 +9,15 @@ use App\Services\ContentEditorService;
 $root = dirname(__DIR__, 2);
 spl_autoload_register(static function (string $class) use ($root): void {
     $map = [
-        'App\\Core\\' => '/app/core/',
-        'App\\Controllers\\' => '/app/controllers/',
-        'App\\Models\\' => '/app/models/',
-        'App\\Services\\' => '/app/services/',
-        'App\\Middleware\\' => '/app/middleware/',
+        'App\Core\\' => '/app/core/',
+        'App\Controllers\\' => '/app/controllers/',
+        'App\Models\\' => '/app/models/',
+        'App\Services\\' => '/app/services/',
+        'App\Middleware\\' => '/app/middleware/',
     ];
     foreach ($map as $prefix => $directory) {
         if (str_starts_with($class, $prefix)) {
-            $file = $root . $directory . str_replace('\\\\', '/', substr($class, strlen($prefix))) . '.php';
+            $file = $root . $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
             if (is_file($file)) require $file;
             return;
         }
@@ -433,7 +433,16 @@ retentionExpect((int) $anonymized['accept_help_requests'] === 0 && $anonymized['
 $profileStmt = $pdo->prepare('SELECT phone, workshop_name, biography, level_verified FROM technician_profiles WHERE user_id = ?');
 $profileStmt->execute([$ownerId]);
 $profile = $profileStmt->fetch(PDO::FETCH_ASSOC);
-retentionExpect($profile['phone'] === null && $profile['workshop_name'] === '' && $profile['biography'] === '' && (int) $profile['level_verified'] === 0, 'Technician identity fields must be anonymized.');
+retentionExpect($profile['phone'] === null && $profile['workshop_name'] === '' && $profile['biography'] === '', 'Technician contact and personal profile fields must be anonymized.');
+retentionExpect(
+    $profile['device_focus'] === 'iphone'
+    && $profile['board_experience'] === '5-10'
+    && $profile['specialization'] === 'board'
+    && $profile['experience'] === '5-10'
+    && $profile['tech_level'] === 'board'
+    && (int) $profile['level_verified'] === 1,
+    'Technical specialization, experience, and verification must remain unchanged.'
+);
 
 $publicStmt = $pdo->prepare(
     'SELECT id, requester_user_id, helper_user_id, requester_display_name, helper_display_name
