@@ -75,18 +75,30 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
             <div class="post-composer__device-grid">
                 <label class="field">
                     <span class="field__label">الشركة المصنعة</span>
-                    <span class="post-composer__manufacturer-wrap">
+                    <div class="post-composer__brand-picker" data-brand-picker>
+                    <input type="hidden" name="manufacturer_id" data-manufacturer required value="<?= $e($selectedManufacturer) ?>">
+                    <button class="field__input post-composer__brand-trigger" type="button" data-brand-trigger aria-expanded="false">
                         <span class="post-composer__manufacturer-mark" data-manufacturer-mark>؟</span>
-                        <select class="field__input" name="manufacturer_id" data-manufacturer required>
-                            <option value="">اختار الشركة</option>
-                            <?php foreach (($manufacturers ?? []) as $manufacturer) : ?>
-                                <option value="<?= (int) $manufacturer['id'] ?>" data-slug="<?= $e($manufacturer['slug']) ?>"
-                                    <?= (string) $manufacturer['id'] === $selectedManufacturer ? 'selected' : '' ?>>
-                                    <?= $e($manufacturer['display_name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </span>
+                        <span data-manufacturer-name><?= $e((string) (array_values(array_filter($manufacturers ?? [], static fn (array $item): bool => (string) $item['id'] === $selectedManufacturer))[0]['display_name'] ?? 'اختار الشركة')) ?></span>
+                        <span class="post-composer__brand-chevron">⌄</span>
+                    </button>
+                    <div class="post-composer__brand-options" data-brand-options hidden>
+                        <?php foreach (($manufacturers ?? []) as $manufacturer) : ?>
+                            <button type="button" data-manufacturer-option
+                                data-id="<?= (int) $manufacturer['id'] ?>"
+                                data-name="<?= $e($manufacturer['display_name']) ?>"
+                                data-monogram="<?= $e(mb_substr($manufacturer['display_name'], 0, 2, 'UTF-8')) ?>"
+                                data-slug="<?= $e($manufacturer['slug']) ?>">
+                                <?php if (!empty($manufacturer['logo_path'])) : ?>
+                                    <img src="<?= $e($baseUrl . '/' . ltrim((string) $manufacturer['logo_path'], '/')) ?>" alt="" loading="lazy">
+                                <?php else : ?>
+                                    <span class="post-composer__brand-logo"><?= $e(mb_substr($manufacturer['display_name'], 0, 2, 'UTF-8')) ?></span>
+                                <?php endif; ?>
+                                <strong><?= $e($manufacturer['display_name']) ?></strong>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
                 </label>
                 <div class="field post-composer__model-field">
                     <label class="field__label" for="post-device-model">موديل الجهاز</label>
