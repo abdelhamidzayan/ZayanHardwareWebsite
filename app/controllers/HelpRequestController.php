@@ -65,6 +65,7 @@ final class HelpRequestController extends Controller
             'currentUser' => $user,
             'helpRequest' => $request,
             'messages' => $messages,
+            'publication' => HelpRequest::publicationForRequest($id),
             'isRequester' => (int) $request['requester_id'] === (int) $user['id'],
             'isHelper' => (int) $request['helper_id'] === (int) $user['id'],
         ]);
