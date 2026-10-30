@@ -97,12 +97,13 @@ final class HelpRequestController extends Controller
             $failedUploads = $initialMessageId > 0
                 ? HelpRequestMediaService::store($id, $initialMessageId, (int) $user['id'], $uploads)
                 : count($uploads);
-            if ($failedUploads > 0) $this->flash('info', 'تم إرسال الطلب، لكن تعذر حفظ بعض المرفقات.');
             NotificationService::notify(
                 (int) $helperId, (int) $user['id'], null, null, 'personal_help_request',
                 'طلب مساعدة شخصي جديد', $subject, '/help-requests/' . $id, 'personal-help-created:' . $id
             );
-            $this->flash('success', 'تم إرسال طلب المساعدة. سيظهر لك عند رد العضو.');
+            $this->flash($failedUploads > 0 ? 'info' : 'success', $failedUploads > 0
+                ? 'تم إرسال الطلب، لكن تعذر حفظ بعض المرفقات.'
+                : 'تم إرسال طلب المساعدة. سيظهر لك عند رد العضو.');
             return $this->redirect('/help-requests/' . $id);
         } catch (\DomainException) {
             return $this->fail($returnTo, 'هذا العضو لا يستقبل طلبات المساعدة حاليًا، أو أن الطلب غير صالح.');
