@@ -407,7 +407,7 @@
                                 item.url = URL.createObjectURL(item.renderedBlob);
                             }
                             item.dirtyEditor = true;
-                            markDirty();
+                            if (!item.media_uuid) markDirty();
                             await persistBlob(item);
                             await saveMediaState(item, index);
                             renderMedia();
@@ -584,6 +584,8 @@
     function handleRevisionConflict(response, result) {
         if (response.status !== 409 || !result || result.error !== 'revision_conflict') return false;
         conflict = true;
+        dirty = true;
+        persistLocal();
         showConflict(result);
         setStatus('المسودة اتعدلت من جهاز آخر. لم نستبدل أي تغييرات.', 'conflict');
         return true;
