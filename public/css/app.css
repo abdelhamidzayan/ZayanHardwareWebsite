@@ -288,6 +288,37 @@
 .account-menu__logout { margin-block-start: var(--space-2); padding-block-start: var(--space-2); border-block-start: 1px solid var(--color-border); }
 .account-menu__logout button { appearance: none; }
 
+/* Keep notifications directly beside the account dropdown. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: var(--space-2);
+}
+.notification-btn { overflow: visible; }
+.notification-btn__icon {
+  fill: currentColor;
+  stroke: none;
+}
+.notification-btn__count {
+  position: absolute;
+  inset-block-start: -.3rem;
+  inset-inline-end: -.35rem;
+  display: grid;
+  place-items: center;
+  min-inline-size: 1.2rem;
+  block-size: 1.2rem;
+  padding-inline: .22rem;
+  border: 2px solid var(--color-surface);
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 639px) {
   .app-header { padding-inline: var(--space-3); }
   .topbar { gap: .45rem; }
@@ -297,7 +328,9 @@
   .topbar__search { block-size: 2.8rem; gap: .35rem; padding-inline: .6rem; }
   .topbar__search .icon { inline-size: 1.15rem; block-size: 1.15rem; }
   .topbar__search .searchbar__input { font-size: var(--text-sm); }
-  .topbar > .icon-btn { inline-size: 2.45rem; block-size: 2.45rem; }
+  .header-actions { gap: .35rem; }
+  .header-actions > .notification-btn { inline-size: 2.45rem; block-size: 2.45rem; }
+  .notification-btn__count { min-inline-size: 1.05rem; block-size: 1.05rem; font-size: .62rem; }
   .account-menu__trigger { gap: .2rem; min-block-size: 2.45rem; padding: .15rem; }
   .account-menu__avatar { inline-size: 2.1rem; block-size: 2.1rem; }
   .account-menu__name { display: none; }
