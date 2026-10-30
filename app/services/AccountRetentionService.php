@@ -169,6 +169,25 @@ final class AccountRetentionService
             }
         }
 
+        // Migration 015 must widen the contact constraint so a deleted
+        // account can have both personal contact fields cleared safely.
+        $contactCheck = $pdo->prepare(
+            "SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA = DATABASE()
+               AND CONSTRAINT_NAME = 'chk_users_contact'
+             LIMIT 1"
+        );
+        $contactCheck->execute();
+        $contactClause = $contactCheck->fetchColumn();
+        $normalizedContactClause = strtolower(
+            preg_replace('/[\\x60\\s]+/', '', (string) $contactClause) ?? ''
+        );
+        if ($contactClause === false
+            || !str_contains($normalizedContactClause, 'account_status')
+            || !str_contains($normalizedContactClause, 'deleted')) {
+            $problems[] = 'users.chk_users_contact must allow deleted accounts without email or phone (apply migration 015)';
+        }
+
         if ($problems) {
             throw new RuntimeException(
                 'Account-retention schema is incomplete; no accounts were processed. ' . implode('; ', $problems)
@@ -207,7 +226,7 @@ final class AccountRetentionService
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                "SELECT r.id, r.user_id, u.account_status
+                "SELECT r.id, r.user_id, u.account_status, u.role
                  FROM account_deletion_requests r
                  INNER JOIN users u ON u.id = r.user_id
                  WHERE r.id = ? AND r.status = 'pending'
@@ -224,6 +243,23 @@ final class AccountRetentionService
             }
 
             $userId = (int) $request['user_id'];
+
+            // Never remove the final active administrator role. The request
+            // flow blocks the obvious last-admin case; this second guard also
+            // protects manually inserted or stale requests.
+            if (($request['role'] ?? '') === 'admin') {
+                $otherAdmins = $pdo->prepare(
+                    "SELECT COUNT(*) FROM users
+                     WHERE role = 'admin' AND account_status = 'active' AND id <> ?"
+                );
+                $otherAdmins->execute([$userId]);
+                if ((int) $otherAdmins->fetchColumn() < 1) {
+                    throw new RuntimeException(
+                        'Cannot anonymize the last active administrator. Appoint another active administrator first.'
+                    );
+                }
+            }
+
             $anonymousUsername = self::uniqueAnonymousUsername($pdo, $userId);
 
             // Technical attachments are never touched by this worker.
@@ -416,6 +452,13 @@ final class AccountRetentionService
         $pdo->prepare(
             'UPDATE admin_password_resets SET note = NULL
              WHERE user_id = ? OR admin_id = ?'
+        )->execute([$userId, $userId]);
+        // The same free-form note is copied into security_audit_logs.details_json.
+        // Keep the audit event but remove its potentially identifying payload.
+        $pdo->prepare(
+            "UPDATE security_audit_logs SET details_json = NULL
+             WHERE action = 'account.password_reset_by_admin'
+               AND (actor_user_id = ? OR target_user_id = ?)"
         )->execute([$userId, $userId]);
     }
 
