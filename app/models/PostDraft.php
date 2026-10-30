@@ -346,6 +346,16 @@ final class PostDraft extends Model
         if ($pdo->inTransaction()) $pdo->rollBack();
     }
 
+    public static function currentRevision(string $draftId, int $userId): int
+    {
+        $stmt = self::db()->prepare(
+            'SELECT revision FROM post_drafts WHERE id = ? AND user_id = ? LIMIT 1'
+        );
+        $stmt->execute([$draftId, $userId]);
+        $revision = $stmt->fetchColumn();
+        return $revision === false ? 0 : (int) $revision;
+    }
+
     public static function deleteForUser(string $id, int $userId): bool
     {
         $stmt = self::db()->prepare('SELECT m.storage_path, m.rendered_path FROM post_draft_media m JOIN post_drafts d ON d.id = m.draft_id WHERE d.id = ? AND d.user_id = ?');
