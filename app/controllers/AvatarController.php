@@ -28,8 +28,10 @@ final class AvatarController extends Controller
         if ($file === false || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) {
             return $this->notFound();
         }
+        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) return $this->notFound();
         return new Response((string) file_get_contents($file), 200, [
-            'Content-Type' => 'image/jpeg',
+            'Content-Type' => $mime,
             'Content-Length' => (string) filesize($file),
             'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=604800',
             'X-Content-Type-Options' => 'nosniff',
