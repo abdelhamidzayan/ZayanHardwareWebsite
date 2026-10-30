@@ -10,6 +10,7 @@ use App\Models\HelpRequest;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\NotificationService;
+use App\Services\HelpRequestMediaService;
 
 final class HelpRequestController extends Controller
 {
@@ -19,13 +20,13 @@ final class HelpRequestController extends Controller
         if (!$user) return $this->redirect('/login');
         $attachment = HelpRequest::attachmentForParticipant($id, (int) $user['id']);
         if (!$attachment) return $this->notFound();
-        $root = realpath(\\App\\Core\\App::root('storage/private'));
+        $root = realpath(\App\Core\App::root('storage/private'));
         if ($root === false) return $this->notFound();
-        $relative = ltrim(str_replace('\\\\', '/', (string) $attachment['file_path']), '/');
+        $relative = ltrim(str_replace('\\', '/', (string) $attachment['file_path']), '/');
         if ($relative === '' || str_contains($relative, '..')) return $this->notFound();
         $file = realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative));
         if ($file === false || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) return $this->notFound();
-        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($file) ?: 'application/octet-stream';
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: 'application/octet-stream';
         if (!in_array($mime, ['image/jpeg','image/png','image/webp','image/gif','application/pdf'], true)) return $this->notFound();
         return new Response((string) file_get_contents($file), 200, [
             'Content-Type' => $mime,
@@ -134,7 +135,7 @@ final class HelpRequestController extends Controller
         $body = trim($this->string('body'));
         try {
             $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
-        } catch (\\DomainException $e) {
+        } catch (\DomainException $e) {
             $message = match ($e->getMessage()) {
                 'too_many_attachments' => 'الحد الأقصى 8 مرفقات في الرسالة.',
                 'invalid_attachment_size' => 'أحد المرفقات أكبر من 8 ميجابايت أو غير صالح.',
