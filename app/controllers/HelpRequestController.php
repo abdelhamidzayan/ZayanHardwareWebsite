@@ -79,11 +79,23 @@ final class HelpRequestController extends Controller
         $helperId = filter_var($this->request->input('helper_id'), FILTER_VALIDATE_INT);
         $subject = trim($this->string('subject'));
         $body = trim($this->string('body'));
-        if (!$helperId || mb_strlen($subject) < 4 || mb_strlen($subject) > 180 || mb_strlen($body) < 10 || mb_strlen($body) > 5000) {
-            return $this->fail('/feed', 'اكتب عنوانًا واضحًا ووصفًا للمساعدة من 10 إلى 5000 حرف.');
+        try {
+            $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
+        } catch (\\DomainException) {
+            return $this->fail('/feed', 'راجع المرفقات؛ المسموح حتى 8 صور أو ملفات PDF، كل ملف حتى 8 ميجابايت.');
+        }
+        if (!$helperId || mb_strlen($subject) < 4 || mb_strlen($subject) > 180
+            || (mb_strlen($body) < 10 && !$uploads) || mb_strlen($body) > 5000) {
+            return $this->fail('/feed', 'اكتب عنوانًا واضحًا ووصفًا للمساعدة، أو أرفق صورة مع وصف مختصر.');
         }
         try {
             $id = HelpRequest::create((int) $user['id'], (int) $helperId, $subject, $body);
+            $initialMessages = HelpRequest::messages($id);
+            $initialMessageId = (int) ($initialMessages[0]['id'] ?? 0);
+            $failedUploads = $initialMessageId > 0
+                ? HelpRequestMediaService::store($id, $initialMessageId, (int) $user['id'], $uploads)
+                : count($uploads);
+            if ($failedUploads > 0) $this->flash('info', 'تم إرسال الطلب، لكن تعذر حفظ بعض المرفقات.');
             NotificationService::notify(
                 (int) $helperId, (int) $user['id'], null, null, 'personal_help_request',
                 'طلب مساعدة شخصي جديد', $subject, '/help-requests/' . $id, 'personal-help-created:' . $id
