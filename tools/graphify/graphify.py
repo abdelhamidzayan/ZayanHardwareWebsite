@@ -122,9 +122,9 @@ class Graph:
             r"(?<![A-Za-z0-9_$])([\\A-Z][\\A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)\s*\(",
             source,
         ):
-                line = source.count("\n", 0, call.start()) + 1
+            class_name = resolve_class(call.group(1))
             if class_name in self.php_classes:
-                line = source.count("\\n", 0, call.start()) + 1
+                line = source.count("\n", 0, call.start()) + 1
                 self.pending_static_calls.append((owner_id, class_name, call.group(2), rel, line))
 
         for data in classes:
