@@ -1,3 +1,4 @@
+<?php $currentUser = $currentUser ?? null; ?>
 <div class="page-head">
     <h2 class="page-head__title">الملف الشخصي</h2>
 </div>
@@ -53,6 +54,8 @@
             <?php else : ?>
                 <p class="profile-help-request__disabled">هذا العضو لا يستقبل طلبات المساعدة الشخصية حاليًا.</p>
             <?php endif; ?>
+        <?php elseif (!$currentUser && $profile['accept_help_requests']) : ?>
+            <a class="btn btn--primary btn--block" href="<?= $e($baseUrl) ?>/login">سجّل الدخول لطلب مساعدة شخصية</a>
         <?php endif; ?>
 
         <?php if ($currentUser && ($currentUser['role'] ?? '') === 'admin') : ?>
