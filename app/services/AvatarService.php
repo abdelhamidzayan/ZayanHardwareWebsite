@@ -23,7 +23,7 @@ final class AvatarService
             throw new \DomainException('avatar_invalid_type');
         }
         $image = @getimagesize($tmp);
-        if (!is_array($image) || $image[0] < 160 || $image[1] < 160 || $image[0] > 6000 || $image[1] > 6000) {
+        if (!is_array($image) || $image[0] < 160 || $image[1] < 160 || $image[0] > 4000 || $image[1] > 4000) {
             throw new \DomainException('avatar_invalid_dimensions');
         }
         $ratio = $image[0] / max(1, $image[1]);
