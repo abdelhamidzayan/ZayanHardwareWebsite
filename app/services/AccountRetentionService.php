@@ -234,7 +234,6 @@ final class AccountRetentionService
             "UPDATE help_public_posts
              SET requester_display_name = 'عضو محذوف',
                  requester_avatar_key = 'technician-blue',
-                 requester_user_id = NULL
              WHERE requester_user_id = ?"
         )->execute([$userId]);
 
@@ -242,7 +241,6 @@ final class AccountRetentionService
             "UPDATE help_public_posts
              SET helper_display_name = 'عضو محذوف',
                  helper_avatar_key = 'technician-blue',
-                 helper_user_id = NULL
              WHERE helper_user_id = ?"
         )->execute([$userId]);
     }
