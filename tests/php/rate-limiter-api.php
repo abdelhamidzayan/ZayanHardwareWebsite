@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use App\\Services\\RateLimiter;
+use App\Services\RateLimiter;
 
 require dirname(__DIR__, 2) . '/app/services/RateLimiter.php';
 
