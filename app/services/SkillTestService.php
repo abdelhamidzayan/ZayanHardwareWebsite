@@ -121,13 +121,17 @@ final class SkillTestService
                 $score, $passed ? 1 : 0,
             ]);
 
-            $pdo->prepare(
-                'INSERT INTO user_skill_ratings (user_id, skill_domain_id, rating, approved_assessments)
-                 VALUES (?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE rating = VALUES(rating),
-                    approved_assessments = approved_assessments + VALUES(approved_assessments),
-                    updated_at = UTC_TIMESTAMP()'
-            )->execute([$userId, (int) $test['skill_domain_id'], $score, $passed ? 1 : 0]);
+            // Failed attempts are recorded in skill_test_attempts, but must never
+            // downgrade a previously approved skill rating.
+            if ($passed) {
+                $pdo->prepare(
+                    'INSERT INTO user_skill_ratings (user_id, skill_domain_id, rating, approved_assessments)
+                     VALUES (?, ?, ?, 1)
+                     ON DUPLICATE KEY UPDATE rating = VALUES(rating),
+                        approved_assessments = approved_assessments + 1,
+                        updated_at = UTC_TIMESTAMP()'
+                )->execute([$userId, (int) $test['skill_domain_id'], $score]);
+            }
 
             $pdo->commit();
             return ['score' => $score, 'passed' => $passed, 'correct' => $correctCount, 'total' => $total];
