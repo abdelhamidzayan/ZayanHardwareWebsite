@@ -1231,6 +1231,7 @@
         getDraftId: function () { return draftId; },
         saveImageEditorDraft: function (item, state) {
             item.editor_state = state;
+            item.needsRender = true;
             item.dirtyEditor = true;
             persistBlob(item);
             markDirty();
