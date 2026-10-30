@@ -44,6 +44,7 @@
     if (originalUrl) URL.revokeObjectURL(originalUrl);
     originalUrl = URL.createObjectURL(file);
     image.onload = () => {
+      modal.hidden = false;
       const side = size();
       baseScale = Math.max(side / image.naturalWidth, side / image.naturalHeight);
       scale = 1;
@@ -51,7 +52,6 @@
       offsetY = 0;
       zoomInput.value = '1';
       draw();
-      modal.hidden = false;
       error.textContent = '';
     };
     image.src = originalUrl;
