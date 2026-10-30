@@ -69,11 +69,19 @@ jobs:
 
           mysql -h 127.0.0.1 -uroot -proot zayan_registration_test < database/migrations/015_deleted_accounts_without_contact.sql
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'account_deletion_requests' AND index_name = 'idx_account_deletion_due';")" -eq 1
+          test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'chk_users_contact' AND LOWER(CHECK_CLAUSE) LIKE '%account_status%' AND LOWER(CHECK_CLAUSE) LIKE '%deleted%';")" -eq 1
           mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "UPDATE users SET email = NULL, phone = NULL, account_status = 'deleted' WHERE id = 2;"
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM users WHERE id = 2 AND email IS NULL AND phone IS NULL AND account_status = 'deleted';")" -eq 1
-          if mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "UPDATE users SET account_status = 'active' WHERE id = 2;" 2>/dev/null; then
-            echo "Contactless active account unexpectedly passed chk_users_contact"
-            exit 1
+          if mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SHOW VARIABLES LIKE 'check_constraint_checks';" | grep -qi 'check_constraint_checks'; then
+            mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SET SESSION check_constraint_checks = ON; UPDATE users SET account_status = 'active' WHERE id = 2;" 2>/dev/null && {
+              echo "Contactless active account unexpectedly passed chk_users_contact"
+              exit 1
+            }
+          else
+            mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "UPDATE users SET account_status = 'active' WHERE id = 2;" 2>/dev/null && {
+              echo "Contactless active account unexpectedly passed chk_users_contact"
+              exit 1
+            }
           fi
           echo "Sequential registration and contactless-deleted-account checks passed on ${{ matrix.database.label }}"
       - name: Create disposable test schema
