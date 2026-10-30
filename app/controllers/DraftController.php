@@ -71,6 +71,36 @@ final class DraftController extends Controller
         ]);
     }
 
+    public function data(string $draftId): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        $draft = PostDraft::findForUser($draftId, (int) $user['id']);
+        if (!$draft) return Response::json(['error' => 'draft_not_found'], 404);
+
+        $media = [];
+        foreach ($draft['media'] as $item) {
+            $media[] = [
+                'media_uuid' => $item['media_uuid'],
+                'media_kind' => $item['media_kind'],
+                'mime_type' => $item['mime_type'],
+                'file_size' => (int) $item['file_size'],
+                'sort_order' => (int) $item['sort_order'],
+                'duration_ms' => $item['duration_ms'] !== null ? (int) $item['duration_ms'] : null,
+                'editor_state' => $item['editor_state'],
+                'url' => $this->mediaUrl($draftId, (string) $item['media_uuid']),
+            ];
+        }
+
+        return Response::json([
+            'id' => $draft['id'],
+            'revision' => (int) $draft['revision'],
+            'payload' => $draft['payload'],
+            'media' => $media,
+            'updated_at' => $draft['updated_at'],
+        ]);
+    }
+
     public function upload(string $draftId): Response
     {
         $user = AuthService::user();
