@@ -11,6 +11,7 @@ final class Issue extends Model
     {
         $stmt = self::db()->prepare(
             'SELECT i.*, u.username, u.display_name AS author_name, u.role AS author_role,
+                    u.avatar_key AS author_avatar_key, u.avatar_path AS author_avatar_path,
                     (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count,
                     (SELECT ir.id FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_id,
                     (SELECT ir.review_status FROM issue_results ir WHERE ir.issue_id = i.id ORDER BY ir.created_at DESC, ir.id DESC LIMIT 1) AS latest_result_review,
@@ -32,7 +33,8 @@ final class Issue extends Model
         $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
             'SELECT i.id, i.title, i.content_type, i.device_model AS device, i.category, i.description,
-                    i.status, i.created_at, u.display_name AS author, u.role,
+                    i.status, i.created_at, u.display_name AS author, u.username, u.role,
+                    u.avatar_key AS author_avatar_key, u.avatar_path AS author_avatar_path,
                     (SELECT COUNT(*) FROM issue_replies r
                      WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS comments
              FROM issues i
@@ -116,6 +118,19 @@ final class Issue extends Model
             ->execute([$attachmentId, $issueId]);
     }
 
+    public static function profilePosts(int $userId): array
+    {
+        $stmt = self::db()->prepare(
+            "SELECT i.id, i.title, i.content_type, i.device_model, i.category, i.status, i.created_at,
+                    (SELECT COUNT(*) FROM issue_replies r WHERE r.issue_id = i.id AND r.deleted_at IS NULL) AS reply_count
+             FROM issues i
+             WHERE i.user_id = ? AND i.deleted_at IS NULL
+             ORDER BY i.created_at DESC, i.id DESC LIMIT 50"
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
     public static function workbench(int $userId): array
     {
         $stmt = self::db()->prepare(
@@ -193,6 +208,7 @@ final class Issue extends Model
         };
         $sql = 'SELECT r.id, r.issue_id, r.user_id, r.parent_reply_id, r.body, r.created_at, r.updated_at,
                        u.username, u.display_name, u.role,
+                       u.avatar_key, u.avatar_path,
                        parent_user.display_name AS parent_author_name, parent.user_id AS parent_author_id,
                        COALESCE((SELECT SUM(re.points) FROM reputation_events re WHERE re.user_id = u.id), 0) AS reputation_points,
                        (SELECT COUNT(*) FROM reply_votes v WHERE v.reply_id = r.id) AS helpful_count
