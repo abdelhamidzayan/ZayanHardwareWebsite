@@ -42,10 +42,12 @@ final class ProfileController extends Controller
         return $this->view('profile/show', [
             'title' => $profile['display_name'],
             'active' => $isOwner ? 'profile' : '',
-            'showHeader' => false,
             'skillRatings' => User::skillRatings((int) $profile['id']),
             'profile' => [
+                'id' => (int) $profile['id'],
                 'display_name' => $profile['display_name'],
+                'avatar_url' => !empty($profile['avatar_path']) ? $this->baseUrl() . '/avatar/' . (int) $profile['id'] : $this->baseUrl() . '/assets/avatars/' . rawurlencode((string) ($profile['avatar_key'] ?? 'technician-blue')) . '.svg',
+                'accept_help_requests' => (int) ($profile['accept_help_requests'] ?? 1) === 1,
                 'username' => $profile['username'],
                 'initials' => $initials,
                 'role_label' => self::ROLES[$profile['role']] ?? 'فنّي',
@@ -58,6 +60,8 @@ final class ProfileController extends Controller
                 'joined' => substr((string) $profile['created_at'], 0, 10),
                 'is_owner' => $isOwner,
             ],
+            'profilePosts' => Issue::profilePosts((int) $profile['id']),
+            'publicHelpPosts' => HelpRequest::publicPostsByUser((int) $profile['id']),
         ]);
     }
 }
