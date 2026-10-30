@@ -144,14 +144,14 @@ final class PostDraft extends Model
         )->execute([$draftId, $mediaUuid, $kind, $path, $mime, $size, $sha256, $durationMs, $sortOrder]);
     }
 
-    public static function setRenderedPath(string $draftId, string $mediaUuid, int $userId, string $path, string $sha256): bool
+    public static function setRenderedPath(string $draftId, string $mediaUuid, int $userId, string $path, string $mimeType, string $sha256): bool
     {
         $media = self::ownedMedia($draftId, $mediaUuid, $userId);
         if (!$media || $media['media_kind'] !== 'image') return false;
         self::db()->prepare(
-            'UPDATE post_draft_media SET rendered_path = ?, rendered_sha256 = ?
+            'UPDATE post_draft_media SET rendered_path = ?, rendered_mime_type = ?, rendered_sha256 = ?
              WHERE draft_id = ? AND media_uuid = ?'
-        )->execute([$path, $sha256, $draftId, $mediaUuid]);
+        )->execute([$path, $mimeType, $sha256, $draftId, $mediaUuid]);
         return true;
     }
 
