@@ -31,6 +31,11 @@ class Graph:
         self.php_classes: dict[str, str] = {}
         self.files: list[Path] = []
         self.route_count = 0
+        self.route_lookup: dict[tuple[str, str], str] = {}
+        self.sql_queries_analyzed = 0
+        self.api_calls_found = 0
+        self.api_calls_linked = 0
+        self.api_calls_unresolved = 0
 
     def add_node(self, kind: str, key: str, label: str, path: str | None = None, **attrs: Any) -> str:
         node_id = stable_id(kind, key)
@@ -150,6 +155,7 @@ class Graph:
             route_key = f"{verb} {route_path}"
             route_id = self.add_node("route", route_key, route_key, path=self.relative(path), controller=controller_fqn, method=method)
             self.add_edge(file_id, route_id, "declares_route")
+            self.route_lookup[(verb, route_path)] = route_id
             self.route_count += 1
             controller_id = self.php_classes.get(controller_fqn)
             if controller_id:
@@ -201,6 +207,181 @@ class Graph:
             if found:
                 self.add_edge(file_id, stable_id("file", self.relative(found)), "imports_js_module")
 
+
+    def analyze_model_sql(self, path: Path, source: str) -> None:
+        """Conservatively map literal SQL fragments in models to table nodes."""
+        rel = self.relative(path)
+        file_id = stable_id("file", rel)
+        literal = re.compile(r"""(['"])((?:\\.|(?!\1)[\s\S])*)\1""")
+        table_token = r"(?:[A-Za-z_][A-Za-z0-9_$]*\.)?([A-Za-z_][A-Za-z0-9_$]*)"
+        reads: set[str] = set()
+        writes: set[str] = set()
+
+        for match in literal.finditer(source):
+            query = match.group(2)
+            if not re.search(r"\b(SELECT|INSERT|UPDATE|DELETE|REPLACE|TRUNCATE)\b", query, re.I):
+                continue
+            self.sql_queries_analyzed += 1
+            for found in re.finditer(r"\b(?:FROM|JOIN)\s+" + table_token, query, re.I):
+                reads.add(found.group(1).lower())
+            write_patterns = (
+                r"\bINSERT\s+(?:IGNORE\s+)?INTO\s+" + table_token,
+                r"\bREPLACE\s+INTO\s+" + table_token,
+                r"\bUPDATE\s+" + table_token,
+                r"\bDELETE\s+FROM\s+" + table_token,
+                r"\bTRUNCATE\s+(?:TABLE\s+)?" + table_token,
+            )
+            for pattern in write_patterns:
+                for found in re.finditer(pattern, query, re.I):
+                    writes.add(found.group(1).lower())
+
+        for name in sorted(reads - writes):
+            table_id = self.add_node("table", name, name)
+            self.add_edge(file_id, table_id, "queries_table")
+        for name in sorted(writes):
+            table_id = self.add_node("table", name, name)
+            self.add_edge(file_id, table_id, "writes_table")
+
+    @staticmethod
+    def js_call_arguments(source: str, open_index: int) -> list[str]:
+        """Split a JavaScript call's arguments without evaluating its expression."""
+        stack = ["("]
+        quote: str | None = None
+        escaped = False
+        end = len(source)
+        for index in range(open_index + 1, len(source)):
+            char = source[index]
+            if quote is not None:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == quote:
+                    quote = None
+                continue
+            if char in ("'", '"', chr(96)):
+                quote = char
+            elif char in "([{":
+                stack.append(char)
+            elif char in ")]}":
+                if stack:
+                    stack.pop()
+                if not stack:
+                    end = index
+                    break
+        body = source[open_index + 1:end]
+        args: list[str] = []
+        start = 0
+        stack = []
+        quote = None
+        escaped = False
+        for index, char in enumerate(body):
+            if quote is not None:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == quote:
+                    quote = None
+                continue
+            if char in ("'", '"', chr(96)):
+                quote = char
+            elif char in "([{":
+                stack.append(char)
+            elif char in ")]}":
+                if stack:
+                    stack.pop()
+            elif char == "," and not stack:
+                args.append(body[start:index].strip())
+                start = index + 1
+        final = body[start:].strip()
+        if final or args:
+            args.append(final)
+        return args
+
+    @staticmethod
+    def js_static_path(expression: str, source: str) -> str | None:
+        expression = expression.strip()
+        literal_match = re.fullmatch(r"""(['"])(.*?)\1""", expression, re.S)
+        if literal_match:
+            target = literal_match.group(2)
+        elif expression.startswith(chr(96)) and expression.endswith(chr(96)):
+            target = re.sub(r"\$\{[^}]*\}", "{dynamic}", expression[1:-1])
+        elif re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", expression):
+            variable = re.escape(expression)
+            assignment = re.search(
+                r"\b(?:const|let|var)\s+" + variable + r"\s*=\s*(['\"])(.*?)\1",
+                source, re.S,
+            )
+            if not assignment:
+                return None
+            target = assignment.group(2)
+        else:
+            return None
+        target = target.split("?", 1)[0].split("#", 1)[0]
+        return target if target.startswith("/") else None
+
+    def matching_route(self, verb: str | None, target: str) -> str | None:
+        candidates: list[str] = []
+        for (route_verb, route_path), route_id in self.route_lookup.items():
+            if verb is not None and route_verb != verb:
+                continue
+            pieces = re.split(r"(\{[A-Za-z_][A-Za-z0-9_]*\})", route_path)
+            regex = "".join(
+                "[^/]+" if re.fullmatch(r"\{[A-Za-z_][A-Za-z0-9_]*\}", part) else re.escape(part)
+                for part in pieces
+            )
+            if re.fullmatch(regex, target):
+                candidates.append(route_id)
+        return candidates[0] if len(candidates) == 1 else None
+
+    def analyze_js_api(self, path: Path, source: str) -> None:
+        """Connect statically resolvable fetch() calls to PHP route declarations."""
+        rel = self.relative(path)
+        file_id = stable_id("file", rel)
+        patterns = (
+            (re.compile(r"\bfetch\s*\("), "fetch"),
+            (re.compile(r"\b(?:xhr|xmlHttpRequest|httpRequest)\.open\s*\(", re.I), "xhr"),
+        )
+        for pattern, kind in patterns:
+            for match in pattern.finditer(source):
+                open_index = source.find("(", match.start())
+                args = self.js_call_arguments(source, open_index)
+                if not args:
+                    continue
+                if kind == "xhr":
+                    method_match = re.fullmatch(r"""(['"])(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\1""", args[0], re.I)
+                    verb = method_match.group(2).upper() if method_match else None
+                    expression = args[1] if len(args) > 1 else ""
+                else:
+                    expression = args[0]
+                    options = ",".join(args[1:])
+                    method_match = re.search(r"\bmethod\s*:\s*(['\"])(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\1", options, re.I)
+                    if method_match:
+                        verb = method_match.group(2).upper()
+                    elif re.search(r"\bmethod\s*:", options):
+                        verb = None
+                    else:
+                        verb = "GET"
+                self.api_calls_found += 1
+                target = self.js_static_path(expression, source)
+                route_id = self.matching_route(verb, target) if target else None
+                line = source.count("\n", 0, match.start()) + 1
+                call_key = f"{rel}:{line}:{kind}:{self.api_calls_found}"
+                api_id = self.add_node(
+                    "api_call", call_key,
+                    f"{verb or 'METHOD?'} {target or 'dynamic URL'}",
+                    path=rel, line=line, verb=verb,
+                    target=target, expression=re.sub(r"\s+", " ", expression)[:180],
+                    resolution="linked" if route_id else ("unmatched" if target else "dynamic"),
+                )
+                self.add_edge(file_id, api_id, "calls_api")
+                if route_id:
+                    self.add_edge(api_id, route_id, "calls_route")
+                    self.api_calls_linked += 1
+                else:
+                    self.api_calls_unresolved += 1
+
     def analyze_view_scripts(self, path: Path, source: str) -> None:
         file_id = stable_id("file", self.relative(path))
         pattern = r"<script\b[^>]*\bsrc\s*=\s*['\"][^'\"]*/js/([^/'\"]+\.js)(?:\?[^'\"]*)?['\"]"
@@ -225,11 +406,14 @@ class Graph:
             suffix = path.suffix.lower()
             if suffix == ".php":
                 self.analyze_php(path, source)
+                if self.relative(path).startswith("app/models/"):
+                    self.analyze_model_sql(path, source)
                 if self.relative(path) == "config/routes.php":
                     self.analyze_routes(path, source)
                 self.analyze_view_scripts(path, source)
             elif suffix == ".js":
                 self.analyze_js(path, source)
+                self.analyze_js_api(path, source)
             elif suffix == ".sql":
                 self.analyze_sql(path, source)
 
@@ -252,6 +436,10 @@ class Graph:
             "analysis": "static; application code is not executed",
             "stats": {
                 "files_scanned": len(self.files), "routes_found": self.route_count,
+                "sql_queries_analyzed": self.sql_queries_analyzed,
+                "api_calls_found": self.api_calls_found,
+                "api_calls_linked": self.api_calls_linked,
+                "api_calls_unresolved": self.api_calls_unresolved,
                 "nodes": len(nodes), "edges": len(edges),
                 "nodes_by_kind": dict(sorted(node_counts.items())),
                 "edges_by_kind": dict(sorted(edge_counts.items())),
@@ -265,7 +453,10 @@ class Graph:
         data = self.as_dict()
         nodes = {node["id"]: node for node in data["nodes"]}
         keep = {"route", "class", "table"}
-        selected = [edge for edge in data["edges"] if nodes[edge["source"]]["kind"] in keep and nodes[edge["target"]]["kind"] in keep][:260]
+        selected = [edge for edge in data["edges"] if edge["kind"] in {
+            "routes_to_controller", "routes_to_method", "foreign_key_references",
+            "queries_table", "writes_table", "calls_route"
+        ][:320]
         used: set[str] = set()
         lines = ["flowchart LR"]
         for edge in selected:
