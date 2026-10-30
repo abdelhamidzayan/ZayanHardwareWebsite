@@ -18,6 +18,9 @@
     const categoryInput = form.querySelector('[data-category]');
     const manufacturerSelect = form.querySelector('[data-manufacturer]');
     const manufacturerMark = form.querySelector('[data-manufacturer-mark]');
+    const manufacturerName = form.querySelector('[data-manufacturer-name]');
+    const brandTrigger = form.querySelector('[data-brand-trigger]');
+    const brandOptions = form.querySelector('[data-brand-options]');
     const modelQuery = form.querySelector('[data-model-query]');
     const modelIdInput = form.querySelector('[data-model-id]');
     const modelResults = form.querySelector('[data-model-results]');
@@ -240,10 +243,14 @@
     }
 
     function renderManufacturerMark() {
-        const option = manufacturerSelect.selectedOptions[0];
-        const name = option ? option.textContent.trim() : '؟';
-        manufacturerMark.textContent = name === '؟' ? '؟' : Array.from(name)[0];
+        const option = brandOptions.querySelector('[data-id="' + CSS.escape(manufacturerSelect.value) + '"]');
+        const name = option ? (option.dataset.name || '') : 'اختار الشركة';
+        manufacturerMark.textContent = option ? (option.dataset.monogram || name.slice(0, 2)) : '؟';
         manufacturerMark.dataset.slug = option?.dataset.slug || '';
+        manufacturerName.textContent = name;
+        brandOptions.querySelectorAll('[data-manufacturer-option]').forEach(function (button) {
+            button.classList.toggle('is-selected', button.dataset.id === manufacturerSelect.value);
+        });
     }
 
     async function searchModels(query) {
@@ -688,6 +695,19 @@
         markDirty();
     }
 
+    brandTrigger.addEventListener('click', function () {
+        const open = brandOptions.hidden;
+        brandOptions.hidden = !open;
+        brandTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    brandOptions.querySelectorAll('[data-manufacturer-option]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            manufacturerSelect.value = button.dataset.id || '';
+            manufacturerSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            brandOptions.hidden = true;
+            brandTrigger.setAttribute('aria-expanded', 'false');
+        });
+    });
     manufacturerSelect.addEventListener('change', function () {
         modelQuery.value = '';
         modelIdInput.value = '';
@@ -708,6 +728,7 @@
     });
     document.addEventListener('click', function (event) {
         if (!event.target.closest('.post-composer__model-field')) modelResults.hidden = true;
+        if (!event.target.closest('[data-brand-picker]')) { brandOptions.hidden = true; brandTrigger.setAttribute('aria-expanded', 'false'); }
     });
     suggestButton.addEventListener('click', function () {
         if (!manufacturerSelect.value) return;
