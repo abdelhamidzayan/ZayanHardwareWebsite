@@ -22,14 +22,14 @@
     <?php else : ?>
         <?php foreach ($notifications as $notification) : ?>
             <article class="card notification-item <?= (int) $notification['is_read'] === 1 ? 'is-read' : 'is-unread' ?>">
-                <div class="notification-item__body">
+                <div class="notification-item__identity"><?php if (!empty($notification['actor_user_id'])) : ?><img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($notification['actor_avatar_path']) ? '/avatar/' . (int) $notification['actor_user_id'] : '/assets/avatars/' . rawurlencode((string) ($notification['actor_avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="44" height="44"><?php endif; ?><div class="notification-item__body">
                     <div class="notification-item__heading">
                         <strong><?= $e($notification['title']) ?></strong>
                         <?php if ((int) $notification['is_read'] !== 1) : ?><span class="notification-item__dot" aria-label="غير مقروء"></span><?php endif; ?>
                     </div>
                     <p><?= $e($notification['body']) ?></p>
                     <span class="muted"><?= $e((string) ($notification['actor_name'] ?? 'النظام')) ?> · <?= $e($notification['created_at']) ?></span>
-                </div>
+                </div></div>
                 <form method="post" action="<?= $e($baseUrl) ?>/notifications/<?= (int) $notification['id'] ?>/open">
                     <?= $csrf() ?>
                     <button class="btn btn--secondary" type="submit">فتح</button>
