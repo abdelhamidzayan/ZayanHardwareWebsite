@@ -313,9 +313,17 @@ class Graph:
                 r"\b(?:const|let|var)\s+" + variable + r"\s*=\s*(['\"])(.*?)\1",
                 source, re.S,
             )
-            if not assignment:
-                return None
-            target = assignment.group(2)
+            if assignment:
+                target = assignment.group(2)
+            else:
+                replacement_path = re.search(
+                    r"\b(?:const|let|var)\s+" + variable
+                    + r"\s*=\s*[^;]*?\.replace\s*\([^,]+,\s*(['\"])(/[^'\"]+)\1",
+                    source, re.S,
+                )
+                if not replacement_path:
+                    return None
+                target = replacement_path.group(2)
         else:
             return None
         target = target.split("?", 1)[0].split("#", 1)[0]
@@ -390,6 +398,115 @@ class Graph:
             if (self.root / target_rel).is_file():
                 self.add_edge(file_id, stable_id("file", target_rel), "loads_script")
 
+
+    @staticmethod
+    def php_attribute_path(value: str) -> str | None:
+        path = re.sub(r"<\?.*?\?>", "{dynamic}", value, flags=re.S).strip()
+        path = re.sub(r"^\{dynamic\}", "", path)
+        path = re.sub(r"^https?://[^/]+", "", path)
+        return path if path.startswith("/") else None
+
+    @staticmethod
+    def js_concat_path(expression: str, values: dict[str, str]) -> str | None:
+        expression = expression.strip()
+        if not expression:
+            return None
+        tokens = re.split(r"\s*\+\s*", expression)
+        pieces: list[str] = []
+        for token in tokens:
+            token = token.strip().strip("() ")
+            if token in values:
+                pieces.append(values[token])
+                continue
+            literal = re.fullmatch(r"""(['"])(.*?)\1""", token, re.S)
+            if literal:
+                pieces.append(literal.group(2))
+            elif token:
+                pieces.append("{dynamic}")
+        path = "".join(pieces)
+        path = re.sub(r"^\{dynamic\}", "", path)
+        path = path.split("?", 1)[0].split("#", 1)[0]
+        return path if path.startswith("/") else None
+
+    def analyze_view_api(self, path: Path, source: str, sources: dict[Path, str]) -> None:
+        """Resolve JS endpoint variables from the PHP view that loads each script."""
+        rel = self.relative(path)
+        view_id = stable_id("file", rel)
+        form_actions: list[tuple[str, str]] = []
+
+        for action_match in re.finditer(r"\baction\s*=\s*(['\"])(.*?)\1", source, re.I | re.S):
+            target = self.php_attribute_path(action_match.group(2))
+            if not target:
+                continue
+            form_start = source.rfind("<form", 0, action_match.start())
+            tag_prefix = source[form_start:action_match.start()] if form_start >= 0 else ""
+            method_match = re.search(r"\bmethod\s*=\s*(['\"])(GET|POST|PUT|PATCH|DELETE)\1", tag_prefix, re.I)
+            verb = method_match.group(2).upper() if method_match else "GET"
+            route_id = self.matching_route(verb, target)
+            if route_id:
+                form_actions.append((target, route_id))
+                self.add_edge(view_id, route_id, "submits_to_route")
+
+        data_paths: dict[str, str] = {}
+        for attr_match in re.finditer(r"\bdata-([a-z0-9-]+)\s*=\s*(['\"])(.*?)\2", source, re.I | re.S):
+            name = attr_match.group(1)
+            target = self.php_attribute_path(attr_match.group(3))
+            if not target:
+                continue
+            parts = name.split("-")
+            property_name = parts[0] + "".join(part[:1].upper() + part[1:] for part in parts[1:])
+            data_paths[property_name] = target
+            default_verb = "POST" if any(word in name for word in ("save-url", "suggest-url")) else "GET"
+            route_id = self.matching_route(default_verb, target)
+            if route_id:
+                self.add_edge(view_id, route_id, "configures_route")
+
+        source_by_rel = {self.relative(file_path): text for file_path, text in sources.items()}
+        for edge in list(self.edges.values()):
+            if edge["kind"] != "loads_script" or edge["source"] != view_id:
+                continue
+            script_node = self.nodes.get(edge["target"])
+            if not script_node or "path" not in script_node:
+                continue
+            script_rel = script_node["path"]
+            script_source = source_by_rel.get(script_rel, "")
+            if not script_source:
+                continue
+            values = dict(data_paths)
+            for assignment in re.finditer(
+                r"\b(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*[^;\n]*?\.dataset\.([A-Za-z_$][A-Za-z0-9_$]*)",
+                script_source,
+            ):
+                if assignment.group(2) in data_paths:
+                    values[assignment.group(1)] = data_paths[assignment.group(2)]
+
+            # A fetch(form.action) inherits the action of the form on this page.
+            if len(form_actions) == 1 and re.search(r"\bform\.action\b", script_source):
+                values["formAction"] = form_actions[0][0]
+
+            for api_node in list(self.nodes.values()):
+                if api_node["kind"] != "api_call" or api_node.get("path") != script_rel:
+                    continue
+                if api_node.get("resolution") == "linked":
+                    continue
+                expression = api_node.get("expression", "")
+                if expression.strip() in ("form.action", "this.action") and "formAction" in values:
+                    target = values["formAction"]
+                elif any(re.search(r"\b" + re.escape(name) + r"\b", expression) for name in values):
+                    target = self.js_concat_path(expression, values)
+                else:
+                    continue
+                if not target:
+                    continue
+                route_id = self.matching_route(api_node.get("verb"), target)
+                if not route_id:
+                    continue
+                api_node["target"] = target
+                api_node["resolution"] = "linked"
+                self.add_edge(api_node["id"], route_id, "calls_route")
+                self.api_calls_linked += 1
+                self.api_calls_unresolved = max(0, self.api_calls_unresolved - 1)
+
     def build(self) -> None:
         self.discover()
         sources: dict[Path, str] = {}
@@ -416,6 +533,11 @@ class Graph:
                 self.analyze_js_api(path, source)
             elif suffix == ".sql":
                 self.analyze_sql(path, source)
+
+        source_by_rel = {self.relative(path): source for path, source in sources.items()}
+        for path, source in sources.items():
+            if self.relative(path).startswith("app/views/"):
+                self.analyze_view_api(path, source, sources)
 
         by_sequence: dict[str, list[str]] = defaultdict(list)
         for node in self.nodes.values():
