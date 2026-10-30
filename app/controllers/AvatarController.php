@@ -19,7 +19,7 @@ final class AvatarController extends Controller
             return $this->notFound();
         }
         $relative = (string) $user['avatar_path'];
-        if (!preg_match('~^avatars/' . $userId . '/[a-f0-9]{40}\.jpg$~', $relative)) {
+        if (!preg_match('~^avatars/' . $userId . '/[a-f0-9]{40}\.(?:jpg|png|webp)$~', $relative)) {
             return $this->notFound();
         }
         $root = realpath(\App\Core\App::root('storage/private'));
@@ -28,7 +28,7 @@ final class AvatarController extends Controller
         if ($file === false || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) {
             return $this->notFound();
         }
-        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
         if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) return $this->notFound();
         return new Response((string) file_get_contents($file), 200, [
             'Content-Type' => $mime,
