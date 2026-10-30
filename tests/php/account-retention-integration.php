@@ -151,15 +151,12 @@ $fixtures = [
     "CREATE TABLE IF NOT EXISTS technician_profiles (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         user_id BIGINT UNSIGNED NOT NULL,
-        phone VARCHAR(32) NULL,
-        device_focus VARCHAR(32) NOT NULL DEFAULT 'iphone',
-        board_experience VARCHAR(32) NOT NULL DEFAULT '5-10',
-        specialization VARCHAR(80) NOT NULL DEFAULT 'board',
-        experience VARCHAR(32) NOT NULL DEFAULT '5-10',
-        workshop_name VARCHAR(120) NOT NULL DEFAULT '',
-        biography TEXT NOT NULL,
-        tech_level VARCHAR(24) NOT NULL DEFAULT 'board',
-        level_verified TINYINT(1) NOT NULL DEFAULT 1,
+        device_focus ENUM('iphone','android') NULL,
+        tech_level ENUM('fast','board') NOT NULL DEFAULT 'fast',
+        board_experience ENUM('lt1','1-3','3-5','5-10','gt10') NULL,
+        level_verified TINYINT(1) NOT NULL DEFAULT 0,
+        workshop_name VARCHAR(120) NULL,
+        biography TEXT NULL,
         PRIMARY KEY (id),
         UNIQUE KEY uq_test_profile_user (user_id),
         CONSTRAINT fk_test_profile_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
@@ -272,9 +269,9 @@ try {
 
     $pdo->prepare(
         "INSERT INTO technician_profiles
-            (user_id, phone, device_focus, board_experience, specialization, experience, workshop_name, biography, tech_level, level_verified)
-         VALUES (?, ?, 'iphone', '5-10', 'board', '5-10', 'Owner Workshop', 'Profile biography', 'board', 1)"
-    )->execute([$ownerId, '+201000000001']);
+            (user_id, device_focus, tech_level, board_experience, level_verified, workshop_name, biography)
+         VALUES (?, 'iphone', 'board', '5-10', 1, 'Owner Workshop', 'Profile biography')"
+    )->execute([$ownerId]);
 
     // Expertise and verified assessment history are technical contributions,
     // not account identity; all of them must survive anonymization.
@@ -418,7 +415,16 @@ try {
     throw $e;
 }
 
-// Editing the self-declared skill list must not reset earned ratings.
+// Both registration-stage and profile-editing methods must use the final
+// post-migration schema and preserve assessment-backed skill ratings.
+$registrationUsername = 'retention_owner_' . $ownerId . '_updated';
+App\Models\User::saveRegistrationStage2(
+    $ownerId,
+    $registrationUsername,
+    'power',
+    '5-10',
+    ['iphone']
+);
 App\Models\User::saveOptionalSkills($ownerId, ['power'], 'Updated Workshop');
 $editedRatingStmt = $pdo->prepare('SELECT rating, approved_assessments FROM user_skill_ratings WHERE user_id = ? AND skill_domain_id = ?');
 $editedRatingStmt->execute([$ownerId, $powerDomainId]);
@@ -466,18 +472,16 @@ retentionExpect($anonymized['email'] === null && $anonymized['phone'] === null, 
 retentionExpect($anonymized['avatar_path'] === null && $anonymized['avatar_key'] === 'technician-blue', 'Personal avatar reference must be cleared.');
 retentionExpect((int) $anonymized['accept_help_requests'] === 0 && $anonymized['last_login_at'] === null, 'Account access and personal help must be disabled.');
 
-$profileStmt = $pdo->prepare('SELECT phone, workshop_name, biography, level_verified FROM technician_profiles WHERE user_id = ?');
+$profileStmt = $pdo->prepare('SELECT device_focus, tech_level, board_experience, level_verified, workshop_name, biography FROM technician_profiles WHERE user_id = ?');
 $profileStmt->execute([$ownerId]);
 $profile = $profileStmt->fetch(PDO::FETCH_ASSOC);
-retentionExpect($profile['phone'] === null && $profile['workshop_name'] === '' && $profile['biography'] === '', 'Technician contact and personal profile fields must be anonymized.');
+retentionExpect($profile['workshop_name'] === null && $profile['biography'] === null, 'Personal workshop and biography fields must be anonymized.');
 retentionExpect(
     $profile['device_focus'] === 'iphone'
     && $profile['board_experience'] === '5-10'
-    && $profile['specialization'] === 'board'
-    && $profile['experience'] === '5-10'
     && $profile['tech_level'] === 'board'
     && (int) $profile['level_verified'] === 1,
-    'Technical specialization, experience, and verification must remain unchanged.'
+    'Technical device focus, experience, level, and verification must remain unchanged.'
 );
 
 $deviceStmt = $pdo->prepare('SELECT device_type FROM user_device_specializations WHERE user_id = ?');
@@ -548,9 +552,9 @@ retentionExpect($repeat['due'] === 0 && $repeat['processed'] === 0, 'Repeated wo
 $rollbackPublic = createPublicHelpPost($pdo, $rollbackUserId, $helperId, 'Rollback public article');
 $pdo->prepare(
     "INSERT INTO technician_profiles
-        (user_id, phone, device_focus, board_experience, specialization, experience, workshop_name, biography, tech_level, level_verified)
-     VALUES (?, ?, 'android', '1-3', 'board', '1-3', 'Rollback Workshop', 'Keep this profile if transaction fails', 'board', 1)"
-)->execute([$rollbackUserId, '+201000000003']);
+        (user_id, device_focus, tech_level, board_experience, level_verified, workshop_name, biography)
+     VALUES (?, 'android', 'board', '1-3', 1, 'Rollback Workshop', 'Keep this profile if transaction fails')"
+)->execute([$rollbackUserId]);
 $pdo->prepare(
     "INSERT INTO account_deletion_requests (user_id, status, scheduled_purge_at)
      VALUES (?, 'pending', DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE))"
