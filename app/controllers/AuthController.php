@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\App;
 use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
@@ -25,6 +26,7 @@ final class AuthController extends Controller
     public function login(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
+            App::security('auth.csrf.rejected', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
 
             return $this->redirect('/login');
@@ -36,6 +38,7 @@ final class AuthController extends Controller
         $ipBucket = 'login:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
         $idBucket = 'login:id:' . hash('sha256', strtolower(trim($identifier)));
         if (RateLimiter::tooMany($ipBucket, 20, 900) || RateLimiter::tooMany($idBucket, 5, 900)) {
+            App::security('auth.login.rate_limited', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد 15 دقيقة.');
 
             return $this->redirect('/login');
@@ -46,11 +49,13 @@ final class AuthController extends Controller
         if ($result['error'] === 'invalid') {
             RateLimiter::hit($ipBucket);
             RateLimiter::hit($idBucket);
+            App::security('auth.login.failed', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             $this->flash('error', 'بيانات الدخول غير صحيحة.');
 
             return $this->redirect('/login');
         }
         if ($result['error'] === 'blocked') {
+            App::security('auth.login.blocked_account', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             $this->flash('error', 'هذا الحساب موقوف. تواصل مع الإدارة.');
 
             return $this->redirect('/login');
@@ -59,6 +64,7 @@ final class AuthController extends Controller
         $user = $result['user'];
         User::markLoggedIn((int) $user['id'], $user['new_hash'] ?? null);
         AuthService::login((int) $user['id']);
+        App::security('auth.login.succeeded', ['user_id' => (int) $user['id'], 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
 
         $this->flash('success', 'تم تسجيل الدخول بنجاح.');
 
@@ -68,11 +74,14 @@ final class AuthController extends Controller
     public function logout(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
+            App::security('auth.csrf.rejected', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
 
             return $this->redirect('/feed');
         }
 
+        $currentUser = AuthService::user();
+        App::audit('auth.logout', ['user_id' => (int) ($currentUser['id'] ?? 0)]);
         AuthService::logout();
         $this->flash('info', 'تم تسجيل الخروج.');
 
@@ -88,12 +97,14 @@ final class AuthController extends Controller
     public function register(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
+            App::security('auth.csrf.rejected', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
             return $this->redirect('/register');
         }
 
         $bucket = 'register:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
         if (RateLimiter::tooMany($bucket, 5, 3600)) {
+            App::security('auth.register.rate_limited', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد قليل.');
             return $this->redirect('/register');
         }
@@ -105,6 +116,7 @@ final class AuthController extends Controller
         // Registration creates an active account, so establish the session immediately.
         $userId = (int) ($result['userId'] ?? 0);
         if ($userId > 0) {
+            App::audit('account.registered', ['user_id' => $userId]);
             User::markLoggedIn($userId);
             AuthService::login($userId);
             $this->flash('success', 'تم إنشاء حسابك وتسجيل دخولك بنجاح.');
