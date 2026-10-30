@@ -8,7 +8,7 @@ use App\Services\AuthService;
 final class Router
 {
     /** Route placeholders whose controller parameters are declared as integers. */
-    private const INTEGER_ROUTE_PARAMETERS = ['id', 'replyId', 'updateId', 'userId'];
+    private const INTEGER_ROUTE_PARAMETERS = ['id', 'userId'];
 
     /** @var array<int, array{0:string,1:string,2:array|callable}> */
     private array $routes = [];
