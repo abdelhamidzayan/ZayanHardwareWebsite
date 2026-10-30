@@ -34,11 +34,12 @@ for ($i = 0; $i < 32; $i++) {
     </header>
 
     <div class="issue-card__body">
-        <?php if (($issue['content_type'] ?? 'help_request') === 'help_request' && !empty($issue['device'])) : ?>
-            <span class="tag tech"><?= $e($issue['device']) ?></span>
-        <?php else : ?>
-            <span class="tag"><?= $e($issue['type_label'] ?? 'منشور فني') ?></span>
-        <?php endif; ?>
+        <span class="tag"><?= $e($issue['type_label'] ?? 'معلومة فنية') ?></span>
+        <?php
+        $deviceLabel = trim((string) ($issue['manufacturer_name'] ?? '') . ' ' .
+            (string) ($issue['model_code'] ?? $issue['model_commercial_name'] ?? $issue['device'] ?? ''));
+        ?>
+        <?php if ($deviceLabel !== '') : ?><span class="tag tech"><?= $e($deviceLabel) ?></span><?php endif; ?>
         <h3 class="issue-card__title" dir="auto"><a class="issue-card__title-link" href="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>"><?= $e($issue['title']) ?></a></h3>
         <p class="issue-card__excerpt" dir="auto"><?= $e($issue['excerpt']) ?></p>
     </div>
