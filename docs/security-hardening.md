@@ -2,7 +2,7 @@
 
 ## Rate limits
 
-Migration 014 creates the persistent `rate_limit_buckets` table. `RateLimiter::allowForUser()` atomically checks and increments both an account bucket and a hashed source-IP bucket in one transaction. Controller checks run before the associated write or file move.
+Migration 014 creates the persistent `rate_limit_buckets` table. Apply migration 014 to the target database before deploying the code that calls this limiter; the application does not run it automatically. `RateLimiter::allowForUser()` atomically checks and increments both an account bucket and a hashed source-IP bucket in one transaction. Controller checks run before the associated write or file move.
 
 Current limits use fixed windows:
 
