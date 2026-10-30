@@ -15,7 +15,9 @@ jobs:
           php-version: '8.2'
       - name: Check PHP syntax
         run: |
-          find app bin config public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app bin config public tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Verify CLI boot does not start a browser session
+        run: php tests/php/cli-boot.php
       - name: Check JavaScript syntax
         run: |
           find public/js -type f -name '*.js' -print0 | xargs -0 -n1 node --check
