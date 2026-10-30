@@ -94,6 +94,7 @@ final class DraftPublishingService
 
             $deviceLabel = (string) $modelRow['commercial_name'];
             if (!empty($modelRow['model_code'])) $deviceLabel .= ' (' . (string) $modelRow['model_code'] . ')';
+            $deviceLabel = mb_substr($deviceLabel, 0, 120);
             $stepsJson = $normalizedSteps
                 ? json_encode($normalizedSteps, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)
                 : null;
