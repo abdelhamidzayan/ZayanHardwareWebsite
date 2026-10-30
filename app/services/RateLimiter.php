@@ -89,8 +89,8 @@ final class RateLimiter
                     'DELETE FROM rate_limit_buckets
                      WHERE updated_at < (UTC_TIMESTAMP() - INTERVAL 2 DAY)'
                 );
-            } catch (\\Throwable $cleanupError) {
-                \\App\\Core\\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
+            } catch (\Throwable $cleanupError) {
+                \App\Core\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
             }
         }
         return true;
