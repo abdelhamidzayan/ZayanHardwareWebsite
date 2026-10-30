@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace App\\Controllers;
+namespace App\Controllers;
 
-use App\\Core\\Controller;
-use App\\Core\\Csrf;
-use App\\Core\\Response;
-use App\\Services\\AuthService;
+use App\Core\Controller;
+use App\Core\Csrf;
+use App\Core\Response;
+use App\Services\AuthService;
 
 final class AdminUpdateController extends Controller
 {
@@ -76,7 +76,7 @@ final class AdminUpdateController extends Controller
             $output = stream_get_contents($pipes[1]) ?: '';
             fclose($pipes[1]);
             $exitCode = proc_close($process);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if (is_resource($process)) {
                 proc_terminate($process);
                 proc_close($process);
