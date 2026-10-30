@@ -363,6 +363,29 @@
             card.dataset.mediaItem = '';
             card.dataset.mediaUuid = item.media_uuid || item.local_id;
             card.dataset.kind = item.media_kind;
+            card.draggable = true;
+            card.addEventListener('dragstart', function (event) {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', String(item.media_uuid || item.local_id));
+                card.classList.add('is-dragging');
+            });
+            card.addEventListener('dragend', function () {
+                card.classList.remove('is-dragging');
+                mediaList.querySelectorAll('.is-drag-over').forEach(function (node) { node.classList.remove('is-drag-over'); });
+            });
+            card.addEventListener('dragover', function (event) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                card.classList.add('is-drag-over');
+            });
+            card.addEventListener('dragleave', function () { card.classList.remove('is-drag-over'); });
+            card.addEventListener('drop', function (event) {
+                event.preventDefault();
+                card.classList.remove('is-drag-over');
+                const sourceId = event.dataTransfer.getData('text/plain');
+                const targetId = String(item.media_uuid || item.local_id);
+                if (sourceId && sourceId !== targetId) reorderMedia(sourceId, targetId);
+            });
             if (item.media_kind === 'image') {
                 const img = document.createElement('img');
                 img.src = item.url;
@@ -432,6 +455,23 @@
             card.appendChild(tools);
             mediaList.appendChild(card);
         });
+    }
+
+    function reorderMedia(sourceId, targetId) {
+        const visible = media.filter(function (item) { return item.media_kind !== 'audio'; });
+        const from = visible.findIndex(function (item) { return String(item.media_uuid || item.local_id) === sourceId; });
+        const to = visible.findIndex(function (item) { return String(item.media_uuid || item.local_id) === targetId; });
+        if (from < 0 || to < 0 || from === to) return;
+        const [moved] = visible.splice(from, 1);
+        visible.splice(to, 0, moved);
+        let position = 0;
+        media = media.map(function (item) {
+            return item.media_kind === 'audio' ? item : visible[position++];
+        });
+        media.forEach(function (item, index) { item.sort_order = index; });
+        renderMedia();
+        markDirty();
+        syncAllEditorStates();
     }
 
     function moveMedia(index, direction) {
