@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\App;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Issue;
@@ -596,7 +597,7 @@ final class IssueController extends Controller
 
     private function privateFileResponse(string $storedPath, string $filename, array $allowedMimes): Response
     {
-        $privateRoot = realpath(\App\\Core\App::root('storage/private'));
+        $privateRoot = realpath(App::root('storage/private'));
         if ($privateRoot === false) return $this->notFound();
 
         $storedPath = str_replace('\\', '/', $storedPath);
