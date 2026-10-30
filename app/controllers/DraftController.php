@@ -262,7 +262,7 @@ final class DraftController extends Controller
         if (!move_uploaded_file($tmp, $destination)) return Response::json(['error' => 'storage_failed'], 500);
         $relative = 'drafts/' . $draftId . '/' . $filename;
         $sha = hash_file('sha256', $destination);
-        if (!is_string($sha) || !PostDraft::setRenderedPath($draftId, $mediaUuid, (int) $user['id'], $relative, $sha)) {
+        if (!is_string($sha) || !PostDraft::setRenderedPath($draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha)) {
             @unlink($destination);
             return Response::json(['error' => 'save_failed'], 500);
         }
