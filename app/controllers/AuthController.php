@@ -167,7 +167,7 @@ final class AuthController extends Controller
             if (!is_string($value)) unset($old[$key]);
         }
         $countries = require dirname(__DIR__, 2) . '/config/countries.php';
-        $firstStepErrors = ['display_name', 'contact', 'password'];
+        $firstStepErrors = ['display_name', 'contact', 'password', 'terms_acceptance'];
         $profileErrors = ['profile_bio', 'workshop_name'];
         if (!$errors || count(array_intersect(array_keys($errors), $firstStepErrors)) > 0) {
             $activeStep = 1;
