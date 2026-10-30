@@ -123,7 +123,7 @@ final class AccountRetentionService
                 "UPDATE account_deletion_requests
                  SET status = 'completed',
                      completed_at = UTC_TIMESTAMP(),
-                     note = 'Identity anonymized; all technical content and related files retained.'
+                     note = 'Identity anonymized; all technical posts and technical files retained.'
                  WHERE user_id = ? AND status = 'pending'"
             )->execute([$userId]);
 
@@ -140,6 +140,7 @@ final class AccountRetentionService
                     'attachments_schematics_and_history' => 'retained',
                     'personal_help_content_and_drafts' => 'retained',
                     'account_identity_and_profile' => 'anonymized',
+                    'custom_avatar_binary' => 'removed',
                 ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             ]);
 
