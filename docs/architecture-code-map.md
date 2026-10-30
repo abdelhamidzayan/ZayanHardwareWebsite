@@ -28,6 +28,10 @@ flowchart TD
 - `Controller` is the shared base for rendering views, internal redirects, 404 responses, and flash messages.
 - `Model` delegates database access to `Database::connection()`; models use PDO prepared statements and transactions where a multi-step write must be atomic.
 
+## Generated Graphify graph
+
+The repeatable source scanner is maintained in `tools/graphify/graphify.py`. It generates the full machine-readable dependency graph at `.graphify/graph.json` and a focused Mermaid view at `.graphify/architecture.mmd`. See [Graphify usage and accuracy boundaries](graphify.md). The JSON graph is the detailed output; this hand-written architecture map remains a navigational summary.
+
 ## Route-to-controller map
 
 | Route family | Entry controller | Main downstream dependencies |
