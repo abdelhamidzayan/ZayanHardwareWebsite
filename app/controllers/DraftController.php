@@ -414,6 +414,26 @@ final class DraftController extends Controller
             $step = trim($step);
             if ($step !== '') $clean['steps'][] = mb_substr($step, 0, 2000);
         }
+        $audio = $payload['audio'] ?? null;
+        if ($clean['details_mode'] === 'audio' && is_array($audio)) {
+            $duration = max(0, min(1800000, (int) ($audio['duration_ms'] ?? 0)));
+            $trimStart = max(0, min($duration, (int) ($audio['trim_start_ms'] ?? 0)));
+            $trimEnd = max($trimStart, min($duration, (int) ($audio['trim_end_ms'] ?? $duration)));
+            $waveform = $audio['waveform'] ?? [];
+            if (!is_array($waveform)) $waveform = [];
+            $clean['audio'] = [
+                'duration_ms' => $duration,
+                'trim_start_ms' => $trimStart,
+                'trim_end_ms' => $trimEnd,
+                'waveform' => array_slice(array_map(
+                    static fn ($value): float => max(0.0, min(1.0, (float) $value)),
+                    array_filter($waveform, static fn ($value): bool => is_numeric($value))
+                ), 0, 128),
+            ];
+        } else {
+            $clean['audio'] = null;
+        }
+
         $clean['updated_at_local'] = gmdate('c');
         return $clean;
     }
