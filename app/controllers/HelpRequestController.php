@@ -10,6 +10,7 @@ use App\Models\HelpRequest;
 use App\Services\AuthService;
 use App\Services\NotificationService;
 use App\Services\HelpRequestMediaService;
+use App\Services\RateLimiter;
 
 final class HelpRequestController extends Controller
 {
@@ -27,7 +28,7 @@ final class HelpRequestController extends Controller
         if ($file === false || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) return $this->notFound();
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: 'application/octet-stream';
         if (!in_array($mime, ['image/jpeg','image/png','image/webp','image/gif','application/pdf'], true)) return $this->notFound();
-        return new Response((string) file_get_contents($file), 200, [
+        return Response::streamFile($file, 0, (int) filesize($file), 200, [
             'Content-Type' => $mime,
             'Content-Length' => (string) filesize($file),
             'Content-Disposition' => 'inline; filename="help-attachment-' . $id . '"',
@@ -76,6 +77,9 @@ final class HelpRequestController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/feed', 'انتهت صلاحية الصفحة. أعد المحاولة.');
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+        if (!RateLimiter::allowForUser('help.create', (int) $user['id'], 3, 3600, 15)) {
+            return $this->fail('/feed', 'أرسلت طلبات مساعدة كثيرة خلال فترة قصيرة. حاول مرة أخرى لاحقًا.');
+        }
         $returnTo = $this->string('return_to');
         if (preg_match('~^/profile/[a-z0-9_]{3,20}$~', $returnTo) !== 1) $returnTo = '/feed';
         $helperId = filter_var($this->request->input('helper_id'), FILTER_VALIDATE_INT);
@@ -149,6 +153,9 @@ final class HelpRequestController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->redirect('/help-requests/' . $id);
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+        if (!RateLimiter::allowForUser('help.message', (int) $user['id'], 24, 300, 100)) {
+            return $this->fail('/help-requests/' . $id, 'أرسلت رسائل كثيرة خلال فترة قصيرة. انتظر قليلًا ثم حاول مرة أخرى.');
+        }
         $body = trim($this->string('body'));
         try {
             $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
