@@ -52,7 +52,12 @@ final class FeedController extends Controller
             $issue['excerpt'] = mb_strimwidth($description, 0, 180, '…', 'UTF-8');
             $issue['solved'] = ($issue['status'] ?? '') === 'resolved';
             $issue['comments'] = (int) ($issue['comments'] ?? 0);
-            $issue['audio'] = !empty($issue['audio_path']);
+            $issue['audio'] = !empty($issue['audio_path'])
+                ? gmdate('i:s', (int) round(max(0, (
+                    (int) ($issue['audio_trim_end_ms'] ?? $issue['audio_duration_ms'] ?? 0)
+                    - (int) ($issue['audio_trim_start_ms'] ?? 0)
+                )) / 1000))
+                : '';
             $issue['audio_src'] = !empty($issue['audio_path']) ? '/issues/' . (int) $issue['id'] . '/audio' : '';
             if ($issue['audio'] && $issue['excerpt'] === '') $issue['excerpt'] = 'تسجيل صوتي مرفق';
         }
