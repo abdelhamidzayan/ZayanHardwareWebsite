@@ -217,30 +217,13 @@ final class ContentEditorService
         return $html;
     }
 
-    /** Remove orphaned inline media after a body is edited; ordinary attachments are untouched. */
+    /**
+     * Published inline media is retained even when an edit removes its token
+     * from the current body. Previous body versions may still reference the
+     * attachment, so automatic pruning would destroy revision history.
+     */
     public static function pruneUnusedInlineMedia(int $issueId): void
     {
-        $referenced = [];
-        foreach (Issue::allInlineContent($issueId) as $body) {
-            if (preg_match_all('/\[\[image:(\d+)\]\]/', $body, $matches)) {
-                foreach ($matches[1] as $id) $referenced[(int) $id] = true;
-            }
-        }
-
-        $privateRoot = realpath(App::root('storage/private'));
-        foreach (Issue::inlineAttachments($issueId) as $attachment) {
-            $id = (int) $attachment['id'];
-            if (isset($referenced[$id])) continue;
-            if ($privateRoot !== false) {
-                $relative = ltrim(str_replace('\\', '/', (string) $attachment['file_path']), '/');
-                if (!str_contains($relative, '..')) {
-                    $target = realpath($privateRoot . DIRECTORY_SEPARATOR . $relative);
-                    if ($target !== false && str_starts_with($target, $privateRoot . DIRECTORY_SEPARATOR) && is_file($target)) {
-                        @unlink($target);
-                    }
-                }
-            }
-            Issue::deleteInlineAttachment($issueId, $id);
-        }
+        // Intentionally retain attachment rows and their files.
     }
 }
