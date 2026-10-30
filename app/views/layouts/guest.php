@@ -27,6 +27,7 @@ $authPage = $authPage ?? false;
             <?php if (!$authPage) : ?>
                 <a class="btn btn--primary guest-header__link guest-header__login" href="<?= $e($baseUrl) ?>/login">دخول</a>
             <?php endif; ?>
+            <a class="guest-header__link" href="<?= $e($baseUrl) ?>/help-library">مكتبة المساعدات</a>
             <a class="guest-header__link guest-header__help" href="<?= $e($baseUrl) ?>/help"<?= (($title ?? '') === 'المساعدة والدعم') ? ' aria-current="page"' : '' ?>>المساعدة</a>
             <a class="guest-header__link guest-header__policy-link" href="<?= $e($baseUrl) ?>/policies"<?= (($title ?? '') === 'سياسات الموقع') ? ' aria-current="page"' : '' ?>>السياسات</a>
         </nav>
