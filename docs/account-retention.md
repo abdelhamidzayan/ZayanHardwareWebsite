@@ -7,6 +7,7 @@ The retention worker is not a schema migration tool. Before deploying it or sche
 - `users.account_status` supports `active`, `deletion_pending`, and `deleted`, and the users/profile columns used by the anonymization service exist.
 - `account_deletion_requests`, `security_audit_logs`, and `admin_password_resets` exist (created by the full account-permissions schema in `002_final_registration_permissions.sql`).
 - `terms_acceptances` exists (migration 013 can create it when absent).
+- `users.chk_users_contact` permits both contact fields to be NULL only when `account_status = 'deleted'` (migration 015).
 - `push_subscriptions` exists when Web Push is enabled (migration 006).
 - `help_public_posts` and the personal-help tables exist when the public help library is enabled (migration 011).
 
@@ -19,7 +20,7 @@ Do not sort or reorder these two files by number alone. The database CI workflow
 
 **Administrative bootstrap warning:** the first migration promotes the oldest user to `admin` only when no admin exists. Before applying it to a real database, inspect the oldest account and verify that it belongs to the trusted platform owner. Do not rely on this automatic promotion without that check.
 
-Do not run the worker or enable cron while any required table or account-status value is missing.
+Apply migration 014 before deploying code that uses the database-backed rate limiter. Apply migration 015 before enabling account anonymization. Do not run the worker or enable cron while any required table, constraint, or account-status value is missing.
 
 ## Non-negotiable content rule
 
@@ -39,19 +40,20 @@ The public author label becomes **عضو محذوف**. The profile page is no lo
 
 The scheduled worker changes the existing user row in place:
 - Keeps the same \`users.id\`; changes \`account_status\` to \`deleted\`.
+- Clears both email and phone. Migration 015 permits this only after the account is marked \`deleted\`.
 - Replaces the username with a generated anonymous handle and the display name with \`عضو محذوف\`.
 - Clears email, phone, biography, and workshop name. Technical device specializations, board/fast classification, experience levels, verification status, skill ratings, and assessment history remain unchanged.
 - Replaces the password with an unknown random password, resets the role to \`member\`, and disables personal-help requests.
 - Clears the custom avatar reference and removes generated private avatar image files from that user's avatar directory.
 - Neutralizes Web Push endpoint/key material so the deleted account cannot receive push notifications.
-- Keeps terms acceptance and security-audit rows, but clears stored IP hashes and free-form admin password-reset notes.
+- Keeps terms acceptance and security-audit rows, but clears stored IP hashes and free-form admin password-reset notes, including the copied note in \`security_audit_logs.details_json\`.
 - Marks the pending deletion request as completed and writes an audit event.
 
 No \`issues\`, \`issue_replies\`, \`issue_attachments\`, \`issue_diagnostic_updates\`, \`issue_results\`, edit-history, reputation, help-library, help-message, or draft rows are deleted or rewritten. Technical file directories are not traversed or cleaned.
 
 ## Safety controls
 
-The worker is CLI-only and defaults to **dry-run**. It uses a MySQL advisory lock to prevent two workers from processing at once, locks each due request inside a transaction, verifies that the account is still \`deletion_pending\`, and rolls database changes back if a step fails.
+The worker is CLI-only and defaults to **dry-run**. It refuses to anonymize the last active administrator; appoint another active administrator first. It uses a MySQL advisory lock to prevent two workers from processing at once, locks each due request inside a transaction, verifies that the account is still \`deletion_pending\`, and rolls database changes back if a step fails.
 
 Run a preview first:
 
@@ -75,4 +77,4 @@ Use the actual project path and PHP binary on the server. The worker has not bee
 
 ## Grace period note
 
-The existing request flow disables the account immediately and schedules anonymization for 30 days later. The current application does not yet expose a self-service cancellation screen for a pending request; do not advertise the grace period as a cancellation guarantee until that workflow exists.
+The existing request flow disables the account immediately and schedules anonymization for 30 days later. A sole active administrator cannot submit this request; the platform must have another active administrator before the first admin can leave. The current application does not yet expose a self-service cancellation screen for a pending request; do not advertise the grace period as a cancellation guarantee until that workflow exists.
