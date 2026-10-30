@@ -419,7 +419,7 @@ try {
 }
 
 // Editing the self-declared skill list must not reset earned ratings.
-App\\Models\\User::saveOptionalSkills($ownerId, ['power'], 'Updated Workshop');
+App\Models\User::saveOptionalSkills($ownerId, ['power'], 'Updated Workshop');
 $editedRatingStmt = $pdo->prepare('SELECT rating, approved_assessments FROM user_skill_ratings WHERE user_id = ? AND skill_domain_id = ?');
 $editedRatingStmt->execute([$ownerId, $powerDomainId]);
 $editedRating = $editedRatingStmt->fetch(PDO::FETCH_ASSOC);
