@@ -21,7 +21,7 @@ foreach (($draft['media'] ?? []) as $mediaItem) {
     ];
 }
 $initialState = [
-    'id' => $draft['id'] ?? '',
+    'id' => $draft['id'] ?? ($requestedDraftId ?? ''),
     'revision' => (int) ($draft['revision'] ?? 0),
     'payload' => $draftPayload,
     'media' => $mediaForView,
@@ -45,7 +45,7 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
         data-suggest-url="<?= $e($baseUrl) ?>/devices/suggestions"
         data-initial="<?= $e($initialJson) ?>">
         <?= $csrf() ?>
-        <input type="hidden" name="draft_id" data-draft-id value="<?= $e((string) ($draft['id'] ?? '')) ?>">
+        <input type="hidden" name="draft_id" data-draft-id value="<?= $e((string) ($draft['id'] ?? ($requestedDraftId ?? ''))) ?>">
         <input type="hidden" name="revision" data-draft-revision value="<?= (int) ($draft['revision'] ?? 0) ?>">
 
         <div class="post-composer__save-state" data-save-state role="status" aria-live="polite">
