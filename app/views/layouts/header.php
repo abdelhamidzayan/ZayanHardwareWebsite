@@ -22,7 +22,37 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
             <span class="brand__name"><?= $e($appName) ?></span>
         </a>
 
-        <div class="header-actions">
+        <div class="header-actions">\n        <details class="help-request-menu">
+            <summary class="icon-btn help-request-menu__trigger" aria-label="طلبات المساعدة الشخصية<?= $unreadHelpCount > 0 ? ' (' . $unreadHelpCount . ' جديدة)' : '' ?>">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 12h8M12 8v8"/></svg>
+                <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
+            </summary>
+            <div class="help-request-menu__panel">
+                <div class="notification-menu__head"><strong>طلبات المساعدة</strong><span><?= $unreadHelpCount ?> طلب جديد</span></div>
+                <?php if (empty($headerHelpRequests)) : ?>
+                    <div class="notification-menu__empty"><strong>لا توجد طلبات بعد</strong><p>طلبات المساعدة الشخصية ستظهر هنا.</p></div>
+                <?php else : ?>
+                    <div class="notification-menu__list">
+                        <?php foreach ($headerHelpRequests as $headerRequest) : ?>
+                            <?php
+                            $isRequestOwner = (int) $headerRequest['requester_id'] === (int) ($currentUser['id'] ?? 0);
+                            $otherName = $isRequestOwner ? $headerRequest['helper_name'] : $headerRequest['requester_name'];
+                            $otherAvatarPath = $isRequestOwner ? $headerRequest['helper_avatar_path'] : $headerRequest['requester_avatar_path'];
+                            $otherAvatarKey = $isRequestOwner ? $headerRequest['helper_avatar_key'] : $headerRequest['requester_avatar_key'];
+                            $otherUserId = $isRequestOwner ? $headerRequest['helper_id'] : $headerRequest['requester_id'];
+                            $requestStatus = match ($headerRequest['status']) { 'pending' => 'في انتظار القبول', 'active' => 'محادثة نشطة', 'closed' => 'مغلق', 'declined' => 'تم الاعتذار', default => 'طلب مساعدة' };
+                            ?>
+                            <a class="help-request-menu__item" href="<?= $e($baseUrl) ?>/help-requests/<?= (int) $headerRequest['id'] ?>">
+                                <img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($otherAvatarPath) ? '/avatar/' . (int) $otherUserId : '/assets/avatars/' . rawurlencode((string) ($otherAvatarKey ?? 'technician-blue')) . '.svg')) ?>" alt="" width="36" height="36">
+                                <span class="help-request-menu__item-copy"><strong><?= $e($otherName) ?></strong><span><?= $e($headerRequest['subject']) ?></span><small><?= $e($requestStatus) ?> · <?= $e($headerRequest['last_message_at']) ?></small></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <a class="notification-menu__all" href="<?= $e($baseUrl) ?>/help-requests">عرض كل طلبات المساعدة</a>
+            </div>
+        </details>
+
         <details class="notification-menu">
             <summary class="icon-btn notification-menu__trigger" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
                 <svg class="icon notification-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
