@@ -444,6 +444,33 @@ try {
     throw $e;
 }
 
+// A message from one help conversation must never accept an attachment
+// row linked to a different conversation, even if both IDs exist.
+$pdo->prepare(
+    'INSERT INTO help_request_messages (request_id, sender_id, body) VALUES (?, ?, ?)'
+)->execute([$secondPublic['request_id'], $helperId, 'Message in a separate conversation']);
+$foreignMessageId = (int) $pdo->lastInsertId();
+try {
+    \App\Models\HelpRequest::addAttachment(
+        $firstPublic['request_id'],
+        $foreignMessageId,
+        $helperId,
+        'help-requests/retention-test/mismatched.jpg',
+        'image/jpeg',
+        128
+    );
+    throw new RuntimeException('Cross-conversation attachment association was unexpectedly accepted.');
+} catch (DomainException $e) {
+    retentionExpect(
+        $e->getMessage() === 'attachment_message_mismatch',
+        'Cross-conversation attachment must be rejected with a clear domain error.'
+    );
+}
+retentionExpect(
+    (int) $pdo->query('SELECT COUNT(*) FROM help_request_attachments')->fetchColumn() === 1,
+    'Rejected cross-conversation attachment must not create an attachment row.'
+);
+
 // Both registration-stage and profile-editing methods must use the final
 // post-migration schema and preserve assessment-backed skill ratings.
 $registrationUsername = 'retention_owner_' . $ownerId . '_updated';
