@@ -56,8 +56,14 @@ final class DeviceCatalogController extends Controller
                 trim($aliases),
                 trim($note)
             );
-        } catch (\DomainException) {
-            return Response::json(['error' => 'manufacturer_unavailable'], 422);
+        } catch (\DomainException $error) {
+            $message = match ($error->getMessage()) {
+                'manufacturer_unavailable' => 'الشركة المصنعة غير متاحة حاليًا.',
+                'model_already_exists' => 'الموديل موجود بالفعل في قائمة الأجهزة.',
+                'suggestion_already_pending' => 'تم إرسال اقتراح مطابق من قبل وهو في انتظار المراجعة.',
+                default => 'تعذر إرسال اقتراح الموديل.',
+            };
+            return Response::json(['error' => $error->getMessage(), 'message' => $message], 422);
         }
 
         return Response::json([
@@ -97,8 +103,11 @@ final class DeviceCatalogController extends Controller
         try {
             DeviceCatalog::moderateSuggestion($id, (int) $user['id'], $decision === 'approve');
             $this->flash('success', $decision === 'approve' ? 'تم اعتماد الموديل وإضافته للاختيارات.' : 'تم رفض اقتراح الموديل.');
-        } catch (\DomainException) {
-            $this->flash('error', 'الاقتراح غير موجود أو تمت مراجعته بالفعل.');
+        } catch (\DomainException $error) {
+            $message = $error->getMessage() === 'model_already_exists'
+                ? 'الموديل موجود بالفعل. لم تتم إضافته مرة أخرى.'
+                : 'الاقتراح غير موجود أو تمت مراجعته بالفعل.';
+            $this->flash('error', $message);
         }
         return $this->redirect('/admin/device-model-suggestions');
     }
