@@ -68,7 +68,7 @@ jobs:
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'technician_profiles' AND column_name IN ('device_focus','tech_level','board_experience','level_verified');")" -eq 4
 
           mysql -h 127.0.0.1 -uroot -proot zayan_registration_test < database/migrations/015_deleted_accounts_without_contact.sql
-          due_index_count="$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'account_deletion_requests' AND index_name = 'idx_account_deletion_due';")"
+          due_index_count="$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'account_deletion_requests' AND index_name = 'idx_account_deletion_due';")"
           echo "due_index_count=${due_index_count}"
           test "${due_index_count}" -eq 1
 
