@@ -368,7 +368,8 @@ final class App
 
     private static function startSession(): void
     {
-        if (session_status() === PHP_SESSION_ACTIVE) {
+        // CLI workers do not need browser sessions or session cookies.
+        if (PHP_SAPI === 'cli' || session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
 
