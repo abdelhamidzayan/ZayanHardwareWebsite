@@ -301,7 +301,7 @@ final class HelpRequest extends Model
         $stmt = self::db()->prepare(
             'SELECT p.id, p.title, p.problem_summary, p.diagnosis_summary, p.solution_summary,
                     p.requester_display_name, p.helper_display_name,
-                    p.requester_avatar_key, p.helper_avatar_key, p.created_at
+                    p.requester_avatar_key, p.helper_avatar_key, p.requester_user_id, p.helper_user_id, p.created_at
              FROM help_public_posts p
              JOIN help_request_publications pub ON pub.id = p.publication_id
              JOIN help_requests h ON h.id = p.request_id
