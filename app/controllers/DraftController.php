@@ -88,7 +88,8 @@ final class DraftController extends Controller
                 'sort_order' => (int) $item['sort_order'],
                 'duration_ms' => $item['duration_ms'] !== null ? (int) $item['duration_ms'] : null,
                 'editor_state' => $item['editor_state'],
-                'url' => $this->mediaUrl($draftId, (string) $item['media_uuid']),
+                'url' => $this->mediaUrl($draftId, (string) $item['media_uuid'], !empty($item['rendered_path'])),
+                'original_url' => $this->mediaUrl($draftId, (string) $item['media_uuid']),
             ];
         }
 
@@ -210,6 +211,7 @@ final class DraftController extends Controller
                     'file_size' => $size,
                     'sort_order' => count($existing) + count($saved),
                     'url' => $this->mediaUrl($draftId, $uuid),
+                    'original_url' => $this->mediaUrl($draftId, $uuid),
                 ];
             }
         } catch (\DomainException $e) {
@@ -225,6 +227,56 @@ final class DraftController extends Controller
         }
 
         return Response::json(['media' => $saved], 201);
+    }
+
+    public function uploadRendered(string $draftId, string $mediaUuid): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
+
+        $media = PostDraft::ownedMedia($draftId, $mediaUuid, (int) $user['id']);
+        if (!$media || $media['media_kind'] !== 'image') return Response::json(['error' => 'media_not_found'], 404);
+        $file = $_FILES['rendered'] ?? null;
+        if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
+            || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+            return Response::json(['error' => 'rendered_file_missing'], 422);
+        }
+
+        $tmp = (string) $file['tmp_name'];
+        $size = (int) ($file['size'] ?? 0);
+        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
+        if ($size < 1 || $size > 12 * 1024 * 1024
+            || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)
+            || !is_array(@getimagesize($tmp))) {
+            return Response::json(['error' => 'rendered_file_invalid', 'message' => 'نسخة الصورة المعدلة غير صالحة أو أكبر من 12 ميجابايت.'], 422);
+        }
+
+        $directory = App::root('storage/private/drafts/' . $draftId);
+        if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
+            return Response::json(['error' => 'storage_unavailable'], 500);
+        }
+        $extension = match ($mime) { 'image/jpeg' => 'jpg', 'image/png' => 'png', default => 'webp' };
+        $filename = $mediaUuid . '-rendered-' . bin2hex(random_bytes(5)) . '.' . $extension;
+        $destination = $directory . DIRECTORY_SEPARATOR . $filename;
+        if (!move_uploaded_file($tmp, $destination)) return Response::json(['error' => 'storage_failed'], 500);
+        $relative = 'drafts/' . $draftId . '/' . $filename;
+        $sha = hash_file('sha256', $destination);
+        if (!is_string($sha) || !PostDraft::setRenderedPath($draftId, $mediaUuid, (int) $user['id'], $relative, $sha)) {
+            @unlink($destination);
+            return Response::json(['error' => 'save_failed'], 500);
+        }
+        if (!empty($media['rendered_path'])) {
+            $old = realpath(App::root('storage/private/' . ltrim((string) $media['rendered_path'], '/')));
+            $root = realpath(App::root('storage/private'));
+            if ($root !== false && $old !== false && str_starts_with($old, $root . DIRECTORY_SEPARATOR) && is_file($old)) @unlink($old);
+        }
+
+        return Response::json([
+            'saved' => true,
+            'rendered_url' => $this->mediaUrl($draftId, $mediaUuid, true),
+            'original_url' => $this->mediaUrl($draftId, $mediaUuid),
+        ]);
     }
 
     public function updateMediaEditor(string $draftId, string $mediaUuid): Response
@@ -271,14 +323,18 @@ final class DraftController extends Controller
         $media = PostDraft::ownedMedia($draftId, $mediaUuid, (int) $user['id']);
         if (!$media) return $this->notFound();
 
+        $variant = ($this->request->query['variant'] ?? '') === 'rendered' ? 'rendered' : 'original';
+        $relative = $variant === 'rendered' && !empty($media['rendered_path'])
+            ? (string) $media['rendered_path']
+            : (string) $media['storage_path'];
         $root = realpath(App::root('storage/private'));
-        if ($root === false) return $this->notFound();
-        $file = realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, (string) $media['storage_path']));
+        if ($root === false || $relative === '' || str_contains($relative, '..')) return $this->notFound();
+        $file = realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, ltrim($relative, '/')));
         if ($file === false || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) {
             return $this->notFound();
         }
 
-        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
+        $mime = (new \\finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
         $allowed = [
             'image/jpeg', 'image/png', 'image/webp',
             'video/mp4', 'video/webm', 'video/quicktime',
@@ -286,15 +342,44 @@ final class DraftController extends Controller
         ];
         if (!in_array($mime, $allowed, true)) return $this->notFound();
 
-        return new Response((string) file_get_contents($file), 200, [
+        $size = (int) filesize($file);
+        $start = 0;
+        $end = max(0, $size - 1);
+        $status = 200;
+        $range = $_SERVER['HTTP_RANGE'] ?? '';
+        $headers = [];
+        if (is_string($range) && preg_match('/^bytes=(\\d*)-(\\d*)$/', trim($range), $match) && $size > 0) {
+            if ($match[1] === '' && $match[2] !== '') {
+                $suffix = (int) $match[2];
+                $start = max(0, $size - $suffix);
+            } else {
+                $start = (int) $match[1];
+                if ($match[2] !== '') $end = min($end, (int) $match[2]);
+            }
+            if ($start > $end || $start >= $size) {
+                return new Response('', 416, ['Content-Range' => 'bytes */' . $size, 'Cache-Control' => 'private, no-store']);
+            }
+            $status = 206;
+            $headers['Content-Range'] = 'bytes ' . $start . '-' . $end . '/' . $size;
+        }
+        $length = $end - $start + 1;
+        $handle = fopen($file, 'rb');
+        if ($handle === false) return $this->notFound();
+        if ($start > 0) fseek($handle, $start);
+        $body = $length > 0 ? fread($handle, $length) : '';
+        fclose($handle);
+        if (!is_string($body)) return $this->notFound();
+
+        $headers += [
             'Content-Type' => $mime,
-            'Content-Length' => (string) filesize($file),
+            'Content-Length' => (string) strlen($body),
             'Content-Disposition' => 'inline; filename="draft-media-' . preg_replace('/[^a-f0-9-]/i', '', $mediaUuid) . '"',
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
             'Accept-Ranges' => 'bytes',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
-        ]);
+        ];
+        return new Response($body, $status, $headers);
     }
 
     public function delete(string $draftId): Response
