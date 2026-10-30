@@ -7,6 +7,9 @@
         const tokenInputs = editor.querySelector('[data-content-token-inputs]');
         const livePreview = editor.querySelector('[data-content-live-preview]');
         const livePreviewBody = editor.querySelector('[data-content-live-preview-body]');
+        const emojiToggle = editor.querySelector('[data-emoji-toggle]');
+        const emojiPicker = editor.querySelector('[data-emoji-picker]');
+        const openFiles = editor.querySelector('[data-open-files]');
         if (!textarea || !fileInput || !previews || !tokenInputs) return;
 
         let files = [];
@@ -182,6 +185,25 @@
         }
 
         textarea.addEventListener('input', renderLivePreview);
+
+        if (openFiles) openFiles.addEventListener('click', () => fileInput.click());
+        if (emojiToggle && emojiPicker) {
+            emojiToggle.addEventListener('click', () => { emojiPicker.hidden = !emojiPicker.hidden; });
+            emojiPicker.querySelectorAll('[data-insert-emoji]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const emoji = button.dataset.insertEmoji || '';
+                    const start = textarea.selectionStart ?? textarea.value.length;
+                    const end = textarea.selectionEnd ?? start;
+                    textarea.setRangeText(emoji, start, end, 'end');
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    textarea.focus();
+                    emojiPicker.hidden = true;
+                });
+            });
+            document.addEventListener('click', (event) => {
+                if (!editor.contains(event.target)) emojiPicker.hidden = true;
+            });
+        }
 
         fileInput.addEventListener('change', () => {
             const incoming = Array.from(fileInput.files || []);
