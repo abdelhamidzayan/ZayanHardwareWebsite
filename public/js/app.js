@@ -28,18 +28,45 @@
     const time = root.querySelector('.audio__time');
     const bars = root.querySelectorAll('.audio__wave rect');
 
+    const trimStart = Math.max(0, Number(root.dataset.trimStart || 0) / 1000);
+    let trimEnd = Math.max(0, Number(root.dataset.trimEnd || 0) / 1000);
+    const getTrimEnd = () => (trimEnd > trimStart && (!el.duration || trimEnd <= el.duration)) ? trimEnd : (el.duration || trimEnd);
+    const getTrimDuration = () => Math.max(0, getTrimEnd() - trimStart);
+
     const paint = () => {
-      const ratio = el.duration ? el.currentTime / el.duration : 0;
-      const played = Math.round(ratio * bars.length);
+      const duration = getTrimDuration();
+      const ratio = duration ? (el.currentTime - trimStart) / duration : 0;
+      const played = Math.round(Math.max(0, Math.min(1, ratio)) * bars.length);
       bars.forEach((bar, i) => bar.classList.toggle('is-played', i < played));
     };
 
-    el.addEventListener('loadedmetadata', () => { time.textContent = fmt(el.duration); });
-    el.addEventListener('timeupdate', () => { time.textContent = fmt(el.currentTime); paint(); });
-    el.addEventListener('ended', () => {
-      el.currentTime = 0;
+    const resetToTrimStart = () => {
+      if (trimStart > 0 && (el.currentTime < trimStart || el.currentTime >= getTrimEnd())) {
+        el.currentTime = trimStart;
+      }
+    };
+
+    el.addEventListener('loadedmetadata', () => {
+      if (!trimEnd || trimEnd > el.duration) trimEnd = el.duration;
+      resetToTrimStart();
+      time.textContent = fmt(getTrimDuration());
       paint();
-      time.textContent = fmt(el.duration);
+    });
+    el.addEventListener('play', resetToTrimStart);
+    el.addEventListener('timeupdate', () => {
+      if (el.currentTime >= getTrimEnd()) {
+        el.pause();
+        el.currentTime = trimStart;
+        setPlaying(root, false);
+        playingRoot = null;
+      }
+      time.textContent = fmt(Math.max(0, el.currentTime - trimStart));
+      paint();
+    });
+    el.addEventListener('ended', () => {
+      el.currentTime = trimStart;
+      paint();
+      time.textContent = fmt(getTrimDuration());
       setPlaying(root, false);
       playingRoot = null;
     });
@@ -74,6 +101,29 @@
       setPlaying(root, false);
       playingRoot = null;
     }
+  });
+
+  /* Respect the selected audio trim range on the post detail player too. */
+  document.querySelectorAll('audio[data-audio-trim]').forEach((audio) => {
+    const startMs = Math.max(0, Number(audio.dataset.trimStart || 0));
+    const endMs = Math.max(0, Number(audio.dataset.trimEnd || 0));
+    let trimStart = startMs / 1000;
+    let trimEnd = endMs / 1000;
+    audio.addEventListener('loadedmetadata', () => {
+      if (!trimEnd || trimEnd > audio.duration) trimEnd = audio.duration;
+      if (trimStart > 0) audio.currentTime = trimStart;
+    });
+    audio.addEventListener('play', () => {
+      if (audio.currentTime < trimStart || (trimEnd > trimStart && audio.currentTime >= trimEnd)) {
+        audio.currentTime = trimStart;
+      }
+    });
+    audio.addEventListener('timeupdate', () => {
+      if (trimEnd > trimStart && audio.currentTime >= trimEnd) {
+        audio.pause();
+        audio.currentTime = trimStart;
+      }
+    });
   });
 
   /* ---------- Password show / hide ---------- */
