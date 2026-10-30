@@ -239,6 +239,9 @@ final class IssueController extends Controller
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
         $parsedId = filter_var($updateId, FILTER_VALIDATE_INT);
+        if (!RateLimiter::allowForUser('issues.diagnostic', (int) $user['id'], 8, 600, 30)) {
+            return $this->fail('/issues/' . $id . '#diagnostic-updates', 'أضفت تحديثات تشخيص كثيرة في وقت قصير. انتظر قليلًا ثم حاول مرة أخرى.');
+        }
         $body = trim($this->string('body'));
         if (!$parsedId || $parsedId < 1 || mb_strlen($body) < 3 || mb_strlen($body) > 5000) {
             return $this->fail('/issues/' . $id . '#diagnostic-updates', 'راجع نص تحديث التشخيص.');
@@ -336,6 +339,9 @@ final class IssueController extends Controller
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
         $parsedReplyId = filter_var($replyId, FILTER_VALIDATE_INT);
+        if (!RateLimiter::allowForUser('issues.reply', (int) $user['id'], 15, 300, 60)) {
+            return $this->fail('/issues/' . $id . '#discussion', 'عدد تعديلات الردود في فترة قصيرة تجاوز الحد المسموح. انتظر قليلًا ثم حاول مرة أخرى.');
+        }
         $body = trim($this->string('body'));
         if (!$parsedReplyId || $parsedReplyId < 1 || Issue::replyIssueId((int) $parsedReplyId) !== $id
             || mb_strlen($body) < 2 || mb_strlen($body) > 5000) {
@@ -445,6 +451,9 @@ final class IssueController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+        if (!RateLimiter::allowForUser('issues.edit', (int) $user['id'], 10, 600, 30)) {
+            return $this->fail('/issues/' . $id, 'عدد تعديلات المنشورات في فترة قصيرة تجاوز الحد المسموح. انتظر قليلًا ثم حاول مرة أخرى.');
+        }
         $title = trim($this->string('title'));
         $description = trim($this->string('description'));
         $measurements = trim($this->string('measurements'));
