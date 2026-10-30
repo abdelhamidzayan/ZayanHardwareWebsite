@@ -56,6 +56,7 @@ final class HelpRequestController extends Controller
         if (!$user) return $this->redirect('/login');
         $request = HelpRequest::findForParticipant($id, (int) $user['id']);
         if (!$request) return $this->notFound();
+        HelpRequest::markRead($id, (int) $user['id']);
         $messages = HelpRequest::messages($id);
         foreach ($messages as &$message) $message['attachments'] = HelpRequest::attachmentsForMessage((int) $message['id']);
         unset($message);
