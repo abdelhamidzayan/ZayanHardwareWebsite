@@ -273,7 +273,7 @@ foreach ($replies as $reply) {
                                     <?= $csrf() ?><input type="hidden" name="parent_reply_id" value="<?= (int) $reply['id'] ?>">
                                     <?php
                                     $editorFieldName = 'body'; $editorLabel = 'رد على التعليق'; $editorPlaceholder = 'اكتب ردك على تعليق الفني...';
-                                    $editorValue = ''; $editorMaxLength = 5000; $editorRows = 2; $editorRequired = true;
+                                    $editorValue = ''; $editorMaxLength = 5000; $editorRows = 2; $editorRequired = true; $editorCompact = true;
                                     require __DIR__ . '/../partials/content-editor.php';
                                     ?>
                                     <button class="btn btn--secondary" type="submit">نشر الرد</button>
@@ -329,7 +329,7 @@ foreach ($replies as $reply) {
                 <?= $csrf() ?>
                 <?php
                 $editorFieldName = 'body'; $editorLabel = 'الحل أو خطوات التشخيص'; $editorPlaceholder = 'اكتب القياس، الاختبار، أو سبب العطل المحتمل...';
-                $editorValue = ''; $editorMaxLength = 5000; $editorRows = 4; $editorRequired = true;
+                $editorValue = ''; $editorMaxLength = 5000; $editorRows = 2; $editorRequired = true; $editorCompact = true;
                 require __DIR__ . '/../partials/content-editor.php';
                 ?>
                 <button class="btn btn--primary" type="submit">نشر الرد</button>
