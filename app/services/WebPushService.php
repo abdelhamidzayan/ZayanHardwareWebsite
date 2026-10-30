@@ -15,7 +15,14 @@ final class WebPushService
         $publicKey = (string) App::env('VAPID_PUBLIC_KEY', '');
         $privateKey = (string) App::env('VAPID_PRIVATE_KEY', '');
         $subject = (string) App::env('VAPID_SUBJECT', '');
-        if ($publicKey === '' || $privateKey === '' || $subject === '' || !class_exists(WebPush::class)) return;
+        if (!class_exists(WebPush::class)) {
+            App::log('warning', 'Web Push is unavailable: run composer install on the server.');
+            return;
+        }
+        if ($publicKey === '' || $privateKey === '' || $subject === '') {
+            App::log('warning', 'Web Push is not configured: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT are required.');
+            return;
+        }
 
         try {
             $webPush = new WebPush([
