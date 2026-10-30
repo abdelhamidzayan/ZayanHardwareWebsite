@@ -66,7 +66,15 @@ jobs:
 
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'technician_profiles' AND column_name IN ('phone','specialization','experience');")" -eq 0
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'technician_profiles' AND column_name IN ('device_focus','tech_level','board_experience','level_verified');")" -eq 4
-          echo "Sequential registration migrations preserved phone, experience and skill assignment on ${{ matrix.database.label }}"
+
+          mysql -h 127.0.0.1 -uroot -proot zayan_registration_test < database/migrations/015_deleted_accounts_without_contact.sql
+          mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "UPDATE users SET email = NULL, phone = NULL, account_status = 'deleted' WHERE id = 2;"
+          test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM users WHERE id = 2 AND email IS NULL AND phone IS NULL AND account_status = 'deleted';")" -eq 1
+          if mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "UPDATE users SET account_status = 'active' WHERE id = 2;" 2>/dev/null; then
+            echo "Contactless active account unexpectedly passed chk_users_contact"
+            exit 1
+          fi
+          echo "Sequential registration and contactless-deleted-account checks passed on ${{ matrix.database.label }}"
       - name: Create disposable test schema
         run: mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE zayan_migration_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
