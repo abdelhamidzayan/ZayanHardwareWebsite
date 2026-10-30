@@ -197,6 +197,13 @@ final class HelpRequest extends Model
         }
     }
 
+    public static function publicationForRequest(int $requestId): ?array
+    {
+        $stmt = self::db()->prepare('SELECT * FROM help_request_publications WHERE request_id = ? LIMIT 1');
+        $stmt->execute([$requestId]);
+        return $stmt->fetch() ?: null;
+    }
+
     public static function publicationForRequester(int $publicationId, int $requesterId): ?array
     {
         $stmt = self::db()->prepare(
