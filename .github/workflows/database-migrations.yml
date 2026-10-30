@@ -111,3 +111,12 @@ jobs:
           DB_USER: root
           DB_PASS: root
         run: php tests/php/rate-limiter-integration.php
+
+      - name: Exercise account retention and technical-content preservation
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_migration_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/account-retention-integration.php
