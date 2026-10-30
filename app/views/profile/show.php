@@ -89,6 +89,7 @@
                 <article class="card profile-post">
                     <h3><a href="<?= $e($baseUrl) ?>/help-library/<?= (int) $post['id'] ?>"><?= $e($post['title']) ?></a></h3>
                     <p class="muted"><?= $e(mb_strimwidth((string) $post['problem_summary'], 0, 180, '…', 'UTF-8')) ?></p>
+                    <div class="help-library-card__people"><span class="help-library-person"><?php if (!empty($post['requester_user_id'])) : ?><img class="avatar avatar-image" src="<?= $e($baseUrl . '/avatar/' . (int) $post['requester_user_id']) ?>" alt="" width="32" height="32"><?php endif; ?><?= !empty($post['requester_display_name']) ? $e($post['requester_display_name']) : 'عضو مجهول' ?></span><span class="help-library-person"><?php if (!empty($post['helper_user_id'])) : ?><img class="avatar avatar-image" src="<?= $e($baseUrl . '/avatar/' . (int) $post['helper_user_id']) ?>" alt="" width="32" height="32"><?php endif; ?><?= !empty($post['helper_display_name']) ? $e($post['helper_display_name']) : 'عضو مجهول' ?></span></div>
                     <span class="muted"><?= $e($post['created_at']) ?></span>
                 </article>
             <?php endforeach; ?>
