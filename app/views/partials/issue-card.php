@@ -18,10 +18,10 @@ for ($i = 0; $i < 32; $i++) {
 ?>
 <article class="card issue-card">
     <header class="issue-card__head">
-        <span class="avatar" aria-hidden="true"><?= $e($issue['initials']) ?></span>
+        <a class="issue-card__avatar-link" href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $issue['username'])) ?>" aria-label="الملف الشخصي لـ <?= $e($issue['author']) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . $issue['avatar_src']) ?>" alt="" width="48" height="48" loading="lazy"></a>
         <div class="issue-card__who">
             <p class="issue-card__name">
-                <?= $e($issue['author']) ?>
+                <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $issue['username'])) ?>"><?= $e($issue['author']) ?></a>
                 <?php if (!empty($issue['expert'])) : ?>
                     <span class="badge">
                         <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
