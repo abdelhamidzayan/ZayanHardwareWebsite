@@ -534,7 +534,7 @@
 
     async function syncAllEditorStates() {
         for (let i = 0; i < media.length; i++) {
-            if (media[i].media_kind !== 'audio') await saveMediaState(media[i], i);
+            if (media[i].media_kind === 'image') await saveMediaState(media[i], i);
         }
     }
 
@@ -591,6 +591,7 @@
                 }
             }
             await syncAllEditorStates();
+            setStatus('تم الحفظ والمزامنة', 'saved');
             return true;
         } catch (error) {
             setStatus(error.message || 'تعذر الاتصال بالخادم. النسخة المحلية محفوظة.', 'error');
@@ -1037,7 +1038,9 @@
         const restored = [];
         for (const record of localRecords || []) {
             let matched = record.media_uuid ? serverByUuid.get(record.media_uuid) : null;
-            const url = record.blob ? URL.createObjectURL(record.blob) : (matched ? matched.url : '');
+            const originalLocalUrl = record.blob ? URL.createObjectURL(record.blob) : '';
+            const renderedLocalUrl = record.rendered_blob ? URL.createObjectURL(record.rendered_blob) : '';
+            const url = matched ? matched.url : (renderedLocalUrl || originalLocalUrl);
             if (!url) continue;
             restored.push({
                 local_id: record.local_id,
@@ -1046,12 +1049,11 @@
                 mime_type: record.mime_type,
                 file_size: record.file_size,
                 blob: record.blob || null,
-                url: matched ? matched.url : url,
-                original_url: matched ? (matched.original_url || matched.url) : url,
+                url: renderedLocalUrl || url,
+                original_url: matched ? (matched.original_url || matched.url) : (originalLocalUrl || url),
                 renderedBlob: record.rendered_blob || null,
                 sort_order: matched ? matched.sort_order : record.sort_order,
                 editor_state: record.editor_state || (matched ? matched.editor_state : null),
-                renderedBlob: record.rendered_blob || null,
                 uploaded: Boolean(matched)
             });
         }
