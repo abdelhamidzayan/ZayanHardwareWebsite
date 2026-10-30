@@ -128,6 +128,34 @@ final class HelpRequest extends Model
         return $stmt->fetch() ?: null;
     }
 
+    public static function addAttachment(int $requestId, int $messageId, int $userId, string $path, string $mime, int $size): void
+    {
+        self::db()->prepare(
+            'INSERT INTO help_request_attachments (request_id, message_id, uploaded_by, file_path, mime_type, file_size)
+             VALUES (?, ?, ?, ?, ?, ?)'
+        )->execute([$requestId, $messageId, $userId, $path, $mime, $size]);
+    }
+
+    public static function attachmentsForMessage(int $messageId): array
+    {
+        $stmt = self::db()->prepare(
+            'SELECT id, mime_type, file_size FROM help_request_attachments WHERE message_id = ? ORDER BY id'
+        );
+        $stmt->execute([$messageId]);
+        return $stmt->fetchAll();
+    }
+
+    public static function attachmentForParticipant(int $attachmentId, int $userId): ?array
+    {
+        $stmt = self::db()->prepare(
+            'SELECT a.* FROM help_request_attachments a
+             JOIN help_requests h ON h.id = a.request_id
+             WHERE a.id = ? AND (h.requester_id = ? OR h.helper_id = ?) LIMIT 1'
+        );
+        $stmt->execute([$attachmentId, $userId, $userId]);
+        return $stmt->fetch() ?: null;
+    }
+
     public static function messages(int $requestId): array
     {
         $stmt = self::db()->prepare(
