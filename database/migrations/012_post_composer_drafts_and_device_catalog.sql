@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS post_draft_media (
     media_kind ENUM('image','video','audio') NOT NULL,
     storage_path VARCHAR(255) NOT NULL,
     rendered_path VARCHAR(255) NULL,
+    rendered_mime_type VARCHAR(100) NULL,
     rendered_sha256 CHAR(64) NULL,
     mime_type VARCHAR(100) NOT NULL,
     file_size BIGINT UNSIGNED NOT NULL,
