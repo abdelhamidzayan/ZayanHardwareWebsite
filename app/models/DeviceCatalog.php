@@ -52,7 +52,7 @@ final class DeviceCatalog extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $manufacturer = $pdo->prepare('SELECT id FROM device_manufacturers WHERE id = ? AND is_active = 1 FOR SHARE');
+            $manufacturer = $pdo->prepare('SELECT id FROM device_manufacturers WHERE id = ? AND is_active = 1 FOR UPDATE');
             $manufacturer->execute([$manufacturerId]);
             if (!$manufacturer->fetchColumn()) throw new \DomainException('manufacturer_unavailable');
 
@@ -120,6 +120,21 @@ final class DeviceCatalog extends Model
             }
             $modelId = null;
             if ($approve) {
+                $duplicate = $pdo->prepare(
+                    "SELECT id FROM device_models
+                     WHERE manufacturer_id = ? AND is_active = 1
+                       AND ((? IS NOT NULL AND UPPER(model_code) = UPPER(?))
+                            OR LOWER(commercial_name) = LOWER(?))
+                     LIMIT 1"
+                );
+                $duplicate->execute([
+                    (int) $suggestion['manufacturer_id'],
+                    $suggestion['model_code'],
+                    $suggestion['model_code'],
+                    (string) $suggestion['commercial_name'],
+                ]);
+                if ($duplicate->fetchColumn()) throw new \DomainException('model_already_exists');
+
                 $insert = $pdo->prepare(
                     'INSERT INTO device_models
                         (manufacturer_id, commercial_name, model_code, aliases, created_by, approved_by, approved_at)
