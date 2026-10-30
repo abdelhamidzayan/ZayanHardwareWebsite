@@ -101,6 +101,14 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                     <p class="field__error" data-error-for="password" aria-live="polite"><?= $err('password') ?></p>
                 </div>
 
+                <div class="field">
+                    <label class="check">
+                        <input type="checkbox" name="accept_terms" value="1" data-terms-acceptance required <?= ($old['accept_terms'] ?? '') === '1' ? 'checked' : '' ?>>
+                        <span>أوافق على <a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies" target="_blank" rel="noopener">قواعد المنصة وسياسة الخصوصية</a>.</span>
+                    </label>
+                    <p class="field__error" data-error-for="terms_acceptance" aria-live="polite"><?= $err('terms_acceptance') ?></p>
+                </div>
+
                 <div class="wizard__actions wizard__actions--end">
                     <button class="btn btn--primary" type="button" data-next>التالي</button>
                 </div>
