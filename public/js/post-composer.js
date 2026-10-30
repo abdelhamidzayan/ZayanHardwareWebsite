@@ -47,6 +47,8 @@
     let conflict = false;
     let currentAbort = null;
     let dbPromise = null;
+    let audioChunkSeq = 0;
+    let saveQueued = false;
 
     function uuid() {
         if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
@@ -77,11 +79,12 @@
                 reject(new Error('التخزين المحلي غير متاح في هذا المتصفح.'));
                 return;
             }
-            const request = indexedDB.open('zayan-post-drafts', 1);
+            const request = indexedDB.open('zayan-post-drafts', 2);
             request.onupgradeneeded = function () {
                 const db = request.result;
                 if (!db.objectStoreNames.contains('drafts')) db.createObjectStore('drafts', { keyPath: 'id' });
                 if (!db.objectStoreNames.contains('media')) db.createObjectStore('media', { keyPath: 'key' });
+                if (!db.objectStoreNames.contains('audioSessions')) db.createObjectStore('audioSessions', { keyPath: 'key' });
             };
             request.onsuccess = function () { resolve(request.result); };
             request.onerror = function () { reject(request.error || new Error('تعذر فتح التخزين المحلي.')); };
@@ -108,6 +111,45 @@
             transaction.onerror = function () { reject(transaction.error); };
             transaction.onabort = function () { reject(transaction.error); };
         });
+    }
+
+    async function dbGetAll(storeName) {
+        const db = await openDb();
+        return new Promise(function (resolve, reject) {
+            const transaction = db.transaction(storeName, 'readonly');
+            const request = transaction.objectStore(storeName).getAll();
+            request.onsuccess = function () { resolve(request.result || []); };
+            request.onerror = function () { reject(request.error); };
+        });
+    }
+
+    async function clearAudioSession() {
+        const records = await dbGetAll('audioSessions').catch(function () { return []; });
+        const db = await openDb();
+        return new Promise(function (resolve, reject) {
+            const transaction = db.transaction('audioSessions', 'readwrite');
+            const store = transaction.objectStore('audioSessions');
+            records.filter(function (item) { return item.draft_id === draftId; }).forEach(function (item) {
+                store.delete(item.key);
+            });
+            transaction.oncomplete = function () { audioChunkSeq = 0; resolve(true); };
+            transaction.onerror = function () { reject(transaction.error); };
+        });
+    }
+
+    async function pendingAudioSession() {
+        const records = (await dbGetAll('audioSessions')).filter(function (item) {
+            return item.draft_id === draftId;
+        }).sort(function (left, right) { return Number(left.sequence || 0) - Number(right.sequence || 0); });
+        const chunks = records.filter(function (item) { return item.record_type === 'chunk' && item.blob; });
+        const meta = records.find(function (item) { return item.record_type === 'meta'; }) || null;
+        audioChunkSeq = chunks.reduce(function (max, item) { return Math.max(max, Number(item.sequence || 0)); }, 0);
+        if (!chunks.length) return null;
+        return {
+            blob: new Blob(chunks.map(function (item) { return item.blob; }), { type: meta?.mime_type || chunks[0].mime_type || 'audio/webm' }),
+            duration_ms: Number(meta?.duration_ms || 0),
+            mime_type: meta?.mime_type || chunks[0].mime_type || 'audio/webm'
+        };
     }
 
     async function dbDelete(storeName, key) {
@@ -508,7 +550,8 @@
     }
 
     async function syncServer(force) {
-        if (saving || conflict) return false;
+        if (conflict) return false;
+        if (saving) { saveQueued = true; return false; }
         if (!navigator.onLine) {
             await persistLocal();
             return !force;
@@ -544,7 +587,7 @@
             for (const item of media) {
                 if (!item.media_uuid) {
                     const uploaded = await uploadItem(item);
-                    if (!uploaded) return false;
+                    if (!uploaded) { dirty = true; await persistLocal(); return false; }
                 }
             }
             await syncAllEditorStates();
@@ -555,6 +598,10 @@
             return false;
         } finally {
             saving = false;
+            if (saveQueued && !conflict) {
+                saveQueued = false;
+                queueMicrotask(function () { syncServer(true); });
+            }
         }
     }
 
@@ -937,6 +984,30 @@
             await syncServer(false);
             return;
         }
+        if (!server || !(server.media || []).some(function (item) { return item.media_kind === 'audio'; })) {
+            const pending = await pendingAudioSession().catch(function () { return null; });
+            if (pending && pending.blob && pending.blob.size) {
+                const audioRadio = modeRadios.find(function (item) { return item.value === 'audio'; });
+                if (audioRadio) audioRadio.checked = true;
+                syncModeVisibility();
+                const recovered = {
+                    local_id: uuid(),
+                    media_uuid: '',
+                    media_kind: 'audio',
+                    mime_type: pending.mime_type,
+                    file_size: pending.blob.size,
+                    blob: pending.blob,
+                    fileName: 'recovered-voice-note.' + extensionFor(pending.mime_type),
+                    url: URL.createObjectURL(pending.blob),
+                    sort_order: media.length,
+                    editor_state: null
+                };
+                media.push(recovered);
+                audioMeta = { duration_ms: pending.duration_ms, trim_start_ms: 0, trim_end_ms: pending.duration_ms };
+                await persistBlob(recovered);
+                await clearAudioSession();
+            }
+        }
         if (server) {
             await applyServerData(server);
             const localMedia = await loadLocalMedia();
@@ -1022,6 +1093,7 @@
             };
             media.push(item);
             await persistBlob(item);
+            await clearAudioSession();
             markDirty();
             await syncServer(false);
             return item;
@@ -1030,12 +1102,40 @@
             const item = media.find(function (entry) { return entry.media_kind === 'audio'; });
             if (item) await removeMedia(item);
             audioMeta = null;
+            await clearAudioSession();
             markDirty();
         },
         updateAudioTrim: function (startMs, endMs, durationMs) {
             audioMeta = Object.assign({}, audioMeta || {}, { duration_ms: durationMs, trim_start_ms: startMs, trim_end_ms: endMs });
             markDirty();
         },
+        saveAudioChunk: async function (blob, mimeType) {
+            if (!draftId || !blob || !blob.size) return;
+            audioChunkSeq += 1;
+            await dbPut('audioSessions', {
+                key: draftId + ':chunk:' + audioChunkSeq,
+                draft_id: draftId,
+                record_type: 'chunk',
+                sequence: audioChunkSeq,
+                mime_type: mimeType || blob.type || 'audio/webm',
+                blob: blob,
+                created_at: Date.now()
+            });
+        },
+        saveAudioProgress: async function (durationMs, mimeType) {
+            if (!draftId) return;
+            await dbPut('audioSessions', {
+                key: draftId + ':meta',
+                draft_id: draftId,
+                record_type: 'meta',
+                duration_ms: Math.max(0, Number(durationMs) || 0),
+                mime_type: mimeType || 'audio/webm',
+                sequence: audioChunkSeq,
+                updated_at: Date.now()
+            });
+        },
+        restorePendingAudio: pendingAudioSession,
+        clearAudioSession: clearAudioSession,
         getAudio: function () { return media.find(function (item) { return item.media_kind === 'audio'; }) || null; },
         getAudioMeta: function () { return audioMeta; },
         getDraftId: function () { return draftId; },
