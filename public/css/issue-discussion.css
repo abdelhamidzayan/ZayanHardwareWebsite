@@ -103,3 +103,22 @@
 .content-delete { margin-block: 1.25rem; border-color: var(--color-border); }
 .content-delete summary { cursor: pointer; font-weight: 600; }
 .content-delete .btn--danger { background: var(--color-danger); color: #fff; border-color: var(--color-danger); }
+
+
+/* Compact inline reply composer: keep the conversation visible while typing. */
+.content-editor--compact { display:grid; gap:.45rem; min-width:0; }
+.content-editor--compact > .field { display:block; margin:0; }
+.content-editor--compact > .field > .field__label { display:none; }
+.content-editor--compact [data-content-textarea] { display:block; width:100%; min-height:2.65rem; max-height:8rem; resize:vertical; padding:.65rem .8rem; border:1px solid var(--color-border); border-radius:.8rem; background:var(--color-surface); line-height:1.6; }
+.content-editor--compact .content-editor__file-field { display:none; }
+.content-editor__compact-tools { position:relative; display:flex; align-items:center; gap:.35rem; }
+.content-editor__tool { display:grid; place-items:center; width:2rem; height:2rem; border:0; border-radius:.6rem; background:transparent; font-size:1.15rem; cursor:pointer; }
+.content-editor__tool:hover { background:var(--color-primary-soft); }
+.content-editor__emoji-picker { position:absolute; z-index:8; inset-block-end:calc(100% + .45rem); inset-inline-start:0; display:flex; flex-wrap:wrap; gap:.2rem; width:min(17rem, calc(100vw - 3rem)); padding:.5rem; border:1px solid var(--color-border); border-radius:.85rem; background:var(--color-surface); box-shadow:var(--shadow-float); }
+.content-editor__emoji-picker[hidden] { display:none; }
+.content-editor__emoji-picker button { display:grid; place-items:center; width:2.25rem; height:2.25rem; border:0; border-radius:.55rem; background:transparent; font-size:1.35rem; cursor:pointer; }
+.content-editor__emoji-picker button:hover { background:var(--color-primary-soft); }
+.reply-composer { padding:.8rem; gap:.55rem; }
+.reply-composer h3 { display:none; }
+.reply-to-comment form .content-editor--compact { min-width:0; }
+.reply-to-comment form .content-editor--compact [data-content-textarea] { min-height:2.4rem; }
