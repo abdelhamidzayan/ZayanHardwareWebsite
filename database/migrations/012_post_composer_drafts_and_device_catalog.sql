@@ -93,7 +93,10 @@ ALTER TABLE issues
 
 ALTER TABLE issue_attachments
     ADD COLUMN original_file_path VARCHAR(255) NULL AFTER file_path,
-    ADD COLUMN editor_state JSON NULL AFTER original_file_path,
+    ADD COLUMN original_mime_type VARCHAR(100) NULL AFTER original_file_path,
+    ADD COLUMN rendered_file_path VARCHAR(255) NULL AFTER original_mime_type,
+    ADD COLUMN rendered_mime_type VARCHAR(100) NULL AFTER rendered_file_path,
+    ADD COLUMN editor_state JSON NULL AFTER rendered_mime_type,
     ADD COLUMN sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER editor_state;
 
 CREATE TABLE IF NOT EXISTS post_drafts (
