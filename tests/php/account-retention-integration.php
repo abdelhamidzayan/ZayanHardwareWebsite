@@ -246,6 +246,28 @@ $fixtures = [
 ];
 foreach ($fixtures as $sql) $pdo->exec($sql);
 
+// Match the live users contact invariant, including the corrected post-015
+// exception that permits contactless accounts only after anonymization.
+$contactCheckQuery = $pdo->prepare(
+    "SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS
+     WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'chk_users_contact'
+     LIMIT 1"
+);
+$contactCheckQuery->execute();
+$contactCheckClause = $contactCheckQuery->fetchColumn();
+if ($contactCheckClause === false) {
+    $pdo->exec(
+        "ALTER TABLE users ADD CONSTRAINT chk_users_contact
+         CHECK (email IS NOT NULL OR phone IS NOT NULL OR account_status = 'deleted')"
+    );
+} else {
+    $normalizedClause = strtolower(preg_replace('/[\\x60\\s]+/', '', (string) $contactCheckClause) ?? '');
+    retentionExpect(
+        str_contains($normalizedClause, 'account_status') && str_contains($normalizedClause, 'deleted'),
+        'The users contact check must include the migration 015 deleted-account exception.'
+    );
+}
+
 $pdo->beginTransaction();
 try {
     $userInsert = $pdo->prepare(
@@ -393,6 +415,13 @@ try {
     )->execute([$ownerId, $ownerId, 'test.before_retention', '{"test":true}', str_repeat('d', 64)]);
     $auditId = (int) $pdo->lastInsertId();
     $pdo->prepare(
+        "INSERT INTO security_audit_logs (actor_user_id, target_user_id, action, details_json, ip_hash)
+         VALUES (?, ?, 'account.password_reset_by_admin', ?, ?)"
+    )->execute([
+        $helperId, $ownerId, json_encode(['note' => 'Private identifying admin note'], JSON_THROW_ON_ERROR), str_repeat('f', 64)
+    ]);
+    $adminResetAuditId = (int) $pdo->lastInsertId();
+    $pdo->prepare(
         'INSERT INTO admin_password_resets (user_id, admin_id, note) VALUES (?, ?, ?)'
     )->execute([$ownerId, $helperId, 'Contains personal admin note']);
     $resetId = (int) $pdo->lastInsertId();
@@ -532,6 +561,13 @@ retentionExpect($auditStmt->fetchColumn() === null, 'Audit row must remain with 
 $resetStmt = $pdo->prepare('SELECT note FROM admin_password_resets WHERE id = ?');
 $resetStmt->execute([$resetId]);
 retentionExpect($resetStmt->fetchColumn() === null, 'Password reset audit row must remain with free-form note cleared.');
+$resetAuditStmt = $pdo->prepare('SELECT details_json, ip_hash FROM security_audit_logs WHERE id = ?');
+$resetAuditStmt->execute([$adminResetAuditId]);
+$resetAudit = $resetAuditStmt->fetch(PDO::FETCH_ASSOC);
+retentionExpect(
+    $resetAudit['details_json'] === null && $resetAudit['ip_hash'] === null,
+    'Copied free-form admin reset notes and IP hashes must be redacted from the security audit row.'
+);
 
 $deletionStmt = $pdo->prepare('SELECT status, completed_at FROM account_deletion_requests WHERE id = ?');
 $deletionStmt->execute([$deletionRequestId]);
@@ -547,6 +583,44 @@ retentionExpect($beforeCounts === $afterCounts, 'No technical post, reply, diagn
 
 $repeat = AccountRetentionService::run(true, 100);
 retentionExpect($repeat['due'] === 0 && $repeat['processed'] === 0, 'Repeated worker execution must not process the same completed request twice.');
+
+// A manually queued deletion request must never demote the last active admin.
+$pdo->prepare(
+    "INSERT INTO users
+        (username, display_name, email, phone, password_hash, role, account_status,
+         avatar_key, avatar_path, accept_help_requests, last_login_at)
+     VALUES (?, 'Last Admin', ?, ?, ?, 'admin', 'active', 'technician-blue', NULL, 1, UTC_TIMESTAMP())"
+)->execute([
+    'retention_last_admin_' . bin2hex(random_bytes(3)),
+    'last-admin@example.test',
+    '+201000000004',
+    password_hash('admin-password', PASSWORD_DEFAULT),
+]);
+$lastAdminId = (int) $pdo->lastInsertId();
+$pdo->prepare(
+    "INSERT INTO account_deletion_requests (user_id, status, scheduled_purge_at)
+     VALUES (?, 'pending', DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE))"
+)->execute([$lastAdminId]);
+$lastAdminRequestId = (int) $pdo->lastInsertId();
+$pdo->prepare("UPDATE users SET account_status = 'deletion_pending' WHERE id = ?")->execute([$lastAdminId]);
+
+$adminGuardRun = AccountRetentionService::run(true, 100);
+retentionExpect(
+    $adminGuardRun['processed'] === 0 && count($adminGuardRun['errors'] ?? []) === 1,
+    'The worker must refuse to anonymize the final administrator.'
+);
+$adminGuardUser = $pdo->prepare('SELECT role, account_status, email FROM users WHERE id = ?');
+$adminGuardUser->execute([$lastAdminId]);
+$adminGuardState = $adminGuardUser->fetch(PDO::FETCH_ASSOC);
+retentionExpect(
+    $adminGuardState['role'] === 'admin'
+    && $adminGuardState['account_status'] === 'deletion_pending'
+    && $adminGuardState['email'] === 'last-admin@example.test',
+    'The last administrator must remain unchanged when retention is blocked.'
+);
+$adminGuardRequest = $pdo->prepare('SELECT status FROM account_deletion_requests WHERE id = ?');
+$adminGuardRequest->execute([$lastAdminRequestId]);
+retentionExpect($adminGuardRequest->fetchColumn() === 'pending', 'Blocked last-admin request must remain pending.');
 
 // A failure at the final audit insert must roll back every identity and profile change.
 $rollbackPublic = createPublicHelpPost($pdo, $rollbackUserId, $helperId, 'Rollback public article');
