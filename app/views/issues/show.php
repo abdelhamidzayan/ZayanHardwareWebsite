@@ -1,7 +1,10 @@
 <?php
 $contentType = $issue['content_type'] ?? 'help_request';
 $isHelpRequest = $contentType === 'help_request';
-$typeLabel = match ($contentType) { 'technical_post' => 'معلومة فنية', 'discussion' => 'نقاش عام', default => 'طلب مساعدة' };
+$typeLabel = match ($contentType) { 'technical_post', 'discussion' => 'معلومة فنية', default => 'طلب مساعدة' };
+$steps = json_decode((string) ($issue['steps_json'] ?? ''), true);
+$steps = is_array($steps) ? array_values(array_filter($steps, static fn ($step): bool => is_string($step) && trim($step) !== '')) : [];
+$deviceLabel = trim((string) ($issue['manufacturer_name'] ?? '') . ' ' . (string) ($issue['model_code'] ?? $issue['model_commercial_name'] ?? $issue['device_model'] ?? ''));
 $resolved = $issue['status'] === 'resolved';
 $awaitingConfirmation = $issue['status'] === 'awaiting_confirmation';
 $closed = in_array($issue['status'], ['resolved', 'closed_unresolved'], true);
@@ -39,40 +42,62 @@ foreach ($replies as $reply) {
             </div>
             <?php if (in_array($issue['author_role'], ['admin', 'moderator'], true)) : ?><span class="badge">إشراف المنصة</span><?php endif; ?>
         </div>
-        <?php if ($isHelpRequest) : ?>
-            <div class="issue-tags">
-                <?php if (!empty($issue['device_model'])) : ?><span class="tag tech"><?= $e($issue['device_model']) ?></span><?php endif; ?>
-                <?php if (!empty($issue['category'])) : ?><span class="tag"><?= $e($specializations[$issue['category']] ?? $issue['category']) ?></span><?php endif; ?>
-            </div>
-        <?php else : ?>
-            <div class="issue-tags"><span class="tag"><?= $e($typeLabel) ?></span></div>
-        <?php endif; ?>
+        <div class="issue-tags">
+            <span class="tag"><?= $e($typeLabel) ?></span>
+            <?php if ($deviceLabel !== '') : ?><span class="tag tech"><?= $e($deviceLabel) ?></span><?php endif; ?>
+            <?php if ($isHelpRequest && !empty($issue['category'])) : ?><span class="tag"><?= $e($specializations[$issue['category']] ?? $issue['category']) ?></span><?php endif; ?>
+        </div>
         <h1 class="issue-title" dir="auto"><?= $e($issue['title']) ?></h1>
-        <div class="issue-description" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $issue['description'], $attachments, $baseUrl) ?></div>
+        <?php if (($issue['details_mode'] ?? 'text') === 'audio' && !empty($issue['audio_path'])) : ?>
+            <div class="issue-audio">
+                <audio controls preload="none" src="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/audio"
+                    data-audio-trim data-trim-start="<?= (int) ($issue['audio_trim_start_ms'] ?? 0) ?>"
+                    data-trim-end="<?= (int) ($issue['audio_trim_end_ms'] ?? $issue['audio_duration_ms'] ?? 0) ?>">
+                    المتصفح لا يدعم تشغيل الصوت.
+                </audio>
+                <span class="muted">تسجيل صوتي · <?= $e(gmdate('i:s', (int) round(max(0, (int) ($issue['audio_duration_ms'] ?? 0)) / 1000))) ?></span>
+            </div>
+        <?php elseif (!empty($issue['description'])) : ?>
+            <div class="issue-description" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $issue['description'], $attachments, $baseUrl) ?></div>
+        <?php endif; ?>
+        <?php if ($steps) : ?>
+            <section class="issue-tested-steps">
+                <h2>الخطوات والفحوصات المجربة</h2>
+                <ol>
+                    <?php foreach ($steps as $step) : ?>
+                        <li><span><?= $e($step) ?></span></li>
+                    <?php endforeach; ?>
+                </ol>
+            </section>
+        <?php endif; ?>
         <?php if (!empty($issue['measurements'])) : ?>
             <div class="issue-measurements"><strong>القياسات والملاحظات</strong><p dir="auto"><?= nl2br($e($issue['measurements'])) ?></p></div>
         <?php endif; ?>
         <?php if ($attachments) : ?>
-            <div class="issue-attachments">
-                <?php foreach ($attachments as $file) : ?>
-                    <?php if ((int) ($file['is_inline'] ?? 0) === 1) continue; ?>
-                    <?php
-                    $attachmentUrl = $baseUrl . '/attachments/' . (int) $file['id'];
-                    $mimeType = (string) $file['mime_type'];
-                    ?>
-                    <?php if (str_starts_with($mimeType, 'image/')) : ?>
-                        <a href="<?= $e($attachmentUrl) ?>" class="attachment-image-link" data-image-viewer data-image-src="<?= $e($attachmentUrl) ?>" aria-label="تكبير الصورة">
-                            <img src="<?= $e($attachmentUrl) ?>" alt="مرفق فني" loading="lazy">
-                        </a>
-                    <?php elseif (str_starts_with($mimeType, 'audio/')) : ?>
-                        <audio controls preload="none" src="<?= $e($attachmentUrl) ?>">
-                            المتصفح لا يدعم تشغيل الصوت.
-                        </audio>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </div>
+            <section class="issue-attachments">
+                <h2>المرفقات</h2>
+                <div class="issue-attachments__grid" data-image-gallery="issue-<?= (int) $issue['id'] ?>">
+                    <?php foreach ($attachments as $file) : ?>
+                        <?php if ((int) ($file['is_inline'] ?? 0) === 1) continue; ?>
+                        <?php
+                        $attachmentUrl = $baseUrl . '/attachments/' . (int) $file['id'];
+                        $mimeType = (string) $file['mime_type'];
+                        ?>
+                        <?php if (str_starts_with($mimeType, 'image/')) : ?>
+                            <a href="<?= $e($attachmentUrl) ?>" class="attachment-image-link" data-image-viewer data-image-gallery-item data-image-src="<?= $e($attachmentUrl) ?>" aria-label="فتح الصورة">
+                                <img src="<?= $e($attachmentUrl) ?>" alt="مرفق فني" loading="lazy">
+                            </a>
+                        <?php elseif (str_starts_with($mimeType, 'video/')) : ?>
+                            <video class="issue-attachment-video" controls preload="metadata" playsinline src="<?= $e($attachmentUrl) ?>">المتصفح لا يدعم تشغيل الفيديو.</video>
+                        <?php elseif (str_starts_with($mimeType, 'audio/')) : ?>
+                            <audio controls preload="none" src="<?= $e($attachmentUrl) ?>"></audio>
+                        <?php elseif ($mimeType === 'application/pdf') : ?>
+                            <a class="issue-attachment-file" href="<?= $e($attachmentUrl) ?>" target="_blank" rel="noopener">عرض ملف PDF</a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </section>
         <?php endif; ?>
-
         <?php if ($issue['updated_at'] !== $issue['created_at']) : ?>
             <div class="issue-latest-update">
                 <span class="issue-latest-update__label">آخر تحديث <span class="badge">معدّل</span></span>
