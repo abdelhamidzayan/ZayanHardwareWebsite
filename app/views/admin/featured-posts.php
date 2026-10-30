@@ -3,6 +3,7 @@
         <h1 class="page-head__title">إدارة منشورات الرئيسية</h1>
         <p class="muted">اختار الحالات الفنية اللي تظهر في كروت متحركة أعلى الصفحة الرئيسية.</p>
     </div>
+    <a class="btn btn--secondary" href="<?= $e($baseUrl) ?>/admin/update">تحديث الموقع</a>
 </div>
 
 <div class="container admin-featured">
