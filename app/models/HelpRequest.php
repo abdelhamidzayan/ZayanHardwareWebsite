@@ -85,7 +85,7 @@ final class HelpRequest extends Model
         if ($stmt->rowCount() !== 1) throw new \DomainException('request_not_closable');
     }
 
-    public static function forUser(int $userId, string $scope = 'all'): array
+    public static function forUser(int $userId, string $scope = 'all', int $limit = 100): array
     {
         $where = match ($scope) {
             'incoming' => 'h.helper_id = ?',
@@ -93,6 +93,7 @@ final class HelpRequest extends Model
             default => '(h.helper_id = ? OR h.requester_id = ?)',
         };
         $params = $scope === 'all' ? [$userId, $userId] : [$userId];
+        $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
             'SELECT h.id, h.subject, h.status, h.created_at, h.updated_at, h.last_message_at,
                     h.requester_id, h.helper_id,
@@ -105,7 +106,7 @@ final class HelpRequest extends Model
              JOIN users requester ON requester.id = h.requester_id
              JOIN users helper ON helper.id = h.helper_id
              WHERE ' . $where . '
-             ORDER BY h.last_message_at DESC, h.id DESC LIMIT 100'
+             ORDER BY h.last_message_at DESC, h.id DESC LIMIT ' . $limit
         );
         $stmt->execute($params);
         return $stmt->fetchAll();
@@ -254,6 +255,24 @@ final class HelpRequest extends Model
         $stmt = self::db()->prepare('SELECT * FROM help_public_posts WHERE id = ? LIMIT 1');
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;
+    }
+
+    public static function publicPostsByUser(int $userId): array
+    {
+        $stmt = self::db()->prepare(
+            'SELECT p.id, p.title, p.problem_summary, p.diagnosis_summary, p.solution_summary,
+                    p.requester_display_name, p.helper_display_name,
+                    p.requester_avatar_key, p.helper_avatar_key, p.created_at
+             FROM help_public_posts p
+             JOIN help_request_publications pub ON pub.id = p.publication_id
+             JOIN help_requests h ON h.id = p.request_id
+             WHERE pub.status = \'published\'
+               AND ((h.requester_id = ? AND pub.requester_show_identity = 1)
+                 OR (h.helper_id = ? AND pub.helper_show_identity = 1))
+             ORDER BY p.created_at DESC, p.id DESC LIMIT 50'
+        );
+        $stmt->execute([$userId, $userId]);
+        return $stmt->fetchAll();
     }
 
     public static function unreadCount(int $userId): int
