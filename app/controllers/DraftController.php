@@ -111,6 +111,10 @@ final class DraftController extends Controller
         }
         $draft = PostDraft::findForUser($draftId, (int) $user['id']);
         if (!$draft) return Response::json(['error' => 'draft_not_found'], 404);
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) {
+            return Response::json(['error' => 'revision_invalid'], 422);
+        }
 
         $files = $_FILES['media'] ?? null;
         if (!is_array($files) || !isset($files['name'])) {
@@ -135,6 +139,7 @@ final class DraftController extends Controller
 
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $saved = [];
+        $currentRevision = $expectedRevision;
         try {
             foreach ($names as $index => $name) {
                 $error = (int) ($errors[$index] ?? UPLOAD_ERR_NO_FILE);
@@ -204,8 +209,11 @@ final class DraftController extends Controller
                         $size,
                         $sha256,
                         null,
-                        count($existing) + count($saved)
+                        count($existing) + count($saved),
+                        (int) $user['id'],
+                        $currentRevision
                     );
+                    $currentRevision = PostDraft::currentRevision($draftId, (int) $user['id']);
                 } catch (\Throwable $e) {
                     @unlink($destination);
                     throw $e;
@@ -224,7 +232,10 @@ final class DraftController extends Controller
         } catch (\Throwable $e) {
             // Remove media already stored by this request when any later file fails.
             foreach ($saved as $item) {
-                PostDraft::deleteMedia($draftId, (string) $item['media_uuid'], (int) $user['id']);
+                PostDraft::deleteMediaForRollback($draftId, (string) $item['media_uuid'], (int) $user['id']);
+            }
+            if ($e instanceof \DomainException && $e->getMessage() === 'draft_revision_conflict') {
+                return $this->revisionConflict($draftId, (int) $user['id']);
             }
             if (!$e instanceof \DomainException) {
                 throw $e;
@@ -241,7 +252,7 @@ final class DraftController extends Controller
             return Response::json(['error' => $e->getMessage(), 'message' => $message], 422);
         }
 
-        return Response::json(['media' => $saved], 201);
+        return Response::json(['media' => $saved, 'revision' => $currentRevision], 201);
     }
 
     public function uploadRendered(string $draftId, string $mediaUuid): Response
@@ -250,6 +261,8 @@ final class DraftController extends Controller
         if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
         if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
 
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
         $media = PostDraft::ownedMedia($draftId, $mediaUuid, (int) $user['id']);
         if (!$media || $media['media_kind'] !== 'image') return Response::json(['error' => 'media_not_found'], 404);
         $file = $_FILES['rendered'] ?? null;
@@ -277,9 +290,22 @@ final class DraftController extends Controller
         if (!move_uploaded_file($tmp, $destination)) return Response::json(['error' => 'storage_failed'], 500);
         $relative = 'drafts/' . $draftId . '/' . $filename;
         $sha = hash_file('sha256', $destination);
-        if (!is_string($sha) || !PostDraft::setRenderedPath($draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha)) {
+        if (!is_string($sha)) {
             @unlink($destination);
             return Response::json(['error' => 'save_failed'], 500);
+        }
+        try {
+            $newRevision = PostDraft::setRenderedPath(
+                $draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha, $expectedRevision
+            );
+        } catch (\DomainException $e) {
+            @unlink($destination);
+            if ($e->getMessage() === 'draft_revision_conflict') return $this->revisionConflict($draftId, (int) $user['id']);
+            throw $e;
+        }
+        if ($newRevision === null) {
+            @unlink($destination);
+            return Response::json(['error' => 'media_not_found'], 404);
         }
         if (!empty($media['rendered_path'])) {
             $old = realpath(App::root('storage/private/' . ltrim((string) $media['rendered_path'], '/')));
@@ -289,6 +315,7 @@ final class DraftController extends Controller
 
         return Response::json([
             'saved' => true,
+            'revision' => $newRevision,
             'rendered_url' => $this->mediaUrl($draftId, $mediaUuid, true),
             'original_url' => $this->mediaUrl($draftId, $mediaUuid),
         ]);
@@ -299,6 +326,9 @@ final class DraftController extends Controller
         $user = AuthService::user();
         if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
         if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
+
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
 
         $stateJson = $this->request->input('editor_state');
         if (!is_string($stateJson) || strlen($stateJson) > 350000) {
@@ -314,10 +344,17 @@ final class DraftController extends Controller
         $sortOrder = filter_var($this->request->input('sort_order', 0), FILTER_VALIDATE_INT);
         if ($sortOrder === false || $sortOrder < 0 || $sortOrder > 100) return Response::json(['error' => 'sort_order_invalid'], 422);
 
-        if (!PostDraft::updateMediaEditorState($draftId, $mediaUuid, (int) $user['id'], $state, $sortOrder)) {
-            return Response::json(['error' => 'media_not_found'], 404);
+        try {
+            $newRevision = PostDraft::updateMediaEditorState(
+                $draftId, $mediaUuid, (int) $user['id'], $state, $sortOrder, $expectedRevision
+            );
+        } catch (\DomainException $e) {
+            if ($e->getMessage() === 'draft_revision_conflict') return $this->revisionConflict($draftId, (int) $user['id']);
+            if ($e->getMessage() === 'draft_not_found') return Response::json(['error' => 'draft_not_found'], 404);
+            throw $e;
         }
-        return Response::json(['saved' => true]);
+        if ($newRevision === null) return Response::json(['error' => 'media_not_found'], 404);
+        return Response::json(['saved' => true, 'revision' => $newRevision]);
     }
 
     public function deleteMedia(string $draftId, string $mediaUuid): Response
@@ -325,10 +362,17 @@ final class DraftController extends Controller
         $user = AuthService::user();
         if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
         if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
-        if (!PostDraft::deleteMedia($draftId, $mediaUuid, (int) $user['id'])) {
-            return Response::json(['error' => 'media_not_found'], 404);
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
+        try {
+            $newRevision = PostDraft::deleteMedia($draftId, $mediaUuid, (int) $user['id'], $expectedRevision);
+        } catch (\DomainException $e) {
+            if ($e->getMessage() === 'draft_revision_conflict') return $this->revisionConflict($draftId, (int) $user['id']);
+            if ($e->getMessage() === 'draft_not_found') return Response::json(['error' => 'draft_not_found'], 404);
+            throw $e;
         }
-        return Response::json(['deleted' => true]);
+        if ($newRevision === null) return Response::json(['error' => 'media_not_found'], 404);
+        return Response::json(['deleted' => true, 'revision' => $newRevision]);
     }
 
     public function media(string $draftId, string $mediaUuid): Response
@@ -451,6 +495,15 @@ final class DraftController extends Controller
 
         $clean['updated_at_local'] = gmdate('c');
         return $clean;
+    }
+
+    private function revisionConflict(string $draftId, int $userId): Response
+    {
+        $draft = PostDraft::findForUser($draftId, $userId);
+        return Response::json([
+            'error' => 'revision_conflict',
+            'revision' => (int) ($draft['revision'] ?? 0),
+        ], 409);
     }
 
     private function mediaUrl(string $draftId, string $mediaUuid, bool $rendered = false): string
