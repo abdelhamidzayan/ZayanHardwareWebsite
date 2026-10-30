@@ -24,6 +24,16 @@ final class AccountController extends Controller
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
+            // Serialize concurrent deletion requests on the existing user row.
+            $accountLock = $pdo->prepare('SELECT account_status FROM users WHERE id = ? FOR UPDATE');
+            $accountLock->execute([(int) $user['id']]);
+            $accountStatus = $accountLock->fetchColumn();
+            if ($accountStatus !== 'active') {
+                $pdo->rollBack();
+                $this->flash('info', 'طلب إيقاف الحساب أو حذفه مسجل بالفعل.');
+                return $this->redirect('/');
+            }
+
             $stmt = $pdo->prepare(
                 "INSERT INTO account_deletion_requests (user_id, status, scheduled_purge_at)
                  VALUES (?, 'pending', DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY))"
