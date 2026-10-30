@@ -35,7 +35,7 @@ final class DeviceCatalogController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
 
         $manufacturerId = filter_var($this->request->input('manufacturer_id'), FILTER_VALIDATE_INT);
-        $commercialName = $this->string('commercial_name');
+        $commercialName = trim($this->string('commercial_name'));
         $modelCode = $this->string('model_code');
         $aliases = $this->string('aliases');
         $note = $this->string('note');
@@ -51,7 +51,7 @@ final class DeviceCatalogController extends Controller
             $suggestionId = DeviceCatalog::submitSuggestion(
                 (int) $manufacturerId,
                 (int) $user['id'],
-                trim($commercialName),
+                $commercialName,
                 trim($modelCode),
                 trim($aliases),
                 trim($note)
