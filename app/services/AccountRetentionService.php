@@ -154,7 +154,15 @@ final class AccountRetentionService
 
     private static function removePrivateAvatarFiles(int $userId): void
     {
-        $root = realpath(App::root('storage/private'));
+        $privateRoot = App::root('storage/private');
+        if (!file_exists($privateRoot) && !is_link($privateRoot)) {
+            // Accounts without custom avatars may never have created private storage.
+            return;
+        }
+        if (is_link($privateRoot) || !is_dir($privateRoot)) {
+            throw new RuntimeException('Private storage root must be a real directory.');
+        }
+        $root = realpath($privateRoot);
         if ($root === false) throw new RuntimeException('Private storage directory is unavailable.');
 
         $avatarRootCandidate = $root . DIRECTORY_SEPARATOR . 'avatars';
