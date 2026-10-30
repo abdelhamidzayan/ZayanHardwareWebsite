@@ -6,7 +6,8 @@ Snapshot date: 2026-10-30. Verify Git and runtime again before acting.
 - Repository: `abdelhamidzayan/ZayanHardwareWebsite`.
 - Product source baseline: `feature/profiles-help-media` at `1752f1b4c2acb48c5fbad182a0a3e82cace23c48`.
 - Audit branch: `audit/full-system-20261030`.
-- Latest audit commit: `f455dcab3818c5d19a9aa2487929e937f8636b14`.
+- Audit code/test commit: `f455dcab3818c5d19a9aa2487929e937f8636b14`.
+- The documentation and handoff snapshot is included in the follow-on commit; verify branch HEAD before work.
 - The audit branch starts from the feature branch baseline. It is not merged into `feature/profiles-help-media` or `main`, and it is not deployed.
 - The older `audit/graphify-system-20261030` branch starts from `main` and is 226 commits behind the feature baseline; do not merge it into the feature branch.
 

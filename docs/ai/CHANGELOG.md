@@ -8,7 +8,8 @@ Append factual entries at the top. Do not describe unmerged work as deployed.
 - Fixed integer route-parameter handling for `userId` in Router; added focused parameter contract test.
 - Added Graphify audit script/workflow, route-to-controller signature checks, and CI failure conditions for static-consistency/extraction errors.
 - Added curated architecture/feature/relationship docs and explicit verification boundaries.
-- Commit: `f455dcab3818c5d19a9aa2487929e937f8636b14` contains code/test/workflow changes; documentation update is being recorded separately.
+- Code/test commit: `f455dcab3818c5d19a9aa2487929e937f8636b14`.
+- Curated architecture, relationship map, handoff and audit findings are included in the follow-on memory commit.
 - Runtime, PHP CLI, DB, browser and Graphify execution results are not verified in this handoff.
 
 ## 2026-10-30 — AI project memory bootstrap

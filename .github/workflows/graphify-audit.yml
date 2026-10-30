@@ -2,6 +2,17 @@ name: Graphify full-system code relationship audit
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - feature/profiles-help-media
+    paths:
+      - "app/**"
+      - "config/**"
+      - "database/migrations/**"
+      - "public/**"
+      - "tests/router-route-parameters.php"
+      - ".github/scripts/graphify_audit.py"
+      - ".github/workflows/graphify-audit.yml"
   push:
     branches:
       - audit/full-system-20261030
