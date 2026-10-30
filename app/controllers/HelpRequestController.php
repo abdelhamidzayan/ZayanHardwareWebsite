@@ -81,7 +81,7 @@ final class HelpRequestController extends Controller
         $body = trim($this->string('body'));
         try {
             $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
-        } catch (\\DomainException) {
+        } catch (\DomainException) {
             return $this->fail('/feed', 'راجع المرفقات؛ المسموح حتى 8 صور أو ملفات PDF، كل ملف حتى 8 ميجابايت.');
         }
         if (!$helperId || mb_strlen($subject) < 4 || mb_strlen($subject) > 180
