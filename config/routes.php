@@ -77,6 +77,19 @@ return static function (Router $router): void {
     $router->post('/admin/users/{id}/role', [AdminUserController::class, 'setRole']);
 
     $router->get('/profile/{username}', [ProfileController::class, 'show']);
+    $router->post('/profile/avatar', [AvatarController::class, 'update']);
+    $router->get('/avatar/{userId}', [AvatarController::class, 'show']);
+    $router->get('/help-requests', [HelpRequestController::class, 'index']);
+    $router->get('/help-requests/{id}', [HelpRequestController::class, 'show']);
+    $router->post('/help-requests/create', [HelpRequestController::class, 'create']);
+    $router->post('/help-requests/{id}/accept', [HelpRequestController::class, 'accept']);
+    $router->post('/help-requests/{id}/decline', [HelpRequestController::class, 'decline']);
+    $router->post('/help-requests/{id}/messages', [HelpRequestController::class, 'send']);
+    $router->post('/help-requests/{id}/close', [HelpRequestController::class, 'close']);
+    $router->post('/help-requests/{id}/publication', [HelpRequestController::class, 'proposePublication']);
+    $router->post('/help-publications/{id}/respond', [HelpRequestController::class, 'respondPublication']);
+    $router->get('/help-library', [HelpRequestController::class, 'library']);
+    $router->get('/help-library/{id}', [HelpRequestController::class, 'publicPost']);
 
     // Navigation targets that are not built yet.
     foreach (['/search', '/market'] as $path) {
