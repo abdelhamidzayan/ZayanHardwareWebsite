@@ -76,17 +76,19 @@ final class HelpRequestController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/feed', 'انتهت صلاحية الصفحة. أعد المحاولة.');
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+        $returnTo = $this->string('return_to');
+        if (preg_match('~^/profile/[a-z0-9_]{3,20}$~', $returnTo) !== 1) $returnTo = '/feed';
         $helperId = filter_var($this->request->input('helper_id'), FILTER_VALIDATE_INT);
         $subject = trim($this->string('subject'));
         $body = trim($this->string('body'));
         try {
             $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
         } catch (\DomainException) {
-            return $this->fail('/feed', 'راجع المرفقات؛ المسموح حتى 8 صور أو ملفات PDF، كل ملف حتى 8 ميجابايت.');
+            return $this->fail($returnTo, 'راجع المرفقات؛ المسموح حتى 8 صور أو ملفات PDF، كل ملف حتى 8 ميجابايت.');
         }
         if (!$helperId || mb_strlen($subject) < 4 || mb_strlen($subject) > 180
             || (mb_strlen($body) < 10 && !$uploads) || mb_strlen($body) > 5000) {
-            return $this->fail('/feed', 'اكتب عنوانًا واضحًا ووصفًا للمساعدة، أو أرفق صورة مع وصف مختصر.');
+            return $this->fail($returnTo, 'اكتب عنوانًا واضحًا ووصفًا للمساعدة، أو أرفق صورة مع وصف مختصر.');
         }
         try {
             $id = HelpRequest::create((int) $user['id'], (int) $helperId, $subject, $body);
@@ -103,7 +105,7 @@ final class HelpRequestController extends Controller
             $this->flash('success', 'تم إرسال طلب المساعدة. سيظهر لك عند رد العضو.');
             return $this->redirect('/help-requests/' . $id);
         } catch (\DomainException) {
-            return $this->fail('/feed', 'هذا العضو لا يستقبل طلبات المساعدة حاليًا، أو أن الطلب غير صالح.');
+            return $this->fail($returnTo, 'هذا العضو لا يستقبل طلبات المساعدة حاليًا، أو أن الطلب غير صالح.');
         }
     }
 
