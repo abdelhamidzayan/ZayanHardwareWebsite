@@ -85,6 +85,7 @@ final class AccountRetentionService
                 'role', 'account_status', 'avatar_key', 'avatar_path',
                 'accept_help_requests', 'last_login_at',
             ],
+            'technician_profiles' => ['user_id', 'workshop_name', 'biography'],
             'account_deletion_requests' => ['id', 'user_id', 'status', 'scheduled_purge_at'],
             'terms_acceptances' => ['user_id', 'ip_hash'],
             'security_audit_logs' => ['actor_user_id', 'target_user_id', 'action', 'details_json', 'ip_hash'],
@@ -92,16 +93,35 @@ final class AccountRetentionService
         ];
 
         $columnQuery = $pdo->prepare(
-            'SELECT COLUMN_NAME FROM information_schema.COLUMNS
+            'SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS
              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
         );
         $problems = [];
         foreach ($required as $table => $expectedColumns) {
             $columnQuery->execute([$table]);
-            $actualColumns = $columnQuery->fetchAll(PDO::FETCH_COLUMN);
+            $columnRows = $columnQuery->fetchAll(PDO::FETCH_ASSOC);
+            $columnTypes = [];
+            foreach ($columnRows as $columnRow) {
+                $columnTypes[(string) $columnRow['COLUMN_NAME']] = (string) $columnRow['COLUMN_TYPE'];
+            }
+            $actualColumns = array_keys($columnTypes);
             $missingColumns = array_values(array_diff($expectedColumns, $actualColumns));
             if ($missingColumns) {
                 $problems[] = $table . ' missing columns: ' . implode(', ', $missingColumns);
+            }
+            if ($table === 'users' && isset($columnTypes['account_status'])) {
+                foreach (["'active'", "'deletion_pending'", "'deleted'"] as $requiredValue) {
+                    if (!str_contains($columnTypes['account_status'], $requiredValue)) {
+                        $problems[] = 'users.account_status missing enum value ' . $requiredValue;
+                    }
+                }
+            }
+            if ($table === 'account_deletion_requests' && isset($columnTypes['status'])) {
+                foreach (["'pending'", "'cancelled'", "'completed'"] as $requiredValue) {
+                    if (!str_contains($columnTypes['status'], $requiredValue)) {
+                        $problems[] = 'account_deletion_requests.status missing enum value ' . $requiredValue;
+                    }
+                }
             }
         }
 
@@ -116,17 +136,33 @@ final class AccountRetentionService
             ],
         ];
         $tableQuery = $pdo->prepare(
-            'SELECT 1 FROM information_schema.TABLES
+            'SELECT ENGINE FROM information_schema.TABLES
              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1'
         );
+        $tablesToCheck = array_keys($required);
         foreach ($optional as $table => $expectedColumns) {
             $tableQuery->execute([$table]);
-            if ($tableQuery->fetchColumn() === false) continue;
+            $engine = $tableQuery->fetchColumn();
+            if ($engine === false) continue;
+            $tablesToCheck[] = $table;
             $columnQuery->execute([$table]);
-            $actualColumns = $columnQuery->fetchAll(PDO::FETCH_COLUMN);
+            $columnRows = $columnQuery->fetchAll(PDO::FETCH_COLUMN, 0);
+            $actualColumns = $columnRows;
             $missingColumns = array_values(array_diff($expectedColumns, $actualColumns));
             if ($missingColumns) {
                 $problems[] = $table . ' missing columns: ' . implode(', ', $missingColumns);
+            }
+        }
+
+        $engineQuery = $pdo->prepare(
+            'SELECT ENGINE FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1'
+        );
+        foreach (array_unique($tablesToCheck) as $table) {
+            $engineQuery->execute([$table]);
+            $engine = $engineQuery->fetchColumn();
+            if (strcasecmp((string) $engine, 'InnoDB') !== 0) {
+                $problems[] = $table . ' must use InnoDB for transactional anonymization';
             }
         }
 
