@@ -33,6 +33,21 @@ return static function (Router $router): void {
     $router->get('/issues/create', [IssueController::class, 'create']);
     $router->post('/issues/create', [IssueController::class, 'create']);
 
+    $router->get('/drafts', [DraftController::class, 'index']);
+    $router->post('/drafts/save', [DraftController::class, 'save']);
+    $router->get('/drafts/{draftId}/data', [DraftController::class, 'data']);
+    $router->post('/drafts/{draftId}/media', [DraftController::class, 'upload']);
+    $router->post('/drafts/{draftId}/media/{mediaUuid}/editor', [DraftController::class, 'updateMediaEditor']);
+    $router->post('/drafts/{draftId}/media/{mediaUuid}/delete', [DraftController::class, 'deleteMedia']);
+    $router->get('/drafts/{draftId}/media/{mediaUuid}', [DraftController::class, 'media']);
+    $router->post('/drafts/{draftId}/delete', [DraftController::class, 'delete']);
+
+    $router->get('/devices/manufacturers', [DeviceCatalogController::class, 'manufacturers']);
+    $router->get('/devices/models', [DeviceCatalogController::class, 'models']);
+    $router->post('/devices/suggestions', [DeviceCatalogController::class, 'suggest']);
+    $router->get('/admin/device-model-suggestions', [DeviceCatalogController::class, 'adminIndex']);
+    $router->post('/admin/device-model-suggestions/{id}', [DeviceCatalogController::class, 'moderate']);
+
     $router->get('/issues/{id}', [IssueController::class, 'show']);
     $router->get('/attachments/{id}', [IssueController::class, 'attachment']);
     $router->post('/issues/{id}/reply', [IssueController::class, 'reply']);
