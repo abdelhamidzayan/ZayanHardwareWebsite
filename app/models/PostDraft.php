@@ -135,24 +135,55 @@ final class PostDraft extends Model
         int $size,
         string $sha256,
         ?int $durationMs,
-        int $sortOrder
-    ): void {
-        self::db()->prepare(
-            'INSERT INTO post_draft_media
-                (draft_id, media_uuid, media_kind, storage_path, mime_type, file_size, sha256, duration_ms, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        )->execute([$draftId, $mediaUuid, $kind, $path, $mime, $size, $sha256, $durationMs, $sortOrder]);
+        int $sortOrder,
+        int $expectedRevision
+    ): int {
+        $pdo = self::db();
+        self::beginRevisionMutation($draftId, $userId = self::draftOwnerId($draftId), $expectedRevision);
+        try {
+            $pdo->prepare(
+                'INSERT INTO post_draft_media
+                    (draft_id, media_uuid, media_kind, storage_path, mime_type, file_size, sha256, duration_ms, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            )->execute([$draftId, $mediaUuid, $kind, $path, $mime, $size, $sha256, $durationMs, $sortOrder]);
+
+            return self::finishRevisionMutation($draftId, $userId);
+        } catch (\\Throwable $e) {
+            self::rollbackRevisionMutation();
+            throw $e;
+        }
     }
 
-    public static function setRenderedPath(string $draftId, string $mediaUuid, int $userId, string $path, string $mimeType, string $sha256): bool
-    {
-        $media = self::ownedMedia($draftId, $mediaUuid, $userId);
-        if (!$media || $media['media_kind'] !== 'image') return false;
-        self::db()->prepare(
-            'UPDATE post_draft_media SET rendered_path = ?, rendered_mime_type = ?, rendered_sha256 = ?
-             WHERE draft_id = ? AND media_uuid = ?'
-        )->execute([$path, $mimeType, $sha256, $draftId, $mediaUuid]);
-        return true;
+    public static function setRenderedPath(
+        string $draftId,
+        string $mediaUuid,
+        int $userId,
+        string $path,
+        string $mimeType,
+        string $sha256,
+        int $expectedRevision
+    ): ?int {
+        $pdo = self::db();
+        self::beginRevisionMutation($draftId, $userId, $expectedRevision);
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT media_kind FROM post_draft_media WHERE draft_id = ? AND media_uuid = ? LIMIT 1'
+            );
+            $stmt->execute([$draftId, $mediaUuid]);
+            if ($stmt->fetchColumn() !== 'image') {
+                self::rollbackRevisionMutation();
+                return null;
+            }
+            $pdo->prepare(
+                'UPDATE post_draft_media SET rendered_path = ?, rendered_mime_type = ?, rendered_sha256 = ?
+                 WHERE draft_id = ? AND media_uuid = ?'
+            )->execute([$path, $mimeType, $sha256, $draftId, $mediaUuid]);
+
+            return self::finishRevisionMutation($draftId, $userId);
+        } catch (\\Throwable $e) {
+            self::rollbackRevisionMutation();
+            throw $e;
+        }
     }
 
     public static function ownedMedia(string $draftId, string $mediaUuid, int $userId): ?array
@@ -166,33 +197,153 @@ final class PostDraft extends Model
         return $stmt->fetch() ?: null;
     }
 
-    public static function updateMediaEditorState(string $draftId, string $mediaUuid, int $userId, array $state, int $sortOrder): bool
-    {
+    public static function updateMediaEditorState(
+        string $draftId,
+        string $mediaUuid,
+        int $userId,
+        array $state,
+        int $sortOrder,
+        int $expectedRevision
+    ): ?int {
         $json = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        if (!self::ownedMedia($draftId, $mediaUuid, $userId)) return false;
-        self::db()->prepare(
-            'UPDATE post_draft_media
-             SET editor_state = ?, sort_order = ?
-             WHERE draft_id = ? AND media_uuid = ?'
-        )->execute([$json, $sortOrder, $draftId, $mediaUuid]);
-        return true;
+        $pdo = self::db();
+        self::beginRevisionMutation($draftId, $userId, $expectedRevision);
+        try {
+            $stmt = $pdo->prepare(
+                'UPDATE post_draft_media SET editor_state = ?, sort_order = ?
+                 WHERE draft_id = ? AND media_uuid = ?'
+            );
+            $stmt->execute([$json, $sortOrder, $draftId, $mediaUuid]);
+            if ($stmt->rowCount() < 1) {
+                self::rollbackRevisionMutation();
+                return null;
+            }
+
+            return self::finishRevisionMutation($draftId, $userId);
+        } catch (\\Throwable $e) {
+            self::rollbackRevisionMutation();
+            throw $e;
+        }
     }
 
-    public static function deleteMedia(string $draftId, string $mediaUuid, int $userId): bool
-    {
-        $media = self::ownedMedia($draftId, $mediaUuid, $userId);
-        if (!$media) return false;
-        $stmt = self::db()->prepare(
-            'DELETE m FROM post_draft_media m
-             JOIN post_drafts d ON d.id = m.draft_id
-             WHERE m.draft_id = ? AND m.media_uuid = ? AND d.user_id = ?'
-        );
-        $stmt->execute([$draftId, $mediaUuid, $userId]);
-        if ($stmt->rowCount() === 1) {
+    public static function deleteMedia(
+        string $draftId,
+        string $mediaUuid,
+        int $userId,
+        int $expectedRevision
+    ): ?int {
+        $pdo = self::db();
+        self::beginRevisionMutation($draftId, $userId, $expectedRevision);
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT storage_path, rendered_path FROM post_draft_media
+                 WHERE draft_id = ? AND media_uuid = ? LIMIT 1'
+            );
+            $stmt->execute([$draftId, $mediaUuid]);
+            $media = $stmt->fetch();
+            if (!$media) {
+                self::rollbackRevisionMutation();
+                return null;
+            }
+
+            $pdo->prepare(
+                'DELETE FROM post_draft_media WHERE draft_id = ? AND media_uuid = ?'
+            )->execute([$draftId, $mediaUuid]);
+            $nextRevision = self::finishRevisionMutation($draftId, $userId);
+
             self::removePrivateFile((string) $media['storage_path']);
             if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);
+            return $nextRevision;
+        } catch (\\Throwable $e) {
+            self::rollbackRevisionMutation();
+            throw $e;
         }
-        return $stmt->rowCount() === 1;
+    }
+
+    /** Internal rollback for a partially completed upload request. */
+    public static function deleteMediaForRollback(string $draftId, string $mediaUuid, int $userId): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $draft = $pdo->prepare('SELECT id FROM post_drafts WHERE id = ? AND user_id = ? FOR UPDATE');
+            $draft->execute([$draftId, $userId]);
+            if (!$draft->fetchColumn()) {
+                $pdo->rollBack();
+                return;
+            }
+            $stmt = $pdo->prepare(
+                'SELECT storage_path, rendered_path FROM post_draft_media
+                 WHERE draft_id = ? AND media_uuid = ? LIMIT 1'
+            );
+            $stmt->execute([$draftId, $mediaUuid]);
+            $media = $stmt->fetch();
+            if (!$media) {
+                $pdo->rollBack();
+                return;
+            }
+            $pdo->prepare('DELETE FROM post_draft_media WHERE draft_id = ? AND media_uuid = ?')
+                ->execute([$draftId, $mediaUuid]);
+            $pdo->prepare(
+                'UPDATE post_drafts SET revision = revision + 1, last_synced_at = UTC_TIMESTAMP(),
+                    updated_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ?'
+            )->execute([$draftId, $userId]);
+            $pdo->commit();
+
+            self::removePrivateFile((string) $media['storage_path']);
+            if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);
+        } catch (\\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    private static function beginRevisionMutation(string $draftId, int $userId, int $expectedRevision): void
+    {
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare(
+            'SELECT revision FROM post_drafts WHERE id = ? AND user_id = ? FOR UPDATE'
+        );
+        $stmt->execute([$draftId, $userId]);
+        $revision = $stmt->fetchColumn();
+        if ($revision === false) {
+            $pdo->rollBack();
+            throw new \\DomainException('draft_not_found');
+        }
+        if ((int) $revision !== $expectedRevision) {
+            $pdo->rollBack();
+            throw new \\DomainException('draft_revision_conflict');
+        }
+    }
+
+    private static function finishRevisionMutation(string $draftId, int $userId): int
+    {
+        $pdo = self::db();
+        $pdo->prepare(
+            'UPDATE post_drafts SET revision = revision + 1, last_synced_at = UTC_TIMESTAMP(),
+                updated_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ?'
+        )->execute([$draftId, $userId]);
+        $stmt = $pdo->prepare('SELECT revision FROM post_drafts WHERE id = ? AND user_id = ?');
+        $stmt->execute([$draftId, $userId]);
+        $revision = (int) $stmt->fetchColumn();
+        $pdo->commit();
+        return $revision;
+    }
+
+    private static function rollbackRevisionMutation(): void
+    {
+        $pdo = self::db();
+        if ($pdo->inTransaction()) $pdo->rollBack();
+    }
+
+    private static function draftOwnerId(string $draftId): int
+    {
+        $stmt = self::db()->prepare('SELECT user_id FROM post_drafts WHERE id = ? LIMIT 1');
+        $stmt->execute([$draftId]);
+        $ownerId = $stmt->fetchColumn();
+        if ($ownerId === false) throw new \\DomainException('draft_not_found');
+        return (int) $ownerId;
     }
 
     public static function deleteForUser(string $id, int $userId): bool
