@@ -133,8 +133,87 @@ final class ContentEditorService
                 }
                 continue;
             }
-            $html .= nl2br(htmlspecialchars($part, ENT_QUOTES, 'UTF-8'));
+            $html .= self::renderFormattedText($part);
         }
+        return $html;
+    }
+
+    /**
+     * Render the small formatting vocabulary used by the technical composer.
+     * All user text is escaped before the only supported markup is introduced.
+     */
+    private static function renderFormattedText(string $text): string
+    {
+        $lines = preg_split('/\\r?\\n/', $text) ?: [];
+        $html = '';
+        $listType = null;
+        $paragraph = [];
+
+        $closeList = static function () use (&$html, &$listType): void {
+            if ($listType !== null) {
+                $html .= $listType === 'ol' ? '</ol>' : '</ul>';
+                $listType = null;
+            }
+        };
+        $flushParagraph = static function () use (&$html, &$paragraph, $closeList): void {
+            if (!$paragraph) return;
+            $closeList();
+            $escaped = htmlspecialchars(implode("\n", $paragraph), ENT_QUOTES, 'UTF-8');
+            $escaped = preg_replace('/\\*\\*(.+?)\\*\\*/s', '<strong>$1</strong>', $escaped) ?? $escaped;
+            $html .= '<p>' . nl2br($escaped) . '</p>';
+            $paragraph = [];
+        };
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') {
+                $flushParagraph();
+                $closeList();
+                continue;
+            }
+            if (preg_match('/^#{1,3}\\s+(.+)$/u', $trimmed, $heading)) {
+                $flushParagraph();
+                $closeList();
+                $safe = htmlspecialchars(trim($heading[1]), ENT_QUOTES, 'UTF-8');
+                $html .= '<h3>' . $safe . '</h3>';
+                continue;
+            }
+            if (preg_match('/^[-─]{5,}$/u', $trimmed)) {
+                $flushParagraph();
+                $closeList();
+                $html .= '<hr>';
+                continue;
+            }
+            if (preg_match('/^\\d+\\.\\s+(.+)$/u', $trimmed, $ordered)) {
+                $flushParagraph();
+                if ($listType !== 'ol') {
+                    $closeList();
+                    $html .= '<ol>';
+                    $listType = 'ol';
+                }
+                $safe = htmlspecialchars($ordered[1], ENT_QUOTES, 'UTF-8');
+                $safe = preg_replace('/\\*\\*(.+?)\\*\\*/s', '<strong>$1</strong>', $safe) ?? $safe;
+                $html .= '<li>' . $safe . '</li>';
+                continue;
+            }
+            if (preg_match('/^[•*-]\\s+(.+)$/u', $trimmed, $bullet)) {
+                $flushParagraph();
+                if ($listType !== 'ul') {
+                    $closeList();
+                    $html .= '<ul>';
+                    $listType = 'ul';
+                }
+                $safe = htmlspecialchars($bullet[1], ENT_QUOTES, 'UTF-8');
+                $safe = preg_replace('/\\*\\*(.+?)\\*\\*/s', '<strong>$1</strong>', $safe) ?? $safe;
+                $html .= '<li>' . $safe . '</li>';
+                continue;
+            }
+
+            $closeList();
+            $paragraph[] = $line;
+        }
+        $flushParagraph();
+        $closeList();
         return $html;
     }
 
