@@ -23,7 +23,11 @@ CREATE TABLE technician_profiles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO users (email, role, account_status)
-VALUES ('owner@example.test', 'technician', 'active');
+VALUES
+    ('owner@example.test', 'technician', 'active'),
+    ('legacy-helper@example.test', 'technician', 'active');
 
 INSERT INTO technician_profiles (user_id, phone, specialization, experience)
-VALUES (1, '+201000000001', 'power', '5-10');
+VALUES
+    (1, '+201000000001', 'power', '5-10'),
+    (2, '+201000000002', 'legacy_board_repair', '1-3');
