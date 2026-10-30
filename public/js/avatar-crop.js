@@ -68,7 +68,7 @@
   input.addEventListener('change', () => {
     const file = input.files && input.files[0];
     if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(file.type) || file.size > 5 * 1024 * 1024) {
       error.textContent = 'اختر صورة JPG أو PNG أو WEBP لا تتجاوز 5 ميجابايت.';
       clearUpload();
       return;
