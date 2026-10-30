@@ -37,6 +37,7 @@ final class PageController extends Controller
         return $this->view('pages/settings', [
             'title' => 'الإعدادات',
             'active' => 'profile',
+            'currentUser' => AuthService::user(),
         ]);
     }
 
