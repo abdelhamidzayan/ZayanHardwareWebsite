@@ -6,3 +6,4 @@
 /public/uploads/*
 !/public/uploads/.htaccess
 !.gitkeep
+/.graphify/
