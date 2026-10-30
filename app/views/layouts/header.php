@@ -1,10 +1,9 @@
 <?php
 /**
- * Shared authenticated header: brand, search, notifications and account menu.
+ * Shared authenticated header: brand, conversations, notifications and account menu.
  * Category chips intentionally removed to keep the feed focused.
  */
 $unreadCount = (int) ($unreadCount ?? 0);
-$searchQuery = $searchQuery ?? '';
 $currentUser = $currentUser ?? null;
 $displayName = trim((string) ($currentUser['display_name'] ?? 'حسابي'));
 $username = (string) ($currentUser['username'] ?? '');
