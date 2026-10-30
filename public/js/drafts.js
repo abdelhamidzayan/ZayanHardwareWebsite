@@ -3,6 +3,7 @@
     const page = document.querySelector('[data-drafts-page]');
     if (!page) return;
     const localList = page.querySelector('[data-local-drafts]');
+    const baseUrl = page.dataset.baseUrl || '';
     let serverIds = [];
     try { serverIds = JSON.parse(page.dataset.serverDraftIds || '[]'); } catch (_) { serverIds = []; }
     const serverIdSet = new Set(serverIds.map(String));
@@ -85,7 +86,7 @@
         actions.className = 'draft-card__actions';
         const resume = document.createElement('a');
         resume.className = 'btn btn--primary';
-        resume.href = '/issues/create?draft=' + encodeURIComponent(record.id);
+        resume.href = baseUrl + '/issues/create?draft=' + encodeURIComponent(record.id);
         resume.textContent = 'استكمال المسودة';
         const remove = document.createElement('button');
         remove.type = 'button';
@@ -115,8 +116,6 @@
     async function reconcileLocalDrafts() {
         if (!('indexedDB' in window) || !localList) return;
         const records = await allFrom('drafts');
-        const mediaRecords = await allFrom('media');
-        const activeLocalIds = new Set(records.map((item) => String(item.id)));
         for (const record of records) {
             const id = String(record.id);
             if (serverIdSet.has(id)) {
@@ -127,18 +126,11 @@
             }
             if (!record.dirty && Number(record.serverRevision || 0) > 0) {
                 await deleteLocalDraft(id).catch(() => {});
-                activeLocalIds.delete(id);
                 continue;
             }
             localList.appendChild(makeLocalCard(record));
         }
         updateEmptyState();
-    }
-
-    function updateEmptyState() {
-        const empty = page.querySelector('.empty-state');
-        const hasCards = page.querySelectorAll('[data-draft-card]').length > 0;
-        if (empty) empty.hidden = hasCards;
     }
 
     page.querySelectorAll('[data-delete-draft-form]').forEach((form) => {
