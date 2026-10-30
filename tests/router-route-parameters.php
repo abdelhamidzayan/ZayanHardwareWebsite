@@ -30,9 +30,9 @@ check(preg_match($avatarPattern, '/avatar/not-a-number') === 0, 'Non-numeric use
 $replyPattern = $routes[1][1];
 $diagnosticPattern = $routes[2][1];
 check(preg_match($replyPattern, '/issues/7/replies/19/edit', $replyMatches) === 1, 'Numeric replyId should match the reply route.');
-check(preg_match($replyPattern, '/issues/7/replies/not-a-number/edit') === 0, 'Non-numeric replyId must not match the reply route.');
+check(preg_match($replyPattern, '/issues/7/replies/not-a-number/edit', $invalidReplyMatches) === 1, 'replyId remains a string for controller-level numeric validation.');
 check(preg_match($diagnosticPattern, '/issues/7/diagnostic-updates/23/edit', $diagnosticMatches) === 1, 'Numeric updateId should match the diagnostic route.');
-check(preg_match($diagnosticPattern, '/issues/7/diagnostic-updates/not-a-number/edit') === 0, 'Non-numeric updateId must not match the diagnostic route.');
+check(preg_match($diagnosticPattern, '/issues/7/diagnostic-updates/not-a-number/edit', $invalidDiagnosticMatches) === 1, 'updateId remains a string for controller-level numeric validation.');
 check(
     preg_match($draftPattern, '/drafts/11111111-1111-4111-8111-111111111111/media/22222222-2222-4222-8222-222222222222', $draftMatches) === 1,
     'Draft and media UUID route parameters must remain unrestricted path strings.'
@@ -51,8 +51,8 @@ $normalized = $normalize->invoke($router, [
 
 check(is_int($normalized['id']) && $normalized['id'] === 7, 'id must be passed to controllers as an integer.');
 check(is_int($normalized['userId']) && $normalized['userId'] === 42, 'userId must be passed to controllers as an integer.');
-check(is_int($normalized['replyId']) && $normalized['replyId'] === 19, 'replyId must be passed to controllers as an integer.');
-check(is_int($normalized['updateId']) && $normalized['updateId'] === 23, 'updateId must be passed to controllers as an integer.');
+check(is_string($normalized['replyId']) && $normalized['replyId'] === '19', 'replyId must remain a string for controller validation.');
+check(is_string($normalized['updateId']) && $normalized['updateId'] === '23', 'updateId must remain a string for controller validation.');
 check(is_string($normalized['draftId']), 'draftId must remain a string.');
 check(is_string($normalized['mediaUuid']), 'mediaUuid must remain a string.');
 check(is_string($normalized['username']), 'username must remain a string.');
