@@ -61,6 +61,7 @@ final class IssueController extends Controller
                 'currentUser' => $user,
                 'manufacturers' => DeviceCatalog::manufacturers(),
                 'draft' => $draft,
+                'requestedDraftId' => $draftId,
             ]);
         }
 
