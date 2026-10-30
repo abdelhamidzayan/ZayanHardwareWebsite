@@ -49,21 +49,50 @@ final class DeviceCatalog extends Model
         string $aliases,
         string $note
     ): int {
-        $stmt = self::db()->prepare(
-            'INSERT INTO device_model_suggestions
-                (manufacturer_id, submitted_by, commercial_name, model_code, aliases, note)
-             SELECT ?, ?, ?, ?, ?, ? FROM device_manufacturers
-             WHERE id = ? AND is_active = 1'
-        );
-        $stmt->execute([
-            $manufacturerId, $userId, $commercialName,
-            $modelCode !== '' ? $modelCode : null,
-            $aliases !== '' ? $aliases : null,
-            $note !== '' ? $note : null,
-            $manufacturerId,
-        ]);
-        if ($stmt->rowCount() !== 1) throw new \DomainException('manufacturer_unavailable');
-        return (int) self::db()->lastInsertId();
+        $pdo = self::db();
+        $pdo->beginTransaction();
+        try {
+            $manufacturer = $pdo->prepare('SELECT id FROM device_manufacturers WHERE id = ? AND is_active = 1 FOR SHARE');
+            $manufacturer->execute([$manufacturerId]);
+            if (!$manufacturer->fetchColumn()) throw new \DomainException('manufacturer_unavailable');
+
+            $duplicateSql = "SELECT id FROM device_models
+                             WHERE manufacturer_id = ? AND is_active = 1
+                               AND ((? <> '' AND UPPER(model_code) = UPPER(?))
+                                    OR LOWER(commercial_name) = LOWER(?))
+                             LIMIT 1";
+            $duplicate = $pdo->prepare($duplicateSql);
+            $duplicate->execute([$manufacturerId, $modelCode, $modelCode, $commercialName]);
+            if ($duplicate->fetchColumn()) throw new \DomainException('model_already_exists');
+
+            $pending = $pdo->prepare(
+                "SELECT id FROM device_model_suggestions
+                 WHERE manufacturer_id = ? AND status = 'pending'
+                   AND ((? <> '' AND UPPER(model_code) = UPPER(?))
+                        OR LOWER(commercial_name) = LOWER(?))
+                 LIMIT 1"
+            );
+            $pending->execute([$manufacturerId, $modelCode, $modelCode, $commercialName]);
+            if ($pending->fetchColumn()) throw new \DomainException('suggestion_already_pending');
+
+            $stmt = $pdo->prepare(
+                'INSERT INTO device_model_suggestions
+                    (manufacturer_id, submitted_by, commercial_name, model_code, aliases, note)
+                 VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $stmt->execute([
+                $manufacturerId, $userId, $commercialName,
+                $modelCode !== '' ? $modelCode : null,
+                $aliases !== '' ? $aliases : null,
+                $note !== '' ? $note : null,
+            ]);
+            $id = (int) $pdo->lastInsertId();
+            $pdo->commit();
+            return $id;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
     }
 
     public static function pendingSuggestions(): array
