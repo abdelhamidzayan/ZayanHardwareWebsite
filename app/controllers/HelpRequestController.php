@@ -7,7 +7,6 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\HelpRequest;
-use App\Models\User;
 use App\Services\AuthService;
 use App\Services\NotificationService;
 use App\Services\HelpRequestMediaService;
@@ -174,7 +173,7 @@ final class HelpRequestController extends Controller
                 NotificationService::notify(
                     $recipient, (int) $user['id'], null, null, 'personal_help_message',
                     'رسالة جديدة في طلب المساعدة', $request['subject'],
-                    '/help-requests/' . $id, 'personal-help-message:' . $id . ':' . time()
+                    '/help-requests/' . $id, 'personal-help-message:' . $messageId
                 );
             }
         } catch (\DomainException) {
