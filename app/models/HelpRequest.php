@@ -98,7 +98,7 @@ final class HelpRequest extends Model
             'SELECT h.id, h.subject, h.status, h.created_at, h.updated_at, h.last_message_at,
                     h.requester_id, h.helper_id,
                     CASE
-                      WHEN h.helper_id = ? AND h.status = \'pending\' THEN 1
+                      WHEN h.helper_id = ? AND h.status = \'pending\' AND (h.helper_last_seen_at IS NULL OR h.created_at > h.helper_last_seen_at) THEN 1
                       WHEN h.helper_id = ? AND EXISTS (SELECT 1 FROM help_request_messages um WHERE um.request_id = h.id AND um.sender_id = h.requester_id AND (h.helper_last_seen_at IS NULL OR um.created_at > h.helper_last_seen_at)) THEN 1
                       WHEN h.requester_id = ? AND EXISTS (SELECT 1 FROM help_request_messages um WHERE um.request_id = h.id AND um.sender_id = h.helper_id AND (h.requester_last_seen_at IS NULL OR um.created_at > h.requester_last_seen_at)) THEN 1
                       ELSE 0 END AS has_unread,
@@ -334,7 +334,7 @@ final class HelpRequest extends Model
         $stmt = self::db()->prepare(
             "SELECT COUNT(*) FROM help_requests h
              WHERE (h.helper_id = ? AND (
-                    h.status = 'pending' OR EXISTS (
+                    (h.status = 'pending' AND (h.helper_last_seen_at IS NULL OR h.created_at > h.helper_last_seen_at)) OR EXISTS (
                         SELECT 1 FROM help_request_messages m
                         WHERE m.request_id = h.id AND m.sender_id = h.requester_id
                           AND (h.helper_last_seen_at IS NULL OR m.created_at > h.helper_last_seen_at)
