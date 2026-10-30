@@ -119,10 +119,10 @@ class Graph:
             return imports.get(token, imports.get(short, token if "\\" in token else (f"{namespace}\\{token}" if namespace else token)))
 
         for call in re.finditer(
-            r"(?<![A-Za-z0-9_$])([\\\\A-Za-z_][\\\\A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)\\s*\\(",
+            r"(?<![A-Za-z0-9_$])([\\A-Z][\\A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)\s*\(",
             source,
         ):
-            class_name = resolve_class(call.group(1))
+                line = source.count("\n", 0, call.start()) + 1
             if class_name in self.php_classes:
                 line = source.count("\\n", 0, call.start()) + 1
                 self.pending_static_calls.append((owner_id, class_name, call.group(2), rel, line))
