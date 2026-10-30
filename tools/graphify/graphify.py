@@ -453,9 +453,12 @@ class Graph:
         data = self.as_dict()
         nodes = {node["id"]: node for node in data["nodes"]}
         keep = {"route", "class", "table"}
-        selected = [edge for edge in data["edges"] if edge["kind"] in {
-            "routes_to_controller", "routes_to_method", "foreign_key_references",
-            "queries_table", "writes_table", "calls_route"
+        selected = [
+            edge for edge in data["edges"]
+            if edge["kind"] in {
+                "routes_to_controller", "routes_to_method", "foreign_key_references",
+                "queries_table", "writes_table", "calls_route"
+            }
         ][:320]
         used: set[str] = set()
         lines = ["flowchart LR"]
