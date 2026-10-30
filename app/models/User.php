@@ -52,7 +52,8 @@ final class User extends Model
     public static function findById(int $id): ?array
     {
         $stmt = self::db()->prepare(
-            'SELECT id, username, display_name, email, role, account_status, created_at
+            'SELECT id, username, display_name, email, role, account_status, created_at,
+                   avatar_key, avatar_path, accept_help_requests
              FROM users WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -63,6 +64,7 @@ final class User extends Model
     public static function findProfileByUsername(string $username): ?array
     {
         $sql = 'SELECT u.id, u.username, u.display_name, u.role, u.account_status, u.created_at,
+                       u.avatar_key, u.avatar_path, u.accept_help_requests,
                        p.device_focus,
                        (SELECT GROUP_CONCAT(uds.device_type ORDER BY FIELD(uds.device_type, \'iphone\', \'android\') SEPARATOR \',\')
                         FROM user_device_specializations uds WHERE uds.user_id = u.id) AS device_specializations,
@@ -111,7 +113,24 @@ final class User extends Model
         }
     }
 
-    /** Save optional profile details; avatar upload is intentionally not implemented yet. */
+    /** Save the selected built-in avatar or a validated uploaded avatar path. */
+    public static function saveAvatar(int $userId, string $avatarKey, ?string $avatarPath = null): void
+    {
+        $allowed = ['technician-blue', 'technician-cyan', 'technician-violet', 'technician-green', 'technician-orange', 'technician-red'];
+        if ($avatarPath === null && !in_array($avatarKey, $allowed, true)) {
+            throw new \\InvalidArgumentException('Invalid avatar key.');
+        }
+        self::db()->prepare('UPDATE users SET avatar_key = ?, avatar_path = ? WHERE id = ?')
+            ->execute([$avatarKey, $avatarPath, $userId]);
+    }
+
+    public static function setHelpRequestsEnabled(int $userId, bool $enabled): void
+    {
+        self::db()->prepare('UPDATE users SET accept_help_requests = ? WHERE id = ?')
+            ->execute([$enabled ? 1 : 0, $userId]);
+    }
+
+    /** Save optional profile details. */
     public static function saveOptionalProfile(int $userId, string $workshop, string $biography): void
     {
         self::db()->prepare('UPDATE technician_profiles SET workshop_name = ?, biography = ? WHERE user_id = ?')
