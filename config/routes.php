@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 use App\Controllers\AuthController;
 use App\Controllers\AccountController;
+use App\Controllers\AvatarController;
+use App\Controllers\HelpRequestController;
 use App\Controllers\AdminUserController;
 use App\Controllers\AdminFeaturedPostsController;
 use App\Controllers\AdminUpdateController;
