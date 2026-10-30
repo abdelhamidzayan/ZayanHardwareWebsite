@@ -25,7 +25,7 @@ final class AvatarController extends Controller
             return new Response((string) file_get_contents($defaultFile), 200, [
                 'Content-Type' => 'image/svg+xml; charset=utf-8',
                 'Content-Length' => (string) filesize($defaultFile),
-                'Cache-Control' => 'public, max-age=300, must-revalidate',
+                'Cache-Control' => 'public, max-age=0, must-revalidate',
                 'X-Content-Type-Options' => 'nosniff',
                 'Content-Security-Policy' => "default-src 'none'; sandbox",
             ]);
@@ -45,7 +45,7 @@ final class AvatarController extends Controller
         return new Response((string) file_get_contents($file), 200, [
             'Content-Type' => $mime,
             'Content-Length' => (string) filesize($file),
-            'Cache-Control' => 'public, max-age=300, must-revalidate',
+            'Cache-Control' => 'public, max-age=0, must-revalidate',
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
         ]);
