@@ -27,9 +27,9 @@
                     </div>
                     <div class="draft-card__actions">
                         <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/issues/create?draft=<?= $e(rawurlencode($draft['id'])) ?>">استكمال المسودة</a>
-                        <button class="btn btn--ghost text-action--danger" type="button"
-                            data-delete-draft="<?= $e($draft['id']) ?>"
-                            data-csrf="<?= $e($csrfToken ?? '') ?>">حذف</button>
+                        <form method="post" action="<?= $e($baseUrl) ?>/drafts/<?= $e($draft['id']) ?>/delete" data-delete-draft-form>
+                            <?= $csrf() ?><button class="btn btn--ghost text-action--danger" type="submit">حذف</button>
+                        </form>
                     </div>
                 </article>
             <?php endforeach; ?>
