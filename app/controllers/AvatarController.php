@@ -33,7 +33,7 @@ final class AvatarController extends Controller
         return new Response((string) file_get_contents($file), 200, [
             'Content-Type' => $mime,
             'Content-Length' => (string) filesize($file),
-            'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=604800',
+            'Cache-Control' => 'public, max-age=300, must-revalidate',
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
         ]);
