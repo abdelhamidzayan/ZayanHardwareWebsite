@@ -605,3 +605,21 @@ textarea { max-inline-size: 100%; }
     min-block-size: 2.35rem;
   }
 }
+
+
+/* ---------- Mobile header: icons and brand marks only ---------- */
+@media (max-width: 639px) {
+  /* Keep the brand mark, action icons, avatar and notification counters.
+     Hide visible text in the header bar only; dropdown menu contents stay readable. */
+  .app-header .brand__name,
+  .app-header .account-menu__name,
+  .guest-header .brand__name,
+  .guest-header__actions .guest-header__label {
+    display: none !important;
+  }
+
+  .app-header .topbar > .brand,
+  .guest-header .guest-header__inner > .brand {
+    gap: 0;
+  }
+}
