@@ -3,7 +3,7 @@ name: PHP syntax check
 on:
   pull_request:
   push:
-    branches: [main, feat/registration-permissions-final-spec]
+    branches: [main, feat/registration-permissions-final-spec, feature/profiles-help-media, fix/audit-priority-issues]
 
 jobs:
   lint:
