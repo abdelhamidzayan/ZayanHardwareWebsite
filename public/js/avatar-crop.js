@@ -54,6 +54,10 @@
       draw();
       error.textContent = '';
     };
+    image.onerror = () => {
+      error.textContent = 'تعذر فتح الصورة في المتصفح. جرّب JPG أو PNG أو WEBP.';
+      clearUpload();
+    };
     image.src = originalUrl;
   }
 
