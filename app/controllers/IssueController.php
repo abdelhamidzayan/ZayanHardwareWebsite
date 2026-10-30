@@ -70,15 +70,46 @@ final class IssueController extends Controller
         if (!$user) return $this->redirect('/login');
 
         if (!$this->request->isPost()) {
+            $draftId = $this->request->query['draft'] ?? '';
+            $draftId = is_string($draftId) && preg_match('/^[a-f0-9-]{36}$/i', $draftId) ? strtolower($draftId) : '';
+            $draft = $draftId !== '' ? PostDraft::findForUser($draftId, (int) $user['id']) : null;
             return $this->view('issues/create', [
                 'title' => 'إنشاء منشور',
                 'active' => 'add',
                 'currentUser' => $user,
+                'manufacturers' => DeviceCatalog::manufacturers(),
+                'draft' => $draft,
             ]);
         }
 
         if (!Csrf::verify($this->request->input('_token'))) {
             return $this->fail('/issues/create', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+        }
+
+        $draftId = $this->request->input('draft_id');
+        if (is_string($draftId) && preg_match('/^[a-f0-9-]{36}$/i', $draftId)) {
+            $revision = filter_var($this->request->input('revision', 0), FILTER_VALIDATE_INT);
+            if ($revision === false || $revision < 1) {
+                return $this->fail('/issues/create', 'تعذر التحقق من آخر نسخة محفوظة للمسودة.');
+            }
+            try {
+                $issueId = DraftPublishingService::publish(strtolower($draftId), (int) $user['id'], $revision);
+                $this->flash('success', 'تم نشر المعلومة الفنية بنجاح.');
+                return $this->redirect('/issues/' . $issueId);
+            } catch (\\DomainException $e) {
+                $message = match ($e->getMessage()) {
+                    'draft_revision_conflict' => 'المسودة اتعدلت من جهاز آخر. افتح المسودة وراجع آخر نسخة قبل النشر.',
+                    'draft_not_found' => 'المسودة غير موجودة أو لم تعد متاحة.',
+                    'device_model_unavailable' => 'الموديل لم يعد متاحًا. اختار موديلًا معتمدًا من القائمة.',
+                    'device_manufacturer_unavailable' => 'الشركة المصنعة غير متاحة حاليًا.',
+                    'draft_audio_required_or_conflict' => 'راجع التسجيل الصوتي: مطلوب تسجيل واحد فقط عند اختيار التسجيل، ولا يقبل مع الكتابة.',
+                    'draft_mode_conflict' => 'اختار الكتابة أو التسجيل الصوتي فقط.',
+                    'draft_text_invalid' => 'اكتب تفاصيل واضحة لا تقل عن 10 أحرف.',
+                    'draft_media_missing' => 'أحد المرفقات غير موجود على الخادم. أعد مزامنته قبل النشر.',
+                    default => 'راجع بيانات المنشور والمرفقات وحاول مرة أخرى.',
+                };
+                return $this->fail('/issues/create?draft=' . rawurlencode($draftId), $message);
+            }
         }
 
         $type = $this->string('content_type');
