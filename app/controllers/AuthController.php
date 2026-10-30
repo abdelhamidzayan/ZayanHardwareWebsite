@@ -26,7 +26,7 @@ final class AuthController extends Controller
     public function login(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
-            App::security('auth.csrf.rejected', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            App::security('auth.csrf.rejected', ['ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
 
             return $this->redirect('/login');
@@ -35,36 +35,42 @@ final class AuthController extends Controller
         $identifier = $this->text('identifier');
         $password   = $this->text('password');
 
-        $ipBucket = 'login:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-        $idBucket = 'login:id:' . hash('sha256', strtolower(trim($identifier)));
-        if (RateLimiter::tooMany($ipBucket, 20, 900) || RateLimiter::tooMany($idBucket, 5, 900)) {
-            App::security('auth.login.rate_limited', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        $guardedAttempt = RateLimiter::attemptForIpAndIdentifier(
+            'auth.login',
+            $identifier,
+            20,
+            5,
+            900,
+            static fn (): array => AuthService::attempt($identifier, $password)
+        );
+        if (!$guardedAttempt['allowed']) {
+            App::security('auth.login.rate_limited', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد 15 دقيقة.');
-
             return $this->redirect('/login');
         }
 
-        $result = AuthService::attempt($identifier, $password);
-
+        $result = $guardedAttempt['result'] ?? ['user' => null, 'error' => 'invalid'];
         if ($result['error'] === 'invalid') {
-            RateLimiter::hit($ipBucket);
-            RateLimiter::hit($idBucket);
-            App::security('auth.login.failed', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            App::security('auth.login.failed', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'بيانات الدخول غير صحيحة.');
-
             return $this->redirect('/login');
         }
         if ($result['error'] === 'blocked') {
-            App::security('auth.login.blocked_account', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            App::security('auth.login.blocked_account', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'هذا الحساب موقوف. تواصل مع الإدارة.');
-
             return $this->redirect('/login');
         }
 
         $user = $result['user'];
         User::markLoggedIn((int) $user['id'], $user['new_hash'] ?? null);
         AuthService::login((int) $user['id']);
-        App::security('auth.login.succeeded', ['user_id' => (int) $user['id'], 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        App::security('auth.login.succeeded', ['user_id' => (int) $user['id'], 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
 
         $this->flash('success', 'تم تسجيل الدخول بنجاح.');
 
@@ -74,7 +80,7 @@ final class AuthController extends Controller
     public function logout(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
-            App::security('auth.csrf.rejected', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            App::security('auth.csrf.rejected', ['ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
 
             return $this->redirect('/feed');
@@ -97,7 +103,7 @@ final class AuthController extends Controller
     public function register(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
-            App::security('auth.csrf.rejected', ['ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            App::security('auth.csrf.rejected', ['ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
             return $this->redirect('/register');
         }
