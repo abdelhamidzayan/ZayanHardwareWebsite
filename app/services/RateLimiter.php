@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\\Services;
 
-use App\Models\Database;
+use App\\Models\\Database;
 
 final class RateLimiter
 {
@@ -15,20 +15,50 @@ final class RateLimiter
         int $windowSeconds,
         ?int $ipMax = null
     ): bool {
+        self::validateAction($action);
         if ($userId < 1) return false;
-        if (!preg_match('/^[a-z][a-z0-9_.-]{1,47}$/', $action)) {
-            throw new \InvalidArgumentException('Invalid rate-limit action.');
-        }
 
         $max = max(1, min(1000, $max));
         $ipMax = max(1, min(10000, $ipMax ?? ($max * 5)));
-        $windowSeconds = max(1, min(86400, $windowSeconds));
-        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $ip = is_string($ip) ? $ip : 'unknown';
-        $buckets = [
+        $ip = self::sourceIp();
+        return self::consume([
             ['key' => $action . ':user:' . $userId, 'limit' => $max],
             ['key' => $action . ':ip:' . hash('sha256', $ip), 'limit' => $ipMax],
-        ];
+        ], $windowSeconds);
+    }
+
+    /** Atomically limits public/anonymous actions by source IP without storing the raw IP. */
+    public static function allowForIp(string $action, int $max, int $windowSeconds): bool
+    {
+        self::validateAction($action);
+        $max = max(1, min(10000, $max));
+        return self::consume([
+            ['key' => $action . ':ip:' . hash('sha256', self::sourceIp()), 'limit' => $max],
+        ], $windowSeconds);
+    }
+
+    private static function validateAction(string $action): void
+    {
+        if (!preg_match('/^[a-z][a-z0-9_.-]{1,47}$/', $action)) {
+            throw new \\InvalidArgumentException('Invalid rate-limit action.');
+        }
+    }
+
+    private static function sourceIp(): string
+    {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        return is_string($ip) && $ip !== '' ? $ip : 'unknown';
+    }
+
+    /**
+     * Consume one or more shared fixed-window buckets in a single transaction.
+     * Bucket rows are locked in stable order to reduce deadlock risk.
+     *
+     * @param list<array{key:string,limit:int}> $buckets
+     */
+    private static function consume(array $buckets, int $windowSeconds): bool
+    {
+        $windowSeconds = max(1, min(86400, $windowSeconds));
         usort($buckets, static fn (array $a, array $b): int => strcmp($a['key'], $b['key']));
 
         $pdo = Database::connection();
@@ -49,7 +79,7 @@ final class RateLimiter
             foreach ($buckets as $bucket) {
                 $select->execute([$bucket['key']]);
                 $row = $select->fetch();
-                if (!$row) throw new \RuntimeException('Unable to lock rate-limit bucket.');
+                if (!$row) throw new \\RuntimeException('Unable to lock rate-limit bucket.');
                 $states[] = [
                     'key' => $bucket['key'],
                     'limit' => $bucket['limit'],
@@ -78,19 +108,20 @@ final class RateLimiter
                 else $increment->execute([$state['key']]);
             }
             $pdo->commit();
-        } catch (\Throwable $e) {
+        } catch (\\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
 
+        // Opportunistic cleanup is metadata-only and runs outside the request transaction.
         if (mt_rand(1, 100) === 1) {
             try {
                 $pdo->exec(
                     'DELETE FROM rate_limit_buckets
                      WHERE updated_at < (UTC_TIMESTAMP() - INTERVAL 2 DAY)'
                 );
-            } catch (\Throwable $cleanupError) {
-                \App\Core\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
+            } catch (\\Throwable $cleanupError) {
+                \\App\\Core\\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
             }
         }
         return true;
