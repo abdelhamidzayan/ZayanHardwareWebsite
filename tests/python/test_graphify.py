@@ -147,5 +147,30 @@ $router->post('/issues/{id}/reply', [ExampleController::class, 'reply']);
         self.assertEqual(graph.api_calls_unresolved, 1)
 
 
+    def test_resolves_js_api_variable_from_php_view_data_url(self) -> None:
+        self.write("app/controllers/DeviceController.php", """<?php
+namespace App\\Controllers;
+final class DeviceController { public function models(): void {} }
+""")
+        self.write("config/routes.php", """<?php
+use App\\Controllers\\DeviceController;
+$router->get('/devices/models', [DeviceController::class, 'models']);
+""")
+        self.write("app/views/issues/create.php", """<form data-composer data-lookup-url="/devices/models"></form>
+<script src="/js/composer.js" defer></script>
+""")
+        self.write("public/js/composer.js", """const form = document.querySelector('[data-composer]');
+const lookupUrl = form.dataset.lookupUrl || '';
+fetch(lookupUrl + '?q=phone', { credentials: 'same-origin' });
+""")
+        graph = self.graph()
+        api_node = next(n for n in graph.nodes.values() if n["kind"] == "api_call")
+        route_id = next(n["id"] for n in graph.nodes.values() if n["kind"] == "route")
+        self.assertEqual(api_node["resolution"], "linked")
+        self.assertEqual(api_node["target"], "/devices/models")
+        self.assertIn((api_node["id"], route_id, "calls_route"), graph.edges)
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
