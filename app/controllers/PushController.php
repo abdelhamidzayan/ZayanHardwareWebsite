@@ -14,8 +14,24 @@ final class PushController extends Controller
 {
     public function publicKey(): Response
     {
-        $key = (string) App::env('VAPID_PUBLIC_KEY', '');
-        if ($key === '') return $this->json(['error' => 'push_not_configured'], 503);
+        if (!class_exists(\\Minishlink\\WebPush\\WebPush::class)) {
+            return $this->json([
+                'error' => 'push_dependency_missing',
+                'message' => 'مكتبة Web Push غير مثبتة على الخادم. نفّذ composer install من مجلد المشروع.',
+            ], 503);
+        }
+
+        $key = trim((string) App::env('VAPID_PUBLIC_KEY', ''));
+        $privateKey = trim((string) App::env('VAPID_PRIVATE_KEY', ''));
+        $subject = trim((string) App::env('VAPID_SUBJECT', ''));
+
+        if ($key === '') return $this->json(['error' => 'push_public_key_missing', 'message' => 'مفتاح VAPID_PUBLIC_KEY غير موجود في ملف .env على الخادم.'], 503);
+        if ($privateKey === '') return $this->json(['error' => 'push_private_key_missing', 'message' => 'مفتاح VAPID_PRIVATE_KEY غير موجود في ملف .env على الخادم.'], 503);
+        if ($subject === '') return $this->json(['error' => 'push_subject_missing', 'message' => 'إعداد VAPID_SUBJECT غير موجود. أضف بريدًا حقيقيًا بصيغة mailto: أو رابط الموقع.'], 503);
+        if (!preg_match('/^[A-Za-z0-9_-]{80,100}$/', $key)) {
+            return $this->json(['error' => 'push_public_key_invalid', 'message' => 'قيمة VAPID_PUBLIC_KEY غير صالحة. أعد توليد زوج مفاتيح VAPID وانسخه كما هو.'], 503);
+        }
+
         return $this->json(['publicKey' => $key]);
     }
 
