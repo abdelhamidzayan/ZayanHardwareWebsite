@@ -111,6 +111,8 @@ final class AccountRetentionService
             $userId = (int) $request['user_id'];
             $anonymousUsername = 'deleted' . base_convert((string) $userId, 10, 36);
 
+            // Remove account avatar binaries only; technical attachments are untouched.
+            self::removePrivateAvatarFiles($userId);
             self::anonymizePublicHelpAuthor($pdo, $userId);
             self::anonymizeTechnicianProfile($pdo, $userId);
             self::disablePushSubscriptions($pdo, $userId);
@@ -149,6 +151,39 @@ final class AccountRetentionService
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
+    }
+
+    private static function removePrivateAvatarFiles(int $userId): void
+    {
+        $root = realpath(App::root('storage/private'));
+        if ($root === false) throw new RuntimeException('Private storage directory is unavailable.');
+
+        $relative = 'avatars/' . $userId;
+        $candidate = $root . DIRECTORY_SEPARATOR . $relative;
+        if (!is_dir($candidate)) return;
+
+        $directory = realpath($candidate);
+        if ($directory === false || !str_starts_with($directory, $root . DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('Avatar directory is outside private storage.');
+        }
+
+        $entries = scandir($directory);
+        if ($entries === false) throw new RuntimeException('Unable to inspect the avatar directory.');
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') continue;
+            if (!preg_match('/^[a-f0-9]{40}\\.(?:jpg|png|webp)$/i', $entry)) continue;
+
+            $file = realpath($directory . DIRECTORY_SEPARATOR . $entry);
+            if ($file === false) continue;
+            if (!str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) {
+                throw new RuntimeException('Avatar file resolved outside private storage.');
+            }
+            if (!@unlink($file)) throw new RuntimeException('Unable to remove a private avatar image.');
+        }
+
+        $remaining = scandir($directory);
+        if ($remaining === false) throw new RuntimeException('Unable to verify avatar cleanup.');
+        if (count($remaining) === 2) @rmdir($directory);
     }
 
     private static function anonymizePublicHelpAuthor(PDO $pdo, int $userId): void
