@@ -404,10 +404,19 @@ foreach ($replies as $reply) {
     <?php endif; ?>
     <dialog class="image-viewer" data-image-viewer-dialog aria-label="عارض الصور">
         <div class="image-viewer__toolbar">
-            <span>اسحب للتحريك · استخدم عجلة الماوس أو أزرار التكبير</span>
-            <div><button type="button" class="btn btn--secondary" data-image-zoom-out aria-label="تصغير">−</button><button type="button" class="btn btn--secondary" data-image-zoom-in aria-label="تكبير">+</button><button type="button" class="btn btn--primary" data-image-viewer-close>إغلاق</button></div>
+            <span data-image-viewer-counter>1 / 1</span>
+            <div>
+                <button type="button" class="btn btn--secondary" data-image-zoom-out aria-label="تصغير">−</button>
+                <button type="button" class="btn btn--secondary" data-image-zoom-in aria-label="تكبير">+</button>
+                <button type="button" class="btn btn--secondary" data-image-fullscreen>ملء الشاشة</button>
+                <button type="button" class="btn btn--primary" data-image-viewer-close>إغلاق</button>
+            </div>
         </div>
-        <div class="image-viewer__viewport" data-image-viewer-viewport><img data-image-viewer-image alt="صورة فنية مكبرة" draggable="false"></div>
+        <div class="image-viewer__viewport" data-image-viewer-viewport>
+            <button type="button" class="image-viewer__nav image-viewer__nav--prev" data-image-prev aria-label="الصورة السابقة">‹</button>
+            <img data-image-viewer-image alt="صورة فنية مكبرة" draggable="false">
+            <button type="button" class="image-viewer__nav image-viewer__nav--next" data-image-next aria-label="الصورة التالية">›</button>
+        </div>
     </dialog>
     <script src="<?= $e($baseUrl) ?>/js/image-viewer.js" defer></script>
 </div>
