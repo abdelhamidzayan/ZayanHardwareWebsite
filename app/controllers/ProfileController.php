@@ -6,6 +6,8 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Response;
 use App\Models\User;
+use App\Models\Issue;
+use App\Models\HelpRequest;
 use App\Services\AuthService;
 
 final class ProfileController extends Controller
@@ -46,7 +48,7 @@ final class ProfileController extends Controller
             'profile' => [
                 'id' => (int) $profile['id'],
                 'display_name' => $profile['display_name'],
-                'avatar_url' => !empty($profile['avatar_path']) ? $this->baseUrl() . '/avatar/' . (int) $profile['id'] : $this->baseUrl() . '/assets/avatars/' . rawurlencode((string) ($profile['avatar_key'] ?? 'technician-blue')) . '.svg',
+                'avatar_src' => !empty($profile['avatar_path']) ? '/avatar/' . (int) $profile['id'] : '/assets/avatars/' . rawurlencode((string) ($profile['avatar_key'] ?? 'technician-blue')) . '.svg',
                 'accept_help_requests' => (int) ($profile['accept_help_requests'] ?? 1) === 1,
                 'username' => $profile['username'],
                 'initials' => $initials,
