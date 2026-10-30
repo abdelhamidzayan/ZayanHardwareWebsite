@@ -314,6 +314,11 @@ final class App
                 ]);
             }
 
+            // CLI workers have no HTTP request to report in the access channel.
+            if (PHP_SAPI === 'cli') {
+                return;
+            }
+
             $status = http_response_code();
             if (!is_int($status) || $status < 100) {
                 $status = 200;
