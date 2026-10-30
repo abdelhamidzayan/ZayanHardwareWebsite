@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace App\\Services;
+namespace App\Services;
 
-use App\\Models\\Database;
+use App\Models\Database;
 
 final class RateLimiter
 {
@@ -136,7 +136,7 @@ final class RateLimiter
     private static function validateAction(string $action): void
     {
         if (!preg_match('/^[a-z][a-z0-9_.-]{1,47}$/', $action)) {
-            throw new \\InvalidArgumentException('Invalid rate-limit action.');
+            throw new \InvalidArgumentException('Invalid rate-limit action.');
         }
     }
 
@@ -175,7 +175,7 @@ final class RateLimiter
             foreach ($buckets as $bucket) {
                 $select->execute([$bucket['key']]);
                 $row = $select->fetch();
-                if (!$row) throw new \\RuntimeException('Unable to lock rate-limit bucket.');
+                if (!$row) throw new \RuntimeException('Unable to lock rate-limit bucket.');
                 $states[] = [
                     'key' => $bucket['key'],
                     'limit' => $bucket['limit'],
@@ -204,7 +204,7 @@ final class RateLimiter
                 else $increment->execute([$state['key']]);
             }
             $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
