@@ -67,6 +67,8 @@ jobs:
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'technician_profiles' AND column_name IN ('phone','specialization','experience');")" -eq 0
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'technician_profiles' AND column_name IN ('device_focus','tech_level','board_experience','level_verified');")" -eq 4
 
+          # Model the live database's original contact CHECK, then verify migration 015 widens it safely.
+          mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "ALTER TABLE users ADD CONSTRAINT chk_users_contact CHECK (email IS NOT NULL OR phone IS NOT NULL);"
           mysql -h 127.0.0.1 -uroot -proot zayan_registration_test < database/migrations/015_deleted_accounts_without_contact.sql
           test "$(mysql -N -h 127.0.0.1 -uroot -proot zayan_registration_test -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'account_deletion_requests' AND index_name = 'idx_account_deletion_due';")" -eq 1
           mysql -h 127.0.0.1 -uroot -proot zayan_registration_test -e "UPDATE users SET email = NULL, phone = NULL, account_status = 'deleted' WHERE id = 2;"
