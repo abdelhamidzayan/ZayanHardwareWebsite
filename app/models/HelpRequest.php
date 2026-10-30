@@ -258,6 +258,8 @@ final class HelpRequest extends Model
                 $requester['avatar_key'] ?? null, $helper['avatar_key'] ?? null,
             ]);
             $postId = (int) $pdo->lastInsertId();
+            $pdo->prepare('UPDATE help_request_publications SET public_post_id = ? WHERE id = ?')
+                ->execute([$postId, $publicationId]);
             $pdo->commit();
             return $postId;
         } catch (\Throwable $e) {
