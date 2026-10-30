@@ -121,12 +121,6 @@ final class Issue extends Model
         return $stmt->fetchAll();
     }
 
-    public static function deleteInlineAttachment(int $issueId, int $attachmentId): void
-    {
-        self::db()->prepare('DELETE FROM issue_attachments WHERE id = ? AND issue_id = ? AND is_inline = 1')
-            ->execute([$attachmentId, $issueId]);
-    }
-
     public static function profilePosts(int $userId): array
     {
         $stmt = self::db()->prepare(
