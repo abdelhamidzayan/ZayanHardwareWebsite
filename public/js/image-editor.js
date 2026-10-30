@@ -64,6 +64,12 @@
         redoStack = [];
     }
 
+    function saveProgress() {
+        if (sourceItem && window.ZayanComposer && typeof window.ZayanComposer.saveImageEditorDraft === 'function') {
+            window.ZayanComposer.saveImageEditorDraft(sourceItem, clone(state));
+        }
+    }
+
     function fitCanvas() {
         const crop = state.crop;
         renderScale = Math.min(1, 2048 / Math.max(crop.width, crop.height));
@@ -281,11 +287,25 @@
             return;
         }
         if (tool === 'select') {
-            const target = hitTest(getPoint(event));
+            const clickPoint = getPoint(event);
+            const target = hitTest(clickPoint);
             selectedId = target ? target.id : null;
             activeObject = target;
             activeAction = target ? 'move' : '';
-            if (target) pushHistory();
+            if (target) {
+                const bounds = objectBounds(target);
+                const handleX = bounds.x + bounds.width;
+                const handleY = bounds.y + bounds.height;
+                if (Math.abs(clickPoint.x - handleX) <= 18 && Math.abs(clickPoint.y - handleY) <= 18) activeAction = 'resize';
+                pushHistory();
+            }
+            textEntry.hidden = !(target && target.type === 'text');
+            if (target && target.type === 'text') {
+                textInput.value = target.text || '';
+                dialog.querySelector('[data-image-add-text]').textContent = 'تحديث النص';
+            } else {
+                dialog.querySelector('[data-image-add-text]').textContent = 'إضافة النص';
+            }
             draw();
             return;
         }
@@ -320,6 +340,8 @@
             const dy = point.y - pointerStart.y;
             moveObject(activeObject, dx, dy);
             pointerStart = point;
+        } else if (tool === 'select' && activeObject && activeAction === 'resize') {
+            resizeObject(activeObject, point);
         } else if (tool === 'crop' && cropPreview) {
             cropPreview.end = point;
         } else if (tool === 'pen' && activeObject) {
@@ -342,6 +364,18 @@
         }
     }
 
+    function resizeObject(object, point) {
+        if (object.type === 'text') {
+            const delta = point.x - Number(object.x2 || object.x);
+            object.fontSize = Math.max(18, Math.min(220, (Number(object.fontSize) || 46) + delta * 0.45));
+            object.size = Math.max(1, Math.min(24, object.fontSize / 12));
+            object.x2 = point.x;
+            return;
+        }
+        object.x2 = point.x;
+        object.y2 = point.y;
+    }
+
     function pointerUp() {
         if (!drawing || !state) return;
         drawing = false;
@@ -361,6 +395,7 @@
         activeObject = null;
         activeAction = '';
         draw();
+        saveProgress();
     }
 
     function addText() {
@@ -368,6 +403,20 @@
         if (!text) return;
         pushHistory();
         const point = pendingTextPoint || { x: state.crop.x + state.crop.width / 2, y: state.crop.y + state.crop.height / 2 };
+        const selectedText = state.objects.find(function (item) { return item.id === selectedId && item.type === 'text'; });
+        if (selectedText && !pendingTextPoint) {
+            pushHistory();
+            selectedText.text = text;
+            selectedText.color = colorInput.value;
+            selectedText.size = Number(sizeInput.value);
+            selectedText.fontSize = Math.max(18, Number(sizeInput.value) * 12);
+            textInput.value = '';
+            dialog.querySelector('[data-image-add-text]').textContent = 'إضافة النص';
+            textEntry.hidden = true;
+            draw();
+            saveProgress();
+            return;
+        }
         const object = {
             id: newId(),
             type: 'text',
@@ -376,7 +425,7 @@
             y: point.y,
             color: colorInput.value,
             size: Number(sizeInput.value),
-            fontSize: Math.max(24, Number(sizeInput.value) * 12)
+            fontSize: Math.max(18, Number(sizeInput.value) * 12)
         };
         state.objects.push(object);
         selectedId = object.id;
@@ -384,7 +433,9 @@
         pendingTextPoint = null;
         textEntry.hidden = true;
         setTool('select');
+        dialog.querySelector('[data-image-add-text]').textContent = 'إضافة النص';
         draw();
+        saveProgress();
     }
 
     function undo() {
@@ -393,6 +444,7 @@
         state = undoStack.pop();
         selectedId = null;
         draw();
+        saveProgress();
     }
 
     function redo() {
@@ -401,6 +453,7 @@
         state = redoStack.pop();
         selectedId = null;
         draw();
+        saveProgress();
     }
 
     async function renderBlob() {
@@ -460,6 +513,7 @@
         state = defaultState();
         selectedId = null;
         draw();
+        saveProgress();
     });
     dialog.querySelector('[data-image-editor-save]').addEventListener('click', async function () {
         if (!state || !onSave) return;
@@ -475,8 +529,14 @@
             button.disabled = false;
         }
     });
-    colorInput.addEventListener('input', function () { updateSelectedProperty('color', colorInput.value); });
-    sizeInput.addEventListener('input', function () { updateSelectedProperty('size', Number(sizeInput.value)); });
+    colorInput.addEventListener('change', function () { updateSelectedProperty('color', colorInput.value); saveProgress(); });
+    sizeInput.addEventListener('change', function () {
+        updateSelectedProperty('size', Number(sizeInput.value));
+        const selected = state.objects.find(function (item) { return item.id === selectedId; });
+        if (selected && selected.type === 'text') selected.fontSize = Math.max(18, Number(sizeInput.value) * 12);
+        draw();
+        saveProgress();
+    });
     canvas.addEventListener('pointerdown', pointerDown);
     canvas.addEventListener('pointermove', pointerMove);
     canvas.addEventListener('pointerup', pointerUp);
