@@ -112,10 +112,24 @@ final class RateLimiter
             }
 
             $pdo->commit();
+            self::cleanupStaleBuckets($pdo);
             return ['allowed' => true, 'result' => is_array($result) ? $result : null];
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
+        }
+    }
+
+    private static function cleanupStaleBuckets(\PDO $pdo): void
+    {
+        if (mt_rand(1, 100) !== 1) return;
+        try {
+            $pdo->exec(
+                'DELETE FROM rate_limit_buckets
+                 WHERE updated_at < (UTC_TIMESTAMP() - INTERVAL 2 DAY)'
+            );
+        } catch (\Throwable $cleanupError) {
+            \App\Core\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
         }
     }
 
@@ -195,17 +209,7 @@ final class RateLimiter
             throw $e;
         }
 
-        // Opportunistic cleanup is metadata-only and runs outside the request transaction.
-        if (mt_rand(1, 100) === 1) {
-            try {
-                $pdo->exec(
-                    'DELETE FROM rate_limit_buckets
-                     WHERE updated_at < (UTC_TIMESTAMP() - INTERVAL 2 DAY)'
-                );
-            } catch (\\Throwable $cleanupError) {
-                \\App\\Core\\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
-            }
-        }
+        self::cleanupStaleBuckets($pdo);
         return true;
     }
 }
