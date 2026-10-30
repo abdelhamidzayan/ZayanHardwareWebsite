@@ -559,6 +559,7 @@
             const result = await response.json();
             if (handleRevisionConflict(response, result)) return false;
             if (!response.ok || !result.media || !result.media[0]) {
+                updateDraftRevision(result);
                 throw new Error(result.message || 'تعذر مزامنة المرفق.');
             }
             updateDraftRevision(result);
