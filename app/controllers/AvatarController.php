@@ -20,7 +20,7 @@ final class AvatarController extends Controller
             $allowed = ['technician-blue', 'technician-cyan', 'technician-violet', 'technician-green', 'technician-orange', 'technician-red'];
             $key = in_array((string) ($user['avatar_key'] ?? ''), $allowed, true)
                 ? (string) $user['avatar_key'] : 'technician-blue';
-            $defaultFile = \\App\\Core\\App::root('public/assets/avatars/' . $key . '.svg');
+            $defaultFile = \App\Core\App::root('public/assets/avatars/' . $key . '.svg');
             if (!is_file($defaultFile)) return $this->notFound();
             return new Response((string) file_get_contents($defaultFile), 200, [
                 'Content-Type' => 'image/svg+xml; charset=utf-8',
