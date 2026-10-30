@@ -158,22 +158,22 @@ final class DraftPublishingService
                 $renderedRelative = null;
                 $displayRelative = $newRelative;
                 if ($item['media_kind'] === 'image' && !empty($item['rendered_path'])) {
-                    $renderedSourceRelative = ltrim(str_replace('\\\\', '/', (string) $item['rendered_path']), '/');
+                    $renderedSourceRelative = ltrim(str_replace('\\', '/', (string) $item['rendered_path']), '/');
                     if ($renderedSourceRelative === '' || str_contains($renderedSourceRelative, '..')) {
-                        throw new \\DomainException('draft_media_path_invalid');
+                        throw new \DomainException('draft_media_path_invalid');
                     }
                     $renderedSource = realpath($privateRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $renderedSourceRelative));
                     if ($renderedSource === false || !str_starts_with($renderedSource, $privateRoot . DIRECTORY_SEPARATOR) || !is_file($renderedSource)) {
-                        throw new \\DomainException('draft_media_missing');
+                        throw new \DomainException('draft_media_missing');
                     }
                     $renderedExtension = strtolower(pathinfo($renderedSource, PATHINFO_EXTENSION));
                     if (!preg_match('/^[a-z0-9]{2,6}$/', $renderedExtension)) {
-                        throw new \\DomainException('draft_media_path_invalid');
+                        throw new \DomainException('draft_media_path_invalid');
                     }
                     $renderedFilename = bin2hex(random_bytes(16)) . '-preview.' . $renderedExtension;
                     $renderedDestination = $issueDirectory . DIRECTORY_SEPARATOR . $renderedFilename;
                     if (!rename($renderedSource, $renderedDestination)) {
-                        throw new \\DomainException('draft_media_move_failed');
+                        throw new \DomainException('draft_media_move_failed');
                     }
                     $renderedRelative = 'issues/' . $issueId . '/' . $renderedFilename;
                     $displayRelative = $renderedRelative;
