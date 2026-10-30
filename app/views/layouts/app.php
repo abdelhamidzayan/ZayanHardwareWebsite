@@ -19,10 +19,10 @@ $headerNotifications = is_array($currentUser) && isset($currentUser['id'])
     ? \App\Models\Notification::forUser((int) $currentUser['id'], 5)
     : [];
 $headerHelpRequests = is_array($currentUser) && isset($currentUser['id'])
-    ? \\App\\Models\\HelpRequest::forUser((int) $currentUser['id'], 'all', 5)
+    ? \App\Models\HelpRequest::forUser((int) $currentUser['id'], 'all', 5)
     : [];
 $unreadHelpCount = is_array($currentUser) && isset($currentUser['id'])
-    ? \\App\\Models\\HelpRequest::unreadCount((int) $currentUser['id'])
+    ? \App\Models\HelpRequest::unreadCount((int) $currentUser['id'])
     : 0;
 ?>
 <!DOCTYPE html>
