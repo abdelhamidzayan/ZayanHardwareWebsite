@@ -1,5 +1,5 @@
 -- Zayan Hardware: member avatars, personal help conversations and consent-based public sharing.
--- Apply once after migration 006. Private message attachments stay outside the public web root.
+-- Apply once after migration 010 (the latest existing schema migration). Private message attachments stay outside the public web root.
 
 ALTER TABLE users
     ADD COLUMN avatar_key VARCHAR(40) NOT NULL DEFAULT 'technician-blue',
