@@ -53,7 +53,7 @@ No \`issues\`, \`issue_replies\`, \`issue_attachments\`, \`issue_diagnostic_upda
 
 ## Safety controls
 
-The worker is CLI-only and defaults to **dry-run**. It refuses to anonymize the last active administrator; appoint another active administrator first. It uses a MySQL advisory lock to prevent two workers from processing at once, locks each due request inside a transaction, verifies that the account is still \`deletion_pending\`, and rolls database changes back if a step fails.
+The worker is CLI-only and defaults to **dry-run**. It refuses to anonymize the last active administrator; appoint another active administrator first. A shared roster advisory lock serializes deletion requests, retention, and admin role/status changes to prevent concurrent changes from invalidating that check. The worker also uses a separate lock to prevent two workers from processing at once, locks each due request inside a transaction, verifies that the account is still \`deletion_pending\`, and rolls database changes back if a step fails.
 
 Run a preview first:
 
