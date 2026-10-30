@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Services\AuthService;
+
 final class Router
 {
     /** @var array<int, array{0:string,1:string,2:array|callable}> */
@@ -20,6 +22,12 @@ final class Router
 
     public function dispatch(Request $request): Response
     {
+        // Guests may only use the authentication screens and public help/policy pages.
+        // Enforce this before route matching so direct URLs and POST endpoints are protected too.
+        if (AuthService::user() === null && !$this->isGuestRouteAllowed($request)) {
+            return Response::redirect(Request::basePath() . '/login', 303);
+        }
+
         $allowed = [];
 
         foreach ($this->routes as [$method, $regex, $handler]) {
@@ -50,6 +58,22 @@ final class Router
             View::render('errors/404', ['title' => 'الصفحة غير موجودة', 'showHeader' => false, 'active' => '']),
             404
         );
+    }
+
+    private function isGuestRouteAllowed(Request $request): bool
+    {
+        $allowedRoutes = [
+            'GET /',
+            'GET /login',
+            'POST /login',
+            'GET /register',
+            'POST /register',
+            'GET /register/usernames',
+            'GET /help',
+            'GET /policies',
+        ];
+
+        return in_array($request->method . ' ' . $request->path, $allowedRoutes, true);
     }
 
     private function add(string $method, string $path, array|callable $handler): void

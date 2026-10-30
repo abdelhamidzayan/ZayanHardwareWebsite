@@ -260,3 +260,208 @@ textarea { max-inline-size: 100%; }
   }
 }
 
+
+
+/* ---------- Guest access navigation: compact icons on phones ---------- */
+.guest-header__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .45rem;
+}
+
+.guest-header__actions .guest-header__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  text-decoration: none;
+}
+
+.guest-header__actions .guest-header__link > .icon {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  flex: none;
+}
+
+.guest-header__actions .guest-header__login {
+  min-block-size: 2.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.guest-header__actions .guest-header__login:hover,
+.guest-header__actions .guest-header__login:focus-visible,
+.guest-header__actions .guest-header__login.is-active {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.guest-nav-menu {
+  position: relative;
+  flex: none;
+}
+
+.guest-nav-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.guest-nav-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.guest-nav-menu__trigger {
+  min-block-size: 2.65rem;
+}
+
+.guest-nav-menu__chevron {
+  inline-size: .85rem !important;
+  block-size: .85rem !important;
+  transition: transform 150ms ease;
+}
+
+.guest-nav-menu[open] .guest-nav-menu__chevron {
+  transform: rotate(180deg);
+}
+
+.guest-nav-menu.is-active > .guest-nav-menu__trigger,
+.guest-nav-menu[open] > .guest-nav-menu__trigger {
+  border-color: var(--color-primary-soft);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.guest-nav-menu__panel {
+  position: absolute;
+  z-index: 60;
+  inset-block-start: calc(100% + .45rem);
+  inset-inline-end: 0;
+  display: grid;
+  gap: .25rem;
+  inline-size: min(17rem, calc(100vw - 1.25rem));
+  padding: .45rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 14px 36px rgb(15 23 42 / 14%);
+}
+
+.guest-nav-menu__item {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  min-block-size: 2.75rem;
+  padding: .55rem .7rem;
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.guest-nav-menu__item > .icon {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  flex: none;
+}
+
+.guest-nav-menu__item:hover,
+.guest-nav-menu__item:focus-visible,
+.guest-nav-menu__item.is-active,
+.guest-nav-menu__item[aria-current="page"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.guest-nav-menu__item:focus-visible,
+.guest-nav-menu__trigger:focus-visible,
+.guest-header__login:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .guest-header__inner {
+    gap: .6rem;
+    padding-inline: .75rem;
+  }
+
+  .guest-header .brand__name,
+  .app-header .brand__name {
+    display: none;
+  }
+
+  .guest .brand {
+    flex: 0 0 auto;
+    gap: 0;
+  }
+
+  .guest .brand__logo {
+    inline-size: 2.6rem;
+    block-size: 2.6rem;
+    flex-basis: 2.6rem;
+  }
+
+  .guest-header__actions {
+    gap: .35rem;
+  }
+
+  .guest-header__actions .guest-header__link,
+  .guest-nav-menu__trigger {
+    inline-size: 2.75rem;
+    min-inline-size: 2.75rem;
+    block-size: 2.75rem;
+    min-block-size: 2.75rem;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .guest-header__actions > .guest-header__login .guest-header__label,
+  .guest-nav-menu__trigger .guest-header__label {
+    display: none;
+  }
+
+  .guest-header__actions .guest-header__link > .icon {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .guest-nav-menu__trigger .guest-nav-menu__chevron {
+    inline-size: .7rem !important;
+    block-size: .7rem !important;
+    margin-inline-start: -.4rem;
+  }
+
+  .guest-nav-menu__panel {
+    inline-size: min(17rem, calc(100vw - 1.5rem));
+  }
+}
+
+@media (max-width: 359px) {
+  .guest-header__inner {
+    padding-inline: .5rem;
+  }
+
+  .guest-header__actions {
+    gap: .2rem;
+  }
+
+  .guest-header__actions .guest-header__link,
+  .guest-nav-menu__trigger {
+    inline-size: 2.55rem;
+    min-inline-size: 2.55rem;
+    block-size: 2.55rem;
+    min-block-size: 2.55rem;
+  }
+
+  .guest .brand__logo {
+    inline-size: 2.4rem;
+    block-size: 2.4rem;
+    flex-basis: 2.4rem;
+  }
+}
