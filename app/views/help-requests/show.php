@@ -108,8 +108,8 @@ $statusLabel = match ($helpRequest['status']) { 'pending' => 'في انتظار 
                     <label class="check"><input type="radio" name="consent" value="0" required data-publication-no><span>لا، أرفض النشر</span></label>
                 </fieldset>
                 <fieldset class="field" data-publication-identity hidden><legend class="field__label">هل توافق على إظهار هويتك في المرجع؟</legend>
-                    <label class="check"><input type="radio" name="show_identity" value="1"><span>نعم، إظهار اسمي وصورتي</span></label>
-                    <label class="check"><input type="radio" name="show_identity" value="0" checked><span>لا، إخفاء هويتي</span></label>
+                    <label class="check"><input type="radio" name="show_identity" value="1" required><span>نعم، إظهار اسمي وصورتي</span></label>
+                    <label class="check"><input type="radio" name="show_identity" value="0" required><span>لا، إخفاء هويتي</span></label>
                 </fieldset>
                 <p class="field__hint">يمكنك الموافقة على نشر المحتوى مع إخفاء هويتك. قرار إظهار هوية الطرف الآخر لا يتخذه إلا هو.</p>
                 <button class="btn btn--primary" type="submit">إرسال قراري</button>
