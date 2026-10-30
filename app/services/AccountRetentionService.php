@@ -328,24 +328,21 @@ final class AccountRetentionService
         $columns = self::tableColumns($pdo, 'technician_profiles');
         if (!$columns) return;
 
-        $fields = [
-            'phone' => null,
-            'device_focus' => 'android',
-            'board_experience' => 'lt1',
-            'specialization' => '',
-            'experience' => 'lt1',
+        // Preserve technical credentials and expertise: device focus,
+        // specialization, board experience, level verification, and skill
+        // assessments are historical technical data, not account identity.
+        $personalFields = [
+            'phone' => '',
             'workshop_name' => '',
             'biography' => '',
         ];
         $sets = [];
         $params = [];
-        foreach ($fields as $field => $fallback) {
+        foreach ($personalFields as $field => $fallback) {
             if (!isset($columns[$field])) continue;
             $params[] = $columns[$field]['is_nullable'] === 'YES' ? null : $fallback;
             $sets[] = $field . ' = ?';
         }
-        if (isset($columns['tech_level'])) $sets[] = "tech_level = 'fast'";
-        if (isset($columns['level_verified'])) $sets[] = 'level_verified = 0';
         if (!$sets) return;
 
         $params[] = $userId;
