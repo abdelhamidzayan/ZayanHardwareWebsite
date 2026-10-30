@@ -23,11 +23,11 @@ App::boot($tempRoot);
 
 // A user with no custom avatar may never have created storage/private.
 require_once $projectRoot . '/app/services/AccountRetentionService.php';
-$avatarCleanup = new ReflectionMethod(\\App\\Services\\AccountRetentionService::class, 'removePrivateAvatarFiles');
+$avatarCleanup = new ReflectionMethod(\App\Services\AccountRetentionService::class, 'removePrivateAvatarFiles');
 $avatarCleanup->setAccessible(true);
 $avatarCleanup->invoke(null, 123);
 if (file_exists($tempRoot . '/storage/private')) {
-    fwrite(STDERR, "Avatar cleanup must not create private storage for an account without a custom avatar.\\n");
+    fwrite(STDERR, "Avatar cleanup must not create private storage for an account without a custom avatar.\n");
     exit(1);
 }
 
