@@ -21,22 +21,22 @@ final class DeviceCatalog extends Model
         $query = trim($query);
         if ($manufacturerId < 1 || mb_strlen($query) < 1) return [];
         $limit = max(1, min(25, $limit));
-        $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query) . '%';
-        $stmt = self::db()->prepare(
-            'SELECT id, manufacturer_id, commercial_name, model_code, aliases
-             FROM device_models
-             WHERE manufacturer_id = ? AND is_active = 1
-               AND (commercial_name LIKE ? ESCAPE \'\\\\\'
-                    OR COALESCE(model_code, \'\') LIKE ? ESCAPE \'\\\\\'
-                    OR COALESCE(aliases, \'\') LIKE ? ESCAPE \'\\\\\')
-             ORDER BY
-               CASE WHEN model_code = ? THEN 0
-                    WHEN commercial_name = ? THEN 1
-                    WHEN model_code LIKE ? ESCAPE \'\\\\\' THEN 2 ELSE 3 END,
-               commercial_name
-             LIMIT ' . $limit
-        );
-        $prefix = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query) . '%';
+        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query);
+        $like = '%' . $escaped . '%';
+        $prefix = $escaped . '%';
+        $sql = "SELECT id, manufacturer_id, commercial_name, model_code, aliases
+                FROM device_models
+                WHERE manufacturer_id = ? AND is_active = 1
+                  AND (commercial_name LIKE ? ESCAPE '!'
+                       OR COALESCE(model_code, '') LIKE ? ESCAPE '!'
+                       OR COALESCE(aliases, '') LIKE ? ESCAPE '!')
+                ORDER BY
+                  CASE WHEN UPPER(model_code) = UPPER(?) THEN 0
+                       WHEN UPPER(commercial_name) = UPPER(?) THEN 1
+                       WHEN model_code LIKE ? ESCAPE '!' THEN 2 ELSE 3 END,
+                  commercial_name
+                LIMIT " . $limit;
+        $stmt = self::db()->prepare($sql);
         $stmt->execute([$manufacturerId, $like, $like, $like, $query, $query, $prefix]);
         return $stmt->fetchAll();
     }
