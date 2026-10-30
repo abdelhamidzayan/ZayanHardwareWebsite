@@ -24,10 +24,18 @@ ALTER TABLE users
 
 -- Bootstrap the oldest account as admin only when the database has no admin.
 -- Verify that the oldest account belongs to the trusted platform owner before running this migration.
+-- Use session variables here: MySQL rejects reading the target table from a
+-- subquery in the same UPDATE (ERROR 1093), while MariaDB accepts that form.
+SET @zayan_oldest_user_id := (SELECT id FROM users ORDER BY id ASC LIMIT 1);
+SET @zayan_existing_admin_count := (SELECT COUNT(*) FROM users WHERE role = 'admin');
+
 UPDATE users
 SET role = 'admin'
-WHERE id = (SELECT id FROM (SELECT id FROM users ORDER BY id ASC LIMIT 1) AS oldest_user)
-  AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin');
+WHERE id = @zayan_oldest_user_id
+  AND @zayan_existing_admin_count = 0;
+
+SET @zayan_oldest_user_id := NULL;
+SET @zayan_existing_admin_count := NULL;
 
 -- A contact method may be email OR phone. Phone stays in the profile table,
 -- but must be unique when supplied so it can be used as a login identifier.
