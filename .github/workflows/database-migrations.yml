@@ -32,6 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_mysql
+
       - name: Wait for database
         run: |
           for attempt in {1..30}; do
@@ -97,3 +102,12 @@ jobs:
           test "$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT hit_count FROM rate_limit_buckets WHERE bucket = 'ci-rate-limit-smoke';")" -eq 2
           mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM rate_limit_buckets WHERE bucket = 'ci-rate-limit-smoke';"
           echo "Migration smoke tests passed on ${{ matrix.database.label }}"
+
+      - name: Exercise rate limiter against disposable database
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_migration_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/rate-limiter-integration.php
