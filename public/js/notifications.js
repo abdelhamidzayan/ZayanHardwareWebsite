@@ -45,6 +45,7 @@
             const subscription = await registration.pushManager.getSubscription();
             if (enableButton) enableButton.hidden = Boolean(subscription);
             if (disableButton) disableButton.hidden = !subscription;
+            if (subscription) setStatus('إشعارات Push مفعّلة على هذا الجهاز.');
         } catch (_) {
             setStatus('تعذر الوصول إلى إعدادات الإشعارات في هذا الجهاز.');
         }
@@ -53,14 +54,19 @@
     if (enableButton) enableButton.addEventListener('click', async () => {
         enableButton.disabled = true;
         try {
+            if (!window.isSecureContext) {
+                throw new Error('إشعارات Push تحتاج HTTPS. على بيئة التطوير استخدم localhost، وعلى الاستضافة فعّل شهادة SSL.');
+            }
+            const keyResponse = await fetch(base + '/push/public-key', { credentials: 'same-origin', cache: 'no-store' });
+            const keyData = await keyResponse.json().catch(() => ({}));
+            if (!keyResponse.ok || !keyData.publicKey) {
+                throw new Error(keyData.message || 'تعذر قراءة إعدادات Push من الخادم.');
+            }
             if (Notification.permission === 'denied') {
                 throw new Error('الإشعارات محظورة من إعدادات المتصفح. فعّلها من إعدادات الموقع أولًا.');
             }
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') throw new Error('لم يتم منح إذن الإشعارات.');
-            const keyResponse = await fetch(base + '/push/public-key', { credentials: 'same-origin', cache: 'no-store' });
-            const keyData = await keyResponse.json();
-            if (!keyResponse.ok || !keyData.publicKey) throw new Error('إعدادات Push غير مكتملة على الخادم.');
             const registration = await navigator.serviceWorker.ready;
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
