@@ -37,6 +37,7 @@ return static function (Router $router): void {
     $router->post('/drafts/save', [DraftController::class, 'save']);
     $router->get('/drafts/{draftId}/data', [DraftController::class, 'data']);
     $router->post('/drafts/{draftId}/media', [DraftController::class, 'upload']);
+    $router->post('/drafts/{draftId}/media/{mediaUuid}/rendered', [DraftController::class, 'uploadRendered']);
     $router->post('/drafts/{draftId}/media/{mediaUuid}/editor', [DraftController::class, 'updateMediaEditor']);
     $router->post('/drafts/{draftId}/media/{mediaUuid}/delete', [DraftController::class, 'deleteMedia']);
     $router->get('/drafts/{draftId}/media/{mediaUuid}', [DraftController::class, 'media']);
