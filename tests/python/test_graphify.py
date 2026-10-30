@@ -172,5 +172,35 @@ fetch(lookupUrl + '?q=phone', { credentials: 'same-origin' });
 
 
 
+    def test_maps_static_method_calls_and_warns_on_missing_method(self) -> None:
+        self.write("app/services/Worker.php", """<?php
+namespace App\\Services;
+final class Worker {
+    public static function run(): void {}
+}
+""")
+        self.write("app/controllers/ExampleController.php", """<?php
+namespace App\\Controllers;
+use App\\Services\\Worker;
+final class ExampleController {
+    public function index(): void {
+        Worker::run();
+        Worker::missing();
+    }
+}
+""")
+        graph = self.graph()
+        controller = graph.php_classes["App\\Controllers\\ExampleController"]
+        method = next(n["id"] for n in graph.nodes.values()
+                      if n["kind"] == "method" and n["key"] == "App\\Services\\Worker::run")
+        self.assertIn((controller, method, "calls_method"), graph.edges)
+        self.assertTrue(any(
+            "Worker::missing()" in warning
+            and "app/controllers/ExampleController.php" in warning
+            for warning in graph.warnings
+        ))
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
