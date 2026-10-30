@@ -4,7 +4,7 @@
  */
 'use strict';
 const CACHE_PREFIX='zayan-hardware-static-';
-const STATIC_CACHE=CACHE_PREFIX+'v12';
+const STATIC_CACHE=CACHE_PREFIX+'v13';
 const OFFLINE_URL=new URL('./offline.html',self.registration.scope).href;
 const STATIC_PATH=/\/(?:css|js|assets)\//;
 const STATIC_FILE=/\.(?:css|js|svg|png|jpg|jpeg|webp|woff2?)$/i;
