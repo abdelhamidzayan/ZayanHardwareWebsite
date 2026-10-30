@@ -41,6 +41,20 @@ final class PageController extends Controller
         ]);
     }
 
+    /** Persist the member's personal-help availability preference. */
+    public function saveHelpAvailability(): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+        if (!Csrf::verify($this->request->input('_token'))) {
+            $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
+            return $this->redirect('/settings');
+        }
+        User::setHelpRequestsEnabled((int) $user['id'], $this->request->input('accept_help_requests') === '1');
+        $this->flash('success', 'تم حفظ تفضيل استقبال طلبات المساعدة.');
+        return $this->redirect('/settings');
+    }
+
     /** Pages from the navigation that are not built yet. */
     public function soon(): Response
     {
