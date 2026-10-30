@@ -418,6 +418,16 @@ try {
     throw $e;
 }
 
+// Editing the self-declared skill list must not reset earned ratings.
+App\\Models\\User::saveOptionalSkills($ownerId, ['power'], 'Updated Workshop');
+$editedRatingStmt = $pdo->prepare('SELECT rating, approved_assessments FROM user_skill_ratings WHERE user_id = ? AND skill_domain_id = ?');
+$editedRatingStmt->execute([$ownerId, $powerDomainId]);
+$editedRating = $editedRatingStmt->fetch(PDO::FETCH_ASSOC);
+retentionExpect(
+    $editedRating['rating'] === '88.50' && (int) $editedRating['approved_assessments'] === 4,
+    'Changing profile skill selections must not delete or reset assessment-backed skill ratings.'
+);
+
 $technicalTables = [
     'issues', 'issue_attachments', 'issue_replies', 'issue_diagnostic_updates',
     'issue_results', 'issue_edit_history', 'issue_reply_edit_history',
