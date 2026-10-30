@@ -188,7 +188,10 @@ final class PostDraft extends Model
              WHERE m.draft_id = ? AND m.media_uuid = ? AND d.user_id = ?'
         );
         $stmt->execute([$draftId, $mediaUuid, $userId]);
-        if ($stmt->rowCount() === 1) {\n            self::removePrivateFile((string) $media['storage_path']);\n            if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);\n        }
+        if ($stmt->rowCount() === 1) {
+            self::removePrivateFile((string) $media['storage_path']);
+            if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);
+        }
         return $stmt->rowCount() === 1;
     }
 
@@ -196,11 +199,14 @@ final class PostDraft extends Model
     {
         $stmt = self::db()->prepare('SELECT m.storage_path, m.rendered_path FROM post_draft_media m JOIN post_drafts d ON d.id = m.draft_id WHERE d.id = ? AND d.user_id = ?');
         $stmt->execute([$id, $userId]);
-        $paths = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $paths = $stmt->fetchAll();
         $delete = self::db()->prepare('DELETE FROM post_drafts WHERE id = ? AND user_id = ?');
         $delete->execute([$id, $userId]);
         if ($delete->rowCount() !== 1) return false;
-        foreach ($paths as $item) {\n            self::removePrivateFile((string) $item['storage_path']);\n            if (!empty($item['rendered_path'])) self::removePrivateFile((string) $item['rendered_path']);\n        }
+        foreach ($paths as $item) {
+            self::removePrivateFile((string) $item['storage_path']);
+            if (!empty($item['rendered_path'])) self::removePrivateFile((string) $item['rendered_path']);
+        }
         self::removePrivateDirectory($id);
         return true;
     }
