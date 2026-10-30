@@ -42,11 +42,13 @@
             <?php if ($profile['accept_help_requests']) : ?>
                 <details class="profile-help-request">
                     <summary class="btn btn--primary btn--block">طلب مساعدة شخصية</summary>
-                    <form class="profile-help-request__form" method="post" action="<?= $e($baseUrl) ?>/help-requests/create">
+                    <form class="profile-help-request__form" method="post" action="<?= $e($baseUrl) ?>/help-requests/create" enctype="multipart/form-data">
                         <?= $csrf() ?>
                         <input type="hidden" name="helper_id" value="<?= (int) $profile['id'] ?>">
                         <label class="field"><span class="field__label">موضوع طلب المساعدة</span><input class="field__input" name="subject" minlength="4" maxlength="180" placeholder="مثال: عطل شحن iPhone 13" required></label>
                         <label class="field"><span class="field__label">اشرح المشكلة</span><textarea class="field__input" name="body" minlength="10" maxlength="5000" rows="5" placeholder="اكتب تفاصيل العطل والقياسات والتجارب التي قمت بها..." required></textarea></label>
+                        <label class="field"><span class="field__label">صور أو مخططات (اختياري)</span><input class="field__input" type="file" name="attachments[]" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple></label>
+                        <p class="field__hint">حتى 8 مرفقات، كل ملف حتى 8 ميجابايت. لن يراها إلا طرفا طلب المساعدة.</p>
                         <p class="field__hint">سيصل الطلب إلى العضو، ولن تبدأ المحادثة الخاصة إلا بعد قبوله.</p>
                         <button class="btn btn--primary btn--block" type="submit">إرسال طلب المساعدة</button>
                     </form>
