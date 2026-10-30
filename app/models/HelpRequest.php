@@ -256,6 +256,7 @@ final class HelpRequest extends Model
                 $publication['problem_summary'], $publication['diagnosis_summary'], $publication['solution_summary'],
                 $requester['display_name'] ?? null, $helper['display_name'] ?? null,
                 $requester['avatar_key'] ?? null, $helper['avatar_key'] ?? null,
+                $requester['id'] ?? null, $helper['id'] ?? null,
             ]);
             $postId = (int) $pdo->lastInsertId();
             $pdo->prepare('UPDATE help_request_publications SET public_post_id = ? WHERE id = ?')
@@ -270,7 +271,7 @@ final class HelpRequest extends Model
 
     private static function publicIdentity(int $userId): ?array
     {
-        $stmt = self::db()->prepare('SELECT display_name, avatar_key FROM users WHERE id = ? LIMIT 1');
+        $stmt = self::db()->prepare('SELECT id, display_name, avatar_key FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([$userId]);
         return $stmt->fetch() ?: null;
     }
@@ -280,7 +281,7 @@ final class HelpRequest extends Model
         $limit = max(1, min(100, $limit));
         $stmt = self::db()->prepare(
             'SELECT id, title, problem_summary, diagnosis_summary, solution_summary,
-                    requester_display_name, helper_display_name, requester_avatar_key, helper_avatar_key, created_at
+                    requester_display_name, helper_display_name, requester_avatar_key, helper_avatar_key, requester_user_id, helper_user_id, created_at
              FROM help_public_posts ORDER BY created_at DESC, id DESC LIMIT ' . $limit
         );
         $stmt->execute();
