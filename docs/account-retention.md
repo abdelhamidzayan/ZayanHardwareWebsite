@@ -42,7 +42,7 @@ The scheduled worker changes the existing user row in place:
 - Keeps the same \`users.id\`; changes \`account_status\` to \`deleted\`.
 - Clears both email and phone. Migration 015 permits this only after the account is marked \`deleted\`.
 - Replaces the username with a generated anonymous handle and the display name with \`عضو محذوف\`.
-- Clears email, phone, biography, and workshop name. Technical device specializations, board/fast classification, experience levels, verification status, skill ratings, and assessment history remain unchanged.
+- Clears biography and workshop name. Technical device specializations, board/fast classification, experience levels, verification status, skill ratings, and assessment history remain unchanged.
 - Replaces the password with an unknown random password, resets the role to \`member\`, and disables personal-help requests.
 - Clears the custom avatar reference and removes generated private avatar image files from that user's avatar directory.
 - Neutralizes Web Push endpoint/key material so the deleted account cannot receive push notifications.
