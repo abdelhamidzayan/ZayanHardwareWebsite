@@ -89,10 +89,14 @@ CREATE TABLE IF NOT EXISTS help_public_posts (
     helper_display_name VARCHAR(80) NULL,
     requester_avatar_key VARCHAR(40) NULL,
     helper_avatar_key VARCHAR(40) NULL,
+    requester_user_id BIGINT UNSIGNED NULL,
+    helper_user_id BIGINT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_help_public_post_publication (publication_id),
     KEY idx_help_public_posts_created (created_at, id),
     CONSTRAINT fk_help_public_posts_publication FOREIGN KEY (publication_id) REFERENCES help_request_publications(id) ON DELETE CASCADE,
-    CONSTRAINT fk_help_public_posts_request FOREIGN KEY (request_id) REFERENCES help_requests(id) ON DELETE CASCADE
+    CONSTRAINT fk_help_public_posts_request FOREIGN KEY (request_id) REFERENCES help_requests(id) ON DELETE CASCADE,
+    CONSTRAINT fk_help_public_posts_requester FOREIGN KEY (requester_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_help_public_posts_helper FOREIGN KEY (helper_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
