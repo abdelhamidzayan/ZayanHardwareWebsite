@@ -64,8 +64,10 @@ try {
     App::log('WARNING', 'test.url https://example.test/callback?access_token=PRIVATE_ACCESS_TOKEN&next=/feed');
     App::log('WARNING', 'test.query https://example.test/callback?token=PRIVATE_QUERY_TOKEN&next=/feed');
     App::log('WARNING', 'test.bearer Bearer PRIVATE_STANDALONE_BEARER');
+    App::log('NOTICE', 'test.session session_id=PRIVATE_SESSION_ID');
     App::log('NOTICE', 'test.context.header', [
         'header' => 'Authorization: Bearer PRIVATE_CONTEXT_BEARER',
+        'session_id' => 'PRIVATE_SESSION_ID_CONTEXT',
     ]);
 
     App::log('INFO', 'test.channel.access', ['status' => 404], 'access');
@@ -111,6 +113,8 @@ try {
         'PRIVATE_ACCESS_TOKEN',
         'PRIVATE_QUERY_TOKEN',
         'PRIVATE_STANDALONE_BEARER',
+        'PRIVATE_SESSION_ID',
+        'PRIVATE_SESSION_ID_CONTEXT',
         'PRIVATE_CSRF_SECRET',
         'PRIVATE_PASSWORD_SECRET',
     ] as $secret) {
@@ -122,7 +126,7 @@ try {
     foreach ([
         'RuntimeException', 'PDOException', 'HY000', '999', 'test.push.exception',
         'test.authorization', 'test.cookie', 'test.url', 'test.query', 'test.bearer',
-        'test.channel.access', 'test.channel.security', 'test.channel.audit', '[REDACTED]',
+        'test.channel.access', 'test.channel.security', 'test.channel.audit', 'test.session', '[REDACTED]',
     ] as $expected) {
         if (!str_contains($contents, $expected)) {
             throw new RuntimeException('A safe exception diagnostic was not recorded: ' . $expected);
