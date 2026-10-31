@@ -38,7 +38,7 @@ The duplicate `002_` prefix is historical. These two files are **sequential**, n
 
 `013` intentionally uses `CREATE TABLE IF NOT EXISTS`: the terms table is created by the registration migration, and this later file also repairs installations where that table was absent.
 
-Migration 016 changes foreign-key delete rules to `RESTRICT` for technical content, personal-help history, skill evidence and attribution. Migration 017 adds `BEFORE DELETE` guards to core technical and audit tables, including standalone posts/replies with no dependent rows. Both migrations change constraints only; they do not delete or rewrite records. The normal application workflow uses soft deletion and account anonymization. Draft rows/media and transient notification/push records remain governed by their separate lifecycle.
+Migration 016 changes foreign-key delete rules to `RESTRICT` for technical content, personal-help history, skill evidence and attribution. Migration 017 adds `BEFORE DELETE` guards to core technical and audit tables, including standalone posts/replies with no dependent rows. Migration 018 creates a durable recovery queue for filesystem compensation failures and protects its audit rows from physical deletion. These migrations do not delete or rewrite existing content. The normal application workflow uses soft deletion and account anonymization. Draft rows/media and transient notification/push records remain governed by their separate lifecycle.
 
 ## Verification requirements
 
