@@ -51,9 +51,34 @@ final class AdminUpdateController extends Controller
             return $this->fail('تم تشغيل التحديث مؤخرًا. انتظر قبل محاولة تشغيله مرة أخرى.');
         }
 
+        $pdo = Database::connection();
+        // Serialize the update with admin suspension, role changes, deletion
+        // requests, and retention anonymization, which use this same lock.
+        $lockAcquired = (int) $pdo->query(
+            "SELECT GET_LOCK('zayan_hardware_admin_deletion_request', 5)"
+        )->fetchColumn() === 1;
+        if (!$lockAcquired) {
+            App::security('admin.site_update.coordination_lock_unavailable', ['user_id' => $adminId]);
+            return $this->fail('هناك عملية إدارية أخرى قيد التنفيذ. حاول مرة أخرى بعد انتهائها.');
+        }
+
+        try {
+            return $this->executeUpdate($adminId, $pdo);
+        } finally {
+            try {
+                $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
+            } catch (\\Throwable $lockError) {
+                App::logException('WARNING', 'admin.site_update.coordination_lock_release_failed', $lockError, [
+                    'user_id' => $adminId,
+                ]);
+            }
+        }
+    }
+
+    private function executeUpdate(int $adminId, \\PDO $pdo): Response
+    {
         // Revalidate the actor against the database immediately before starting
         // the fixed, non-user-controlled update command.
-        $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
             AdminRosterService::assertActorActive($pdo, $adminId);
