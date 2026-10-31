@@ -21,6 +21,13 @@ final class HelpRequestMediaService
             || count($files['size']) !== $fileCount) {
             throw new \DomainException('invalid_attachment_structure');
         }
+        foreach (array_keys($files['name']) as $index) {
+            if (!array_key_exists($index, $files['error'])
+                || !array_key_exists($index, $files['tmp_name'])
+                || !array_key_exists($index, $files['size'])) {
+                throw new \DomainException('invalid_attachment_structure');
+            }
+        }
         if ($fileCount > 8) throw new \DomainException('too_many_attachments');
         $allowed = [
             'image/jpeg' => 'jpg', 'image/png' => 'png',
