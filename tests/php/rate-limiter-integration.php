@@ -64,6 +64,31 @@ try {
     expectRateLimit($firstFailure['allowed'] && $secondFailure['allowed'], 'Two invalid attempts should fit the configured identifier limit.');
     expectRateLimit(!$thirdFailure['allowed'] && !$callbackCalled, 'The attempt callback must not run after the identifier limit is reached.');
 
+    $blockedAccountAttempt = static fn (): array => ['user' => null, 'error' => 'blocked'];
+    $blockedAccountFirst = RateLimiter::attemptForIpAndIdentifier(
+        'ci.login-blocked',
+        'suspended@example.test',
+        10,
+        1,
+        600,
+        $blockedAccountAttempt
+    );
+    $blockedCallbackCalled = false;
+    $blockedAccountSecond = RateLimiter::attemptForIpAndIdentifier(
+        'ci.login-blocked',
+        'suspended@example.test',
+        10,
+        1,
+        600,
+        static function () use (&$blockedCallbackCalled): array {
+            $blockedCallbackCalled = true;
+            return ['user' => null, 'error' => 'blocked'];
+        }
+    );
+    expectRateLimit($blockedAccountFirst['allowed'], 'The first blocked-account attempt should be evaluated.');
+    expectRateLimit(!$blockedAccountSecond['allowed'] && !$blockedCallbackCalled,
+        'Blocked-account attempts must consume the same identifier limit.');
+
     $successfulLogin = RateLimiter::attemptForIpAndIdentifier(
         'ci.login-success',
         'good@example.test',

@@ -158,12 +158,16 @@ final class AuthService
         self::$loaded = true;
 
         $id = $_SESSION['user_id'] ?? null;
-        if (!is_int($id)) {
+        $sessionVersion = $_SESSION['auth_version'] ?? null;
+        if (!is_int($id) || !is_int($sessionVersion) || $sessionVersion < 1) {
+            if (session_status() === PHP_SESSION_ACTIVE) self::forget();
             return self::$current = null;
         }
 
         $user = User::findById($id);
-        if ($user === null || $user['account_status'] !== 'active') {
+        $currentAuthVersion = User::authVersion($id);
+        if ($user === null || $user['account_status'] !== 'active'
+            || $currentAuthVersion === null || $currentAuthVersion !== $sessionVersion) {
             self::forget();
 
             return null;
@@ -205,13 +209,27 @@ final class AuthService
         return ['user' => $row, 'error' => null];
     }
 
-    public static function login(int $userId): void
+    public static function login(int $userId, ?int $expectedAuthVersion = null): bool
     {
+        // Bind the new session to the current database auth_version. Comparing
+        // the version checked with the password also closes the in-flight reset race.
+        $user = User::findById($userId);
+        $currentAuthVersion = User::authVersion($userId);
+        if ($user === null || $user['account_status'] !== 'active'
+            || $currentAuthVersion === null
+            || ($expectedAuthVersion !== null && $currentAuthVersion !== $expectedAuthVersion)) {
+            if (session_status() === PHP_SESSION_ACTIVE) self::forget();
+            return false;
+        }
+
+        if (session_status() !== PHP_SESSION_ACTIVE) return false;
         session_regenerate_id(true);
         $_SESSION['user_id'] = $userId;
+        $_SESSION['auth_version'] = $currentAuthVersion;
         unset($_SESSION['_csrf']);
         self::$loaded  = false;
         self::$current = null;
+        return true;
     }
 
     public static function logout(): void
@@ -221,7 +239,7 @@ final class AuthService
 
     private static function forget(): void
     {
-        unset($_SESSION['user_id'], $_SESSION['_csrf']);
+        unset($_SESSION['user_id'], $_SESSION['auth_version'], $_SESSION['_csrf']);
         session_regenerate_id(true);
         self::$current = null;
         self::$loaded  = true;
