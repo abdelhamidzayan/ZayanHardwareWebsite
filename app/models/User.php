@@ -39,7 +39,7 @@ final class User extends Model
         }
 
         $stmt = self::db()->prepare(
-            'SELECT id, username, password_hash, account_status
+            'SELECT id, username, password_hash, account_status, auth_version
              FROM users
              WHERE ' . $type . ' = ?
              LIMIT 1'
@@ -52,13 +52,22 @@ final class User extends Model
     public static function findById(int $id): ?array
     {
         $stmt = self::db()->prepare(
-            'SELECT id, username, display_name, email, role, account_status, auth_version, created_at,
+            'SELECT id, username, display_name, email, role, account_status, created_at,
                    avatar_key, avatar_path, accept_help_requests
              FROM users WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
 
         return $stmt->fetch() ?: null;
+    }
+
+    /** Returns the internal authentication version without exposing it to view data. */
+    public static function authVersion(int $id): ?int
+    {
+        $stmt = self::db()->prepare('SELECT auth_version FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $value = $stmt->fetchColumn();
+        return $value === false ? null : (int) $value;
     }
 
     public static function findProfileByUsername(string $username): ?array
