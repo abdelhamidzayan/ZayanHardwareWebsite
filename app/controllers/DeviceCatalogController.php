@@ -109,9 +109,12 @@ final class DeviceCatalogController extends Controller
             DeviceCatalog::moderateSuggestion($id, (int) $user['id'], $decision === 'approve');
             $this->flash('success', $decision === 'approve' ? 'تم اعتماد الموديل وإضافته للاختيارات.' : 'تم رفض اقتراح الموديل.');
         } catch (\DomainException $error) {
-            $message = $error->getMessage() === 'model_already_exists'
-                ? 'الموديل موجود بالفعل. لم تتم إضافته مرة أخرى.'
-                : 'الاقتراح غير موجود أو تمت مراجعته بالفعل.';
+            $message = match ($error->getMessage()) {
+                'model_already_exists' => 'الموديل موجود بالفعل. لم تتم إضافته مرة أخرى.',
+                'manufacturer_unavailable' => 'الشركة المصنعة غير نشطة؛ لا يمكن اعتماد موديل جديد لها.',
+                'admin_not_active' => 'لم تعد تملك صلاحية تنفيذ المراجعة.',
+                default => 'الاقتراح غير موجود أو تمت مراجعته بالفعل.',
+            };
             $this->flash('error', $message);
         }
         return $this->redirect('/admin/device-model-suggestions');
