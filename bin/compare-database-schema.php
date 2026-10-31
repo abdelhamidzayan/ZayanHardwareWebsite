@@ -32,8 +32,30 @@ foreach (array_slice($argv, 1) as $argument) {
 }
 
 try {
-    App::boot($root);
-    $database = (array) App::config('database', []);
+    // Load only the database settings. Do not boot the web application here:
+    // App::boot() also runs log retention and registers request handlers.
+    $envFile = $root . '/.env';
+    if (is_file($envFile)) {
+        foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#' || !str_contains($line, '=')) {
+                continue;
+            }
+
+            [$key, $value] = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+            if ($key === '' || getenv($key) !== false || array_key_exists($key, $_ENV)) {
+                continue;
+            }
+            if (strlen($value) >= 2 && ($value[0] === '"' || $value[0] === "'") && $value[-1] === $value[0]) {
+                $value = substr($value, 1, -1);
+            }
+            $_ENV[$key] = $value;
+        }
+    }
+
+    $database = require $root . '/config/database.php';
     $sourceSchema = (string) ($database['name'] ?? '');
 
     $validSchema = static function (string $schema): bool {
