@@ -38,7 +38,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | MySQL/MariaDB matrix | Workflow configured for MySQL 8.0, MariaDB 10.4.32, and 10.11 | Implemented; current-head CI pending |
 | Core content write/media recovery | Dedicated integration tests exist for content writes, draft publish/recovery, help media, and reply tombstones | Implemented; current-head CI pending |
 | Public/private route and upload checks | Focused route and upload tests exist | Implemented; current-head CI pending |
-| Exception log redaction | Complete Authorization/Cookie header redaction, bearer/query-token checks, four-channel JSON checks, and retention regression coverage added | Implemented; PHP test pending execution |
+| Exception log redaction | Complete Authorization/Cookie header redaction, bearer/query-token/session-ID checks, four-channel JSON checks, and retention regression coverage added | Implemented; PHP test pending execution |
 | Access/security/audit channels | Logger provides four channels; real Apache write permissions and HTTP lifecycle still need validation | Runtime check pending |
 | Disposable backup/restore comparison | Workflow now dumps, compresses, hashes, restores into a new schema, and compares tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts | Implemented in CI; awaiting executed workflow result |
 | Owner's full database backup/restore comparison | Previously recorded owner backup/hash has not yet been restored to a separate local test database | Pending owner-machine verification |
