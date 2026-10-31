@@ -74,10 +74,11 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 ## 7. Latest Phase 1 implementation checkpoint
 
-On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`:
+On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed on commit `c35c71f39d0702178d8dc9aad041d247b29c29b1` (PHP run [41238036009](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036009), Graphify run [41238036104](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036104), database matrix [41238036402](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036402)):
 
 - PHP lint, CLI boot, rate-limiter API, draft rollback, public-route policy, schema-comparator CLI, HTTP access-log lifecycle, exception redaction/retention, upload policy, and JavaScript syntax all passed.
 - Graphify analyzer tests, graph generation, determinism check, and artifact upload passed.
+- Graphify snapshot for this head: 151 files, 72 routes, 168 SQL query fragments, 15 JavaScript API calls (10 statically linked; 5 remain dynamic/unresolved), 698 nodes, and 1,637 edges. It also reports the duplicate `002_` migration prefix; the documented fresh-install order and all three database CI runs passed. See [Graphify guide](graphify.md).
 - The full fresh-install sequence 000–018 and all integration suites passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
 - Disposable backup → gzip/checksum → restore into a new schema → schema-object and row-count comparison passed on all three engines.
 
