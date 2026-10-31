@@ -115,6 +115,6 @@ Record the following separately:
 | Row-count comparison | Pending owner-machine verification |
 | Critical row/attachment-reference spot checks | Pending owner-machine verification |
 | Private-media backup inventory and isolated sample restore | Pending owner-machine verification |
-| CI disposable backup/restore matrix | Added to workflow; awaits executed CI result |
+| CI disposable backup/restore matrix | Passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` across MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11; run `41219585295` |
 
 Never mark the owner's backup as restore-verified until the target restore and comparisons actually pass.

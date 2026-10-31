@@ -1,5 +1,18 @@
 # Zayan Hardware — Update Log
 
+## 2026-10-31 — Phase 1 CI gate passed on MySQL/MariaDB matrix
+
+- **Type:** Tests / Database / Logging / Infrastructure
+- **Summary:** Completed the first full Phase 1 automated verification after the repository became public. Added an isolated real-HTTP access-log regression test; corrected the standalone Bearer redaction boundary after its test exposed a regex match against an event label.
+- **Code areas:** `tests/php/logging-http-access.php`; `tests/php/logging-exception-redaction.php`; `app/core/App.php`; `.github/workflows/php-lint.yml`; `bin/compare-database-schema.php`; `.github/workflows/database-migrations.yml`.
+- **Database:** No migration applied to the owner's database. Fresh-install migrations 000–018 and disposable backup/restore/metadata/row-count comparison passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
+- **Safety:** CI used disposable synthetic databases and temporary storage roots. No live database, private-media tree, or deployment was modified. Technical-content retention, media recovery, and account-anonymization integration tests passed in the database matrix.
+- **Verification:** Commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`: PHP workflow [41219585375](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41219585375) passed; Graphify workflow [41219585292](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41219585292) passed; database matrix [41219585295](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41219585295) passed all three engines and all steps. The local owner database restore, separate private-media archive/sample restore, and actual Apache `daemon` permissions remain unverified.
+- **Documentation:** [Completion plan](docs/COMPLETION_PLAN.md) · [Current state](docs/CURRENT_STATE.md) · [Backup/restore runbook](docs/DATABASE_BACKUP_RESTORE.md) · [Storage recovery triage](docs/STORAGE_RECOVERY_RUNBOOK.md).
+- **Status:** Phase 1 automated CI gate passed; owner-machine acceptance remains pending. PR #17 remains a draft; nothing is merged to `main` or deployed.
+
+---
+
 ## 2026-10-31 — Phase 1: backup/restore gate, schema comparator, and logging hardening
 
 - **Type:** Database / Infrastructure / Security / Tests / Documentation

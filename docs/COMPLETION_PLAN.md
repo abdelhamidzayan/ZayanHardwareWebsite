@@ -21,7 +21,7 @@ Scope:
 3. Exercise a complete disposable-database backup → compression/checksum → restore → schema/data comparison cycle in CI.
 4. Review and test core write transactions and file recovery: posts, replies, diagnostic updates, edit history, issue attachments, drafts, and personal-help attachments.
 5. Verify the PHP/CLI bootstrap, PHP and JavaScript syntax, public/private route policy, and focused runtime smoke paths.
-6. Verify application, access, security, and audit log channels; test secret redaction and retention behavior; document safe filesystem permissions and local Apache checks.
+6. Verify application, access, security, and audit log channels; test secret redaction, HTTP shutdown access logging, and retention behavior; document safe filesystem permissions and local Apache checks.
 7. Add a read-only schema comparator covering tables, views, columns, indexes, foreign keys, CHECK constraints, triggers, routines, events, and optional table row counts.
 8. Add a disposable CI backup → gzip/checksum → restore-to-new-schema → schema/row-count comparison gate across the database matrix.
 9. Document safe triage for `storage_recovery_tasks` without deleting any referenced file; do not add an automatic worker until its reference checks and failure behavior are covered by tests.
@@ -37,9 +37,9 @@ Exit criteria:
 - The private media backup is separately verified and representative DB-referenced files resolve in an isolated restore tree, or that check is explicitly blocked because no media backup is available.
 - No data-loss or destructive-operation risk remains unaddressed.
 
-**Implementation checkpoint (2026-10-31):** A read-only comparator is now present at `bin/compare-database-schema.php`; the database workflow now includes an isolated backup/restore/checksum/metadata-and-row-count check; the logging redaction test now covers raw Authorization/Cookie headers, Bearer/query tokens, all four log channels, JSON records, and retention. A local owner backup/restore runbook was added at `docs/DATABASE_BACKUP_RESTORE.md`; a safe read-only storage recovery triage guide was added at `docs/STORAGE_RECOVERY_RUNBOOK.md`. These changes are implemented in the Phase 1 branch, but the tests have not yet executed on this branch. The owner database restore, private-media backup/sample restore, Apache permissions, and local HTTP/browser runtime checks remain pending.
+**CI implementation and verification checkpoint (2026-10-31):** The read-only comparator, disposable backup/restore/checksum gate, log redaction/channel/retention tests, and real HTTP access-shutdown test are implemented. On commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`, the PHP workflow (`41219585375`), Graphify workflow (`41219585292`), and database workflow (`41219585295`) all completed successfully. The database workflow passed its full 000–018 migration and integration matrix on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, including the backup/restore/schema/row-count gate. The local owner backup restore, private-media sample restore, and actual Apache-user permission check remain pending.
 
-**Status:** In progress. The existing workflow defines the 000–018 three-engine matrix and many integration tests, with a new backup/restore gate. The last recorded PR #16 CI run executed zero steps; recheck Actions quota before starting a new run. No current Phase 1 test pass is claimed.
+**Status:** Automated Phase 1 CI gate passed. Phase 1 remains open for owner-machine acceptance checks; no live database, private-media tree, or deployment was modified.
 
 ## Phase 2 — Security, lifecycle, and dependency integrity
 
@@ -81,7 +81,7 @@ Exit criteria:
 
 | Phase | Status | Gate |
 |---|---|---|
-| Phase 1 — Foundation and operations | **In progress** | Current branch: `phase1/foundation-reliability-20261031` |
+| Phase 1 — Foundation and operations | **CI passed; local acceptance pending** | Current branch: `phase1/foundation-reliability-20261031`; PR #17 remains draft |
 | Phase 2 — Security and Graphify | Planned | Starts after Phase 1 gate |
 | Phase 3 — UI, PWA, final acceptance | Planned | Starts after Phase 2 gate |
 
@@ -89,5 +89,6 @@ Exit criteria:
 
 - This plan is being implemented on `phase1/foundation-reliability-20261031`, based on the merge commit of PR #16 (`098442813eb5a55e96d5fff27ce127f9b5f08591`).
 - PR #16 merged into `audit/content-retention-consistency`, not `main`.
-- The last recorded GitHub Actions jobs for the merged PR head failed before executing any steps because the included Actions minutes were exhausted. Such runs are neither test failures nor successful verification.
-- Recheck live Actions usage/budget before opening a PR or running workflows. Keep workflow definitions and test matrices intact.
+- Earlier PR #16 runs executed zero steps due the old private-repository included-minutes limit. After the repository became public, PR #17 executed the current Phase 1 workflows successfully on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`.
+- Run IDs: PHP `41219585375`; Graphify `41219585292`; database matrix `41219585295`. All jobs and steps completed successfully.
+- PR #17 is still a draft targeting `audit/content-retention-consistency`, not `main`. Do not merge it to `main` or mark it deployed.

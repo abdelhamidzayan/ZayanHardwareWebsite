@@ -6,7 +6,7 @@
 
 The owner approved a **three-phase completion plan**. Complete the remaining stabilization work in controlled phases, report each phase gate, and avoid repeating a full review after every change.
 
-- **Phase 1 — Database, data integrity, and operational reliability:** current phase.
+- **Phase 1 — Database, data integrity, and operational reliability:** CI gate passed; owner-machine acceptance checks remain open.
 - **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** starts after Phase 1.
 - **Phase 3 — UI, PWA, cross-device acceptance, and final readiness:** starts after Phase 2.
 
@@ -34,18 +34,18 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 
 | Work item | Current evidence | Status |
 |---|---|---|
-| Ordered fresh-install migrations 000–018 | Documented in `database/FRESH_INSTALL.md`; workflow contains all 20 SQL files in supported order | Implemented; current-head CI pending |
-| MySQL/MariaDB matrix | Workflow configured for MySQL 8.0, MariaDB 10.4.32, and 10.11 | Implemented; current-head CI pending |
-| Core content write/media recovery | Dedicated integration tests exist for content writes, draft publish/recovery, help media, and reply tombstones | Implemented; current-head CI pending |
-| Public/private route and upload checks | Focused route and upload tests exist | Implemented; current-head CI pending |
-| Exception log redaction | Complete Authorization/Cookie header redaction, bearer/query-token/session-ID checks, four-channel JSON checks, and retention regression coverage added | Implemented; PHP test pending execution |
-| Access/security/audit channels | Logger provides four channels; real Apache write permissions and HTTP lifecycle still need validation | Runtime check pending |
-| Disposable backup/restore comparison | Workflow now dumps, compresses, hashes, restores into a new schema, and compares tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts | Implemented in CI; awaiting executed workflow result |
+| Ordered fresh-install migrations 000–018 | Full clean-install sequence passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 | CI verified on `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` |
+| MySQL/MariaDB matrix | All 3 matrix jobs completed successfully, including the complete integration suite | CI verified |
+| Core content write/media recovery | Issue/reply media writes, draft publish outcomes, symlink containment, personal-help media, authorization and reply tombstones passed | CI verified on all 3 engines |
+| Public/private route and upload checks | Public/private route policy, image upload policy and PHP/JS syntax suites passed | CI verified |
+| Exception log redaction | Authorization/Cookie/Bearer/query/session-ID redaction, four log channels, JSON validity, and retention regression passed | CI verified |
+| Access/security/audit channels | Real HTTP request/shutdown logging passed with method/path/status/request ID and query-token exclusion; actual Apache user/ACL remains to be checked on local XAMPP | HTTP integration CI verified; local Apache check pending |
+| Disposable backup/restore comparison | Backup → gzip/checksum → restore into a new schema → compare tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts passed on all 3 engines | CI verified |
 | Owner's full database backup/restore comparison | Previously recorded owner backup/hash has not yet been restored to a separate local test database | Pending owner-machine verification |
 | Private-media backup and sample restore | A separate archive/path and isolated restore of referenced private files have not been verified | Pending owner-machine verification |
 | Pending storage recovery reconciliation | Durable records exist; a read-only/manual triage runbook is now documented; no general automatic worker exists | Procedure documented; reconciliation pending |
-| Read-only schema comparator | Added `bin/compare-database-schema.php` for object and optional row-count comparison between two separate databases | Implemented; syntax/runtime check pending |
-| Phase 1 branch CI verification | No CI run has been triggered for this branch; the last PR #16 zero-step jobs are historical only | Not verified; quota recheck required |
+| Read-only schema comparator | CLI check plus full schema-object and row-count comparison during restore passed on all 3 engines | CI verified |
+| Phase 1 branch CI verification | PHP, Graphify, and 3-engine database workflows all passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` | <Link>
 
 ## 5. Existing technical documentation
 
@@ -66,17 +66,22 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 ## 6. Verification boundaries and local work
 
-- Previous successful CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` verified migrations 000–017 and the earlier test set, not migration 018 or the latest additions.
-- The latest recorded PHP, Graphify, and database matrix jobs for PR #16 executed zero steps because Actions minutes were exhausted. Do not describe that state as passing or failing application tests.
-- The account's displayed Actions reset date was 2026-11-01; recheck live quota and spending budget before starting new workflows.
+- Historical CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` covered migrations 000–017 only. The newer Phase 1 commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` passed the full 000–018 matrix and integration suite.
+- PR #16's earlier zero-step runs were caused by exhausted included Actions minutes. After the repository became public, PR #17 successfully executed all current Phase 1 workflows; the current public-repository run is the source of truth.
+- The owner database restore and private-media restore remain separate local tasks and must not be confused with the disposable CI restore.
 - The owner's local backup and local database work must be performed only on the real machine after checking the exact source/target DB and rollback path. Never restore into the source database.
 - Local environment details in [AI_CONTEXT.md](../AI_CONTEXT.md) are dated handoff notes; recheck before acting.
 
 ## 7. Latest Phase 1 implementation checkpoint
 
-On `phase1/foundation-reliability-20261031`, the following Phase 1 work is implemented but not yet test-executed: a read-only schema comparator, an automated disposable backup/restore/checksum/row-count step in the three-engine database workflow, stronger logging redaction/channel/retention regression coverage, and a safe read-only triage runbook for `storage_recovery_tasks`. The comparator includes views, routines, and events in addition to tables, columns, indexes, foreign keys, CHECK constraints, triggers, and row counts. No live database was modified.
+On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`:
 
-The owner database restore, private-media archive/sample restore, Apache permissions, and live HTTP smoke checks remain unverified. GitHub Actions was previously quota-blocked; recheck usage before triggering workflows.
+- PHP lint, CLI boot, rate-limiter API, draft rollback, public-route policy, schema-comparator CLI, HTTP access-log lifecycle, exception redaction/retention, upload policy, and JavaScript syntax all passed.
+- Graphify analyzer tests, graph generation, determinism check, and artifact upload passed.
+- The full fresh-install sequence 000–018 and all integration suites passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
+- Disposable backup → gzip/checksum → restore into a new schema → schema-object and row-count comparison passed on all three engines.
+
+The owner database restore, private-media archive/sample restore, and real Apache (`daemon`) permissions/log-write checks remain unverified because they require the owner's local Kali/XAMPP environment. No live database or private media tree was modified by CI.
 
 ## 8. Working rules for all three phases
 
