@@ -157,6 +157,7 @@ final class ContentWriteService
         }
 
         $map = [];
+        $seenTokens = [];
         foreach ($uploads as $index => $upload) {
             $mime = (string) ($upload['mime'] ?? '');
             $extension = (string) ($upload['ext'] ?? '');
@@ -167,9 +168,11 @@ final class ContentWriteService
             if (!isset($extensions[$mime]) || $extension !== $extensions[$mime]
                 || $temporaryPath === '' || !is_file($temporaryPath)
                 || $size < 1 || $size > 8 * 1024 * 1024
-                || !is_string($token) || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $token)) {
+                || !is_string($token) || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $token)
+                || isset($seenTokens[$token])) {
                 throw new \DomainException('upload_metadata_invalid');
             }
+            $seenTokens[$token] = true;
 
             if (str_starts_with($mime, 'image/')) {
                 ImageUploadPolicy::inspect($temporaryPath);
