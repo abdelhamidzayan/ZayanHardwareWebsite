@@ -372,12 +372,89 @@ final class PostDraft extends Model
         return true;
     }
 
+    public static function cleanupPrivateMedia(string $relative): void
+    {
+        self::removePrivateFile($relative);
+    }
+
     private static function removePrivateFile(string $relative): void
     {
-        $root = realpath(App::root('storage/private'));
-        if ($root === false || $relative === '' || str_contains($relative, '..')) return;
-        $file = realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, ltrim($relative, '/')));
-        if ($file !== false && str_starts_with($file, $root . DIRECTORY_SEPARATOR) && is_file($file)) @unlink($file);
+        $normalized = str_replace('\\', '/', ltrim($relative, '/'));
+        if (preg_match('#^drafts/([a-f0-9-]{36})/([a-z0-9._-]{1,120})$#i', $normalized, $match) !== 1) {
+            App::log('WARNING', 'draft.media_cleanup_path_rejected', [
+                'reason' => 'invalid_relative_path',
+            ]);
+            return;
+        }
+
+        $root = realpath(App::root('storage/private/drafts'));
+        if ($root === false) {
+            App::log('WARNING', 'draft.media_cleanup_root_unavailable', [
+                'draft_id' => strtolower($match[1]),
+            ]);
+            return;
+        }
+        $draftDirectory = realpath($root . DIRECTORY_SEPARATOR . strtolower($match[1]));
+        if ($draftDirectory === false) {
+            self::completeStorageRecoveryTask($normalized);
+            return;
+        }
+        if (!str_starts_with($draftDirectory, $root . DIRECTORY_SEPARATOR) || !is_dir($draftDirectory)) {
+            App::log('WARNING', 'draft.media_cleanup_directory_rejected', [
+                'draft_id' => strtolower($match[1]),
+            ]);
+            return;
+        }
+
+        $file = $draftDirectory . DIRECTORY_SEPARATOR . $match[2];
+        if (!is_file($file) && !is_link($file)) {
+            self::completeStorageRecoveryTask($normalized);
+            return;
+        }
+        if (!@unlink($file)) {
+            self::recordStorageRecoveryTask($normalized, 'draft_media_cleanup_failed');
+            return;
+        }
+        self::completeStorageRecoveryTask($normalized);
+    }
+
+    private static function recordStorageRecoveryTask(string $relativePath, string $reason): void
+    {
+        try {
+            self::db()->prepare(
+                "INSERT INTO storage_recovery_tasks
+                    (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code,
+                     status, attempts, last_attempt_at, last_error_code)
+                 VALUES ('draft', NULL, ?, ?, ?, 'pending', 1, UTC_TIMESTAMP(), 'unlink_failed')
+                 ON DUPLICATE KEY UPDATE
+                    reason_code = VALUES(reason_code),
+                    status = 'pending',
+                    attempts = attempts + 1,
+                    last_attempt_at = UTC_TIMESTAMP(),
+                    last_error_code = 'unlink_failed',
+                    completed_at = NULL"
+            )->execute([$relativePath, hash('sha256', $relativePath), $reason]);
+        } catch (\Throwable $error) {
+            App::logException('CRITICAL', 'draft.media_recovery_task_write_failed', $error, [
+                'reason_code' => $reason,
+            ]);
+        }
+    }
+
+    private static function completeStorageRecoveryTask(string $relativePath): void
+    {
+        try {
+            self::db()->prepare(
+                "UPDATE storage_recovery_tasks
+                 SET status = 'completed', completed_at = UTC_TIMESTAMP(),
+                     last_attempt_at = UTC_TIMESTAMP(), last_error_code = NULL
+                 WHERE file_path_hash = ? AND status <> 'completed'"
+            )->execute([hash('sha256', $relativePath)]);
+        } catch (\Throwable $error) {
+            App::logException('WARNING', 'draft.media_recovery_completion_failed', $error, [
+                'file_path_hash' => hash('sha256', $relativePath),
+            ]);
+        }
     }
 
     private static function removePrivateDirectory(string $id): void
@@ -386,13 +463,34 @@ final class PostDraft extends Model
         $root = realpath(App::root('storage/private/drafts'));
         if ($root === false) return;
         $dir = realpath($root . DIRECTORY_SEPARATOR . $id);
-        if ($dir === false || !str_starts_with($dir, $root . DIRECTORY_SEPARATOR) || !is_dir($dir)) return;
-        $entries = scandir($dir) ?: [];
-        foreach ($entries as $entry) {
+        if ($dir === false) return;
+        if (!str_starts_with($dir, $root . DIRECTORY_SEPARATOR) || !is_dir($dir)) return;
+
+        foreach (scandir($dir) ?: [] as $entry) {
             if ($entry === '.' || $entry === '..') continue;
             $path = $dir . DIRECTORY_SEPARATOR . $entry;
-            if (is_file($path) || is_link($path)) @unlink($path);
+            if (is_file($path) || is_link($path)) {
+                self::removePrivateFile('drafts/' . strtolower($id) . '/' . $entry);
+            } else {
+                App::log('WARNING', 'draft.media_cleanup_unexpected_entry', [
+                    'draft_id' => strtolower($id),
+                ]);
+            }
         }
-        @rmdir($dir);
+
+        $remaining = array_values(array_diff(scandir($dir) ?: [], ['.', '..']));
+        if ($remaining === []) {
+            if (!@rmdir($dir)) {
+                App::log('WARNING', 'draft.media_directory_remove_failed', [
+                    'draft_id' => strtolower($id),
+                ]);
+            }
+            return;
+        }
+        App::log('WARNING', 'draft.media_directory_not_empty', [
+            'draft_id' => strtolower($id),
+            'remaining_entries' => count($remaining),
+        ]);
     }
+
 }
