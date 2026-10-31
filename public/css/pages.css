@@ -796,7 +796,8 @@
   color: #fff;
 }
 .wizard__step { display: grid; gap: 1rem; min-inline-size: 0; }
-.wizard--on .wizard__step[hidden] { display: none !important; }
+/* Keep inactive steps hidden even before the deferred wizard script runs. */
+.wizard__step[hidden] { display: none !important; }
 .wizard__step .field { min-inline-size: 0; margin: 0; }
 .wizard__actions {
   display: flex;

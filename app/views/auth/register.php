@@ -39,7 +39,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
             <input type="hidden" name="contact_type" value="<?= $e($contactType) ?>" data-contact-type>
             <input type="hidden" name="country" value="<?= $e($selectedCountry) ?>" data-country-value>
 
-            <section class="wizard__step" data-step="1" aria-labelledby="wizard-account-title">
+            <section class="wizard__step" data-step="1" aria-labelledby="wizard-account-title"<?= $activeStep === 1 ? '' : ' hidden' ?>>
                 <h2 class="wizard__heading" id="wizard-account-title">بيانات حسابك</h2>
                 <div class="field">
                     <label class="field__label" for="display_name">الاسم الظاهر</label>
@@ -114,7 +114,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                 </div>
             </section>
 
-            <section class="wizard__step" data-step="2" aria-labelledby="wizard-specialty-title">
+            <section class="wizard__step" data-step="2" aria-labelledby="wizard-specialty-title"<?= $activeStep === 2 ? '' : ' hidden' ?>>
                 <h2 class="wizard__heading" id="wizard-specialty-title">خصص حسابك الفني</h2>
 
                 <div class="field">
@@ -191,7 +191,7 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
                 </div>
             </section>
 
-            <section class="wizard__step" data-step="3" aria-labelledby="wizard-profile-title">
+            <section class="wizard__step" data-step="3" aria-labelledby="wizard-profile-title"<?= $activeStep === 3 ? '' : ' hidden' ?>>
                 <h2 class="wizard__heading" id="wizard-profile-title">ملفك الشخصي</h2>
                 <div class="wizard-profile-placeholder">
                     <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
