@@ -16,7 +16,7 @@
 **Goal:** Prove that a clean installation, core data flows, logs, and backup/restore procedures are dependable.
 
 Scope:
-1. Verify the ordered migration sequence 000–018 on supported MySQL/MariaDB versions using disposable databases.
+1. Verify the consolidated one-file fresh-install schema (`database/fresh_install.sql`) on supported MySQL/MariaDB versions using disposable databases; retain numbered migrations only as historical incremental/upgrade records.
 2. Verify schema objects and data preservation: tables, columns, indexes, constraints, foreign keys, triggers, and representative row counts.
 3. Exercise a complete disposable-database backup → compression/checksum → restore → schema/data comparison cycle in CI.
 4. Review and test core write transactions and file recovery: posts, replies, diagnostic updates, edit history, issue attachments, drafts, and personal-help attachments.
@@ -29,7 +29,7 @@ Scope:
 11. Separately inventory and sample-restore the private media backup, then verify that representative restored attachment/audio paths referenced by the database exist under the private storage root. This requires the owner's local machine and must not overwrite the live storage tree.
 
 Exit criteria:
-- The complete 000–018 migration sequence and selected integration suites pass on the supported CI database matrix.
+- The single consolidated fresh-install SQL file and selected integration suites pass on the supported CI database matrix.
 - The disposable backup/restore cycle passes and schema objects plus row counts match.
 - Core write/media failure tests pass.
 - Logging channels, redaction, and retention tests pass; local Apache write access is separately verified.
@@ -37,7 +37,7 @@ Exit criteria:
 - The private media backup is separately verified and representative DB-referenced files resolve in an isolated restore tree, or that check is explicitly blocked because no media backup is available.
 - No data-loss or destructive-operation risk remains unaddressed.
 
-**CI implementation and verification checkpoint (2026-10-31):** The read-only comparator, disposable backup/restore/checksum gate, log redaction/channel/retention tests, and real HTTP access-shutdown test are implemented. On commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`, the PHP workflow (`41219585375`), Graphify workflow (`41219585292`), and database workflow (`41219585295`) all completed successfully. The database workflow passed its full 000–018 migration and integration matrix on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, including the backup/restore/schema/row-count gate. The local owner backup restore, private-media sample restore, and actual Apache-user permission check remain pending.
+**CI implementation and verification checkpoint (2026-10-31):** The read-only comparator, disposable backup/restore/checksum gate, log redaction/channel/retention tests, and real HTTP access-shutdown test are implemented. On commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`, the PHP workflow (`41219585375`), Graphify workflow (`41219585292`), and database workflow (`41219585295`) all completed successfully. The database workflow passed the historical 000–018 migration sequence and integration matrix on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, including the backup/restore/schema/row-count gate. The current branch is moving fresh-install CI to the new single-file schema; see the latest workflow result before relying on it. The local owner backup restore, private-media sample restore, and actual Apache-user permission check remain pending.
 
 **Status:** Automated Phase 1 CI gate passed. Phase 1 remains open for owner-machine acceptance checks; no live database, private-media tree, or deployment was modified.
 
@@ -119,3 +119,12 @@ The project-directory backup inventory found no full database backup or private-
 - Phase 2 exact tested head `c23dde25f2bee53068c85e775ca56fa93f52e0a9`: PHP run 41238382181, Graphify run 41238382162, and database matrix 41238382193 all passed.
 - Skill-test follow-up exact tested head `d58282608187d5cbd5af59c66c332b2a7394b20e`: PHP run 41239306080, Graphify run 41239306068, and database matrix 41239306049 all passed.
 - No live database migration, media restore, or deployment is claimed.
+
+
+## Unified fresh-install schema and GitHub cleanup (2026-10-31)
+
+- Added `database/fresh_install.sql` as the single entry point for a brand-new empty database. It consolidates the final schema represented by migrations 000–019, omits the duplicate terms-table creation, and removes automatic first-user admin promotion from the new-install path.
+- Updated `database/FRESH_INSTALL.md` and README navigation. The guarded first-admin CLI command remains mandatory after the owner registers.
+- Updated database CI to execute the single SQL file on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, then run the existing schema, retention, trigger, and application integration assertions.
+- Added a path-scoped one-time GitHub Actions cleanup for the 26 reviewed historical branch refs. It preserves `main`; cleanup is not considered complete until that workflow succeeds and the live branch list confirms only `main`.
+- This does not close the remaining owner-machine database/media restore checks, manual security audit, or browser/mobile/PWA acceptance. It does not deploy the site or modify a live database.
