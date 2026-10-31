@@ -1,5 +1,17 @@
 # Zayan Hardware — Update Log
 
+## 2026-10-31 — Phase 1 CI reverified after authorization regression additions
+
+- **Type:** Tests / Security / Database / Documentation
+- **Summary:** Re-ran the complete Phase 1 workflow set on the latest branch head after adding object-level authorization regression coverage for technical posts, replies, diagnostic updates, and private-help participants. All current-head workflows completed successfully.
+- **Code areas:** `tests/php/issue-authorization-integration.php`; `tests/php/help-request-media-integration.php`; existing Phase 1 PHP, logging, database migration, backup/restore, and Graphify workflows.
+- **Database:** No owner database was changed. Fresh-install migrations 000–018 and disposable backup → gzip/checksum → restore → schema-object/row-count comparison passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
+- **Safety:** CI used disposable databases and temporary storage only. It did not restore or modify the owner's database, private media, or deployment.
+- **Verification:** Current Phase 1 head `c35c71f39d0702178d8dc9aad041d247b29c29b1`: [PHP workflow 41238036009](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036009) passed; [Graphify workflow 41238036104](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036104) passed; [database matrix 41238036402](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036402) passed all three engines. Graphify scanned 151 files, found 72 routes and 698 nodes/1,637 edges; 5 dynamic JavaScript API call sites remain unresolved by static matching and are documented for manual review.
+- **Remaining blockers:** Owner-machine database restore, separate private-media backup/sample restore, real Apache `daemon` log-write permissions, and browser/PWA runtime checks are not proven by CI.
+- **Documentation:** [Current state](docs/CURRENT_STATE.md) · [Completion plan](docs/COMPLETION_PLAN.md) · [Graphify guide](docs/graphify.md) · [AI handoff](AI_CONTEXT.md).
+- **Status:** Phase 1 automated CI gate passed on the current head; Phase 1 remains open pending owner-machine acceptance. PR #17 remains a draft targeting `main`; no merge or deployment is claimed.
+
 ## 2026-10-31 — Phase 1 CI gate passed on MySQL/MariaDB matrix
 
 - **Type:** Tests / Database / Logging / Infrastructure
