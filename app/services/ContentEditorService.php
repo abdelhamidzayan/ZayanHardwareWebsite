@@ -111,7 +111,10 @@ final class ContentEditorService
                 if ($isInline) $map[$upload['token']] = $attachmentId;
             } catch (\Throwable $e) {
                 @unlink($destination);
-                App::log('error', 'Unable to save content media: ' . $e->getMessage());
+                App::logException('ERROR', 'issue.attachment_save_failed', $e, [
+                    'issue_id' => $issueId,
+                    'user_id' => $userId,
+                ]);
                 $failed++;
             }
         }
