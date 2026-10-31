@@ -46,7 +46,7 @@ Migration 016 changes foreign-key delete rules to `RESTRICT` for technical conte
 After installation, verify:
 
 - `users` and `technician_profiles` exist with the final registration columns.
-- `users.auth_version` exists and new login sessions store the current value; a password reset must reject older sessions.
+- `users.auth_version` exists and new login sessions store the current value. Password resets, account status transitions, role changes, deletion requests, and final identity anonymization must increment it so existing sessions stay revoked even after reactivation.
 - Legacy `technician_profiles.phone`, `specialization`, and `experience` columns are gone only after the phone/specialization history transfer has completed.
 - Required content, reply, diagnosis, edit-history, help-request, draft, device-catalog, notification, push, terms, audit, and rate-limit tables exist.
 - All application tables use InnoDB.
