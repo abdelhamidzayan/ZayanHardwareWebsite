@@ -352,6 +352,106 @@ try {
     expectContentWrite($diagnosticState->fetchColumn() === 'in_progress', 'Failed diagnostic update must not alter the issue status.');
     expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 2, 'Diagnostic rollback must remove only its failed media file.');
 
+    $originalIssueTitle = $pdo->prepare('SELECT title FROM issues WHERE id = ?');
+    $originalIssueTitle->execute([$issueId]);
+    $originalIssueTitleValue = (string) $originalIssueTitle->fetchColumn();
+    $issueEditSource = makeUploadFile($sourceRoot, 'issue-edit-rollback.pdf');
+    $issueEditFailureService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        static function (): void {
+            throw new RuntimeException('synthetic issue edit attachment failure');
+        },
+        $storageRoot
+    );
+    $issueEditFailed = false;
+    try {
+        $issueEditFailureService->editIssue(
+            $issueId,
+            $ownerId,
+            'Updated title that must roll back',
+            'Updated description that must roll back because attachment persistence failed.',
+            '',
+            [['tmp' => $issueEditSource, 'size' => filesize($issueEditSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $issueEditFailed = $error->getMessage() === 'synthetic issue edit attachment failure';
+    }
+    expectContentWrite($issueEditFailed, 'Issue edit failure injection must be observed.');
+    $originalIssueTitle->execute([$issueId]);
+    expectContentWrite($originalIssueTitle->fetchColumn() === $originalIssueTitleValue, 'Issue title must remain unchanged after failed edit.');
+    $issueHistoryCount = $pdo->prepare('SELECT COUNT(*) FROM issue_edit_history WHERE issue_id = ?');
+    $issueHistoryCount->execute([$issueId]);
+    expectContentWrite((int) $issueHistoryCount->fetchColumn() === 0, 'Issue edit history insert must roll back after media failure.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 2, 'Failed issue edit must compensate the moved file.');
+
+    $originalReplyBody = $pdo->prepare('SELECT body FROM issue_replies WHERE id = ?');
+    $originalReplyBody->execute([$parentId]);
+    $originalReplyBodyValue = (string) $originalReplyBody->fetchColumn();
+    $replyEditSource = makeUploadFile($sourceRoot, 'reply-edit-rollback.pdf');
+    $replyEditFailureService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        static function (): void {
+            throw new RuntimeException('synthetic reply edit attachment failure');
+        },
+        $storageRoot
+    );
+    $replyEditFailed = false;
+    try {
+        $replyEditFailureService->editReply(
+            $issueId,
+            $parentId,
+            $ownerId,
+            'Edited reply body that must roll back.',
+            [['tmp' => $replyEditSource, 'size' => filesize($replyEditSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $replyEditFailed = $error->getMessage() === 'synthetic reply edit attachment failure';
+    }
+    expectContentWrite($replyEditFailed, 'Reply edit failure injection must be observed.');
+    $originalReplyBody->execute([$parentId]);
+    expectContentWrite($originalReplyBody->fetchColumn() === $originalReplyBodyValue, 'Reply body must remain unchanged after failed edit.');
+    $replyHistoryCount = $pdo->prepare('SELECT COUNT(*) FROM issue_reply_edit_history WHERE issue_reply_id = ?');
+    $replyHistoryCount->execute([$parentId]);
+    expectContentWrite((int) $replyHistoryCount->fetchColumn() === 0, 'Reply edit history insert must roll back after media failure.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 2, 'Failed reply edit must compensate the moved file.');
+
+    $originalDiagnosticBody = $pdo->prepare('SELECT body FROM issue_diagnostic_updates WHERE id = ?');
+    $originalDiagnosticBody->execute([$diagnosticCreated['id']]);
+    $originalDiagnosticBodyValue = (string) $originalDiagnosticBody->fetchColumn();
+    $diagnosticEditSource = makeUploadFile($sourceRoot, 'diagnostic-edit-rollback.pdf');
+    $diagnosticEditFailureService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        static function (): void {
+            throw new RuntimeException('synthetic diagnostic edit attachment failure');
+        },
+        $storageRoot
+    );
+    $diagnosticEditFailed = false;
+    try {
+        $diagnosticEditFailureService->editDiagnosticUpdate(
+            $diagnosticIssueId,
+            $diagnosticCreated['id'],
+            $ownerId,
+            'Edited diagnostic body that must roll back.',
+            [['tmp' => $diagnosticEditSource, 'size' => filesize($diagnosticEditSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $diagnosticEditFailed = $error->getMessage() === 'synthetic diagnostic edit attachment failure';
+    }
+    expectContentWrite($diagnosticEditFailed, 'Diagnostic edit failure injection must be observed.');
+    $originalDiagnosticBody->execute([$diagnosticCreated['id']]);
+    expectContentWrite($originalDiagnosticBody->fetchColumn() === $originalDiagnosticBodyValue, 'Diagnostic update body must remain unchanged after failed edit.');
+    $diagnosticHistoryCount = $pdo->prepare('SELECT COUNT(*) FROM issue_diagnostic_update_edit_history WHERE diagnostic_update_id = ?');
+    $diagnosticHistoryCount->execute([$diagnosticCreated['id']]);
+    expectContentWrite((int) $diagnosticHistoryCount->fetchColumn() === 0, 'Diagnostic edit history insert must roll back after media failure.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 2, 'Failed diagnostic edit must compensate the moved file.');
+
     $wrongTypeRejected = false;
     try {
         $diagnosticService->createDiagnosticUpdate(
