@@ -55,7 +55,11 @@ final class HelpRequestMediaService
                 );
             } catch (\Throwable $e) {
                 @unlink($target);
-                App::log('error', 'Unable to save personal help attachment: ' . $e->getMessage());
+                App::logException('ERROR', 'help_request.attachment_save_failed', $e, [
+                    'request_id' => $requestId,
+                    'message_id' => $messageId,
+                    'user_id' => $userId,
+                ]);
                 $failed++;
             }
         }
