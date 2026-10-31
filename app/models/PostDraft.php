@@ -513,7 +513,7 @@ final class PostDraft extends Model
     private static function removePrivateFile(string $relative, ?string $draftStorageRootOverride = null): bool
     {
         $normalized = str_replace('\\', '/', ltrim($relative, '/'));
-        if (preg_match('#^drafts/([a-f0-9-]{36})/([a-z0-9._-]{1,120})$#i', $normalized, $match) !== 1) {
+        if (preg_match('#^drafts/([a-f0-9-]{36})/([a-z0-9_-][a-z0-9._-]{0,119})$#i', $normalized, $match) !== 1) {
             App::log('WARNING', 'draft.media_cleanup_path_rejected', [
                 'reason' => 'invalid_relative_path',
             ]);
