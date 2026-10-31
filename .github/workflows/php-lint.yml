@@ -28,6 +28,9 @@ jobs:
         run: php tests/php/draft-publish-rollback.php
       - name: Verify public route access policy
         run: php tests/php/router-public-routes.php
+      - name: Verify read-only database schema comparator CLI help
+        run: php bin/compare-database-schema.php --help
+
       - name: Verify exception logs redact secrets
         run: php tests/php/logging-exception-redaction.php
       - name: Verify image upload pixel limits and malformed input rejection
