@@ -340,7 +340,17 @@ final class ContentWriteService
 
             $filename = bin2hex(random_bytes(16)) . '.' . $extension;
             $destination = $directory . DIRECTORY_SEPARATOR . $filename;
-            $moved = ($this->moveFile)($temporaryPath, $destination);
+            try {
+                $moved = ($this->moveFile)($temporaryPath, $destination);
+            } catch (Throwable $moveError) {
+                // An adapter may throw after the filesystem operation already
+                // created the destination. Track it before propagating so the
+                // surrounding rollback can compensate or journal the file.
+                if (is_file($destination)) {
+                    $movedFiles[] = $destination;
+                }
+                throw $moveError;
+            }
             $destinationExists = is_file($destination);
 
             // Some filesystem adapters can finish the move and still report a
