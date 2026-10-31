@@ -11,6 +11,17 @@ $profileHref = $username !== '' ? $baseUrl . '/profile/' . rawurlencode($usernam
 $nameParts = preg_split('/\\s+/u', $displayName) ?: [$displayName];
 $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset($nameParts[1]) ? mb_substr($nameParts[1], 0, 1) : ''));
 $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int) $currentUser['id'] : $baseUrl . '/assets/avatars/' . rawurlencode((string) ($currentUser['avatar_key'] ?? 'technician-blue')) . '.svg';
+$headerPath = \\App\\Core\\Request::capture()->path;
+$helpRequestsActive = $headerPath === '/help-requests' || str_starts_with($headerPath, '/help-requests/');
+$notificationsActive = $headerPath === '/notifications' || str_starts_with($headerPath, '/notifications/');
+$accountActivePrefixes = ['/profile/', '/workbench', '/drafts', '/my-posts', '/settings', '/admin'];
+$accountActive = false;
+foreach ($accountActivePrefixes as $prefix) {
+    if (str_starts_with($headerPath, $prefix)) {
+        $accountActive = true;
+        break;
+    }
+}
 ?>
 <header class="app-header">
     <div class="topbar">
@@ -22,12 +33,12 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
         </a>
 
         <div class="header-actions">
-        <a class="icon-btn header-page-link help-request-menu__trigger" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة<?= $unreadHelpCount > 0 ? ' (' . $unreadHelpCount . ' غير مقروءة)' : '' ?>">
+        <a class="icon-btn header-page-link help-request-menu__trigger<?= $helpRequestsActive ? ' is-active' : '' ?>" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة<?= $unreadHelpCount > 0 ? ' (' . $unreadHelpCount . ' غير مقروءة)' : '' ?>" <?= $helpRequestsActive ? 'aria-current="page"' : '' ?>>
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 12h8M12 8v8"/></svg>
             <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
         </a>
 
-        <a class="icon-btn header-page-link notification-menu__trigger" href="<?= $e($baseUrl) ?>/notifications" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
+        <a class="icon-btn header-page-link notification-menu__trigger<?= $notificationsActive ? ' is-active' : '' ?>" href="<?= $e($baseUrl) ?>/notifications" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>" <?= $notificationsActive ? 'aria-current="page"' : '' ?>>
             <svg class="icon notification-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/>
                 <path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/>
@@ -35,7 +46,7 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
             <?php if ($unreadCount > 0) : ?><span class="notification-btn__count" aria-label="<?= $e((string) $unreadCount) ?> إشعارات غير مقروءة"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span><?php endif; ?>
         </a>
         <details class="account-menu">
-            <summary class="account-menu__trigger" aria-label="قائمة الحساب">
+            <summary class="account-menu__trigger<?= $accountActive ? ' is-active' : '' ?>" aria-label="قائمة الحساب">
                 <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="38" height="38">
                 <span class="account-menu__name"><?= $e($displayName) ?></span>
                 <svg class="icon account-menu__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
