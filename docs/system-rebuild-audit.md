@@ -1,5 +1,7 @@
 # Zayan Hardware — System Rebuild Audit
 
+> **Historical audit snapshot:** this document records the state observed during the 2026-10-31 review. PR #16 was subsequently merged into `audit/content-retention-consistency` at `098442813eb5a55e96d5fff27ce127f9b5f08591`; it was not merged to `main` and was not deployed. Statements below describing PR #16 as open or unmerged refer to the pre-merge snapshot. See [Current Project State](CURRENT_STATE.md) and [the three-phase completion plan](COMPLETION_PLAN.md) for the live continuation status.
+
 **Audit date:** 2026-10-31  
 **Working branch:** `audit/system-rebuild-20261031`  
 **Reference note:** SHA values and workflow results below are dated snapshots; query the live PR head before starting another change.  
