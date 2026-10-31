@@ -35,16 +35,18 @@ The duplicate `002_` prefix is historical. These two files are **sequential**, n
 18. `016_protect_technical_history.sql`
 19. `017_block_physical_content_delete.sql`
 20. `018_storage_recovery_tasks.sql`
+21. `019_session_version_invalidation.sql`
 
 `013` intentionally uses `CREATE TABLE IF NOT EXISTS`: the terms table is created by the registration migration, and this later file also repairs installations where that table was absent.
 
-Migration 016 changes foreign-key delete rules to `RESTRICT` for technical content, personal-help history, skill evidence and attribution. Migration 017 adds `BEFORE DELETE` guards to core technical and audit tables, including standalone posts/replies with no dependent rows. Migration 018 creates a durable recovery queue for filesystem compensation failures and protects its audit rows from physical deletion. These migrations do not delete or rewrite existing content. The normal application workflow uses soft deletion and account anonymization. Draft rows/media and transient notification/push records remain governed by their separate lifecycle.
+Migration 016 changes foreign-key delete rules to `RESTRICT` for technical content, personal-help history, skill evidence and attribution. Migration 017 adds `BEFORE DELETE` guards to core technical and audit tables, including standalone posts/replies with no dependent rows. Migration 018 creates a durable recovery queue for filesystem compensation failures and protects its audit rows from physical deletion. Migration 019 adds an account authentication version; an administrative password reset increments it and invalidates previously issued sessions. These migrations do not delete or rewrite existing content. The normal application workflow uses soft deletion and account anonymization. Draft rows/media and transient notification/push records remain governed by their separate lifecycle.
 
 ## Verification requirements
 
 After installation, verify:
 
 - `users` and `technician_profiles` exist with the final registration columns.
+- `users.auth_version` exists and new login sessions store the current value; a password reset must reject older sessions.
 - Legacy `technician_profiles.phone`, `specialization`, and `experience` columns are gone only after the phone/specialization history transfer has completed.
 - Required content, reply, diagnosis, edit-history, help-request, draft, device-catalog, notification, push, terms, audit, and rate-limit tables exist.
 - All application tables use InnoDB.
