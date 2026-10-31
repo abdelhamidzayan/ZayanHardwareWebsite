@@ -60,7 +60,7 @@ final class AdminUpdateController extends Controller
             $pdo->commit();
         } catch (\Throwable $error) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            if ($error instanceof \\DomainException && $error->getMessage() === 'admin_not_active') {
+            if ($error instanceof \DomainException && $error->getMessage() === 'admin_not_active') {
                 App::security('admin.site_update.actor_rejected', ['user_id' => $adminId]);
                 return $this->redirect('/login');
             }
@@ -71,6 +71,12 @@ final class AdminUpdateController extends Controller
         $startedAt = microtime(true);
 
         if (!function_exists('proc_open')) {
+            App::audit('admin.site_update.completed', [
+                'user_id' => $adminId,
+                'exit_code' => null,
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+                'reason' => 'proc_open_unavailable',
+            ]);
             return $this->fail('ميزة تشغيل أوامر النظام غير متاحة في إعدادات PHP.');
         }
 
