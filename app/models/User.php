@@ -214,15 +214,60 @@ final class User extends Model
         }
     }
 
-    public static function markLoggedIn(int $id, ?string $newHash = null): void
-    {
-        if ($newHash !== null) {
-            self::db()->prepare('UPDATE users SET last_login_at = UTC_TIMESTAMP(), password_hash = ? WHERE id = ?')
-                ->execute([$newHash, $id]);
-            return;
+    /**
+     * Mark an account login without allowing a stale in-flight password check
+     * to overwrite a password that an administrator has just reset.
+     */
+    public static function markLoggedIn(
+        int $id,
+        ?string $newHash = null,
+        ?int $expectedAuthVersion = null
+    ): bool {
+        if ($expectedAuthVersion !== null) {
+            if ($newHash !== null) {
+                $stmt = self::db()->prepare(
+                    "UPDATE users
+                     SET last_login_at = UTC_TIMESTAMP(), password_hash = ?
+                     WHERE id = ? AND account_status = 'active' AND auth_version = ?"
+                );
+                $stmt->execute([$newHash, $id, $expectedAuthVersion]);
+            } else {
+                $stmt = self::db()->prepare(
+                    "UPDATE users SET last_login_at = UTC_TIMESTAMP()
+                     WHERE id = ? AND account_status = 'active' AND auth_version = ?"
+                );
+                $stmt->execute([$id, $expectedAuthVersion]);
+            }
+
+            // rowCount() can be zero when last_login_at is unchanged within the
+            // same SQL second. Read the version separately; no stale hash write
+            // can occur because the UPDATE itself includes the version guard.
+            return self::authVersion($id) === $expectedAuthVersion
+                && self::isActive($id);
         }
 
-        self::db()->prepare('UPDATE users SET last_login_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$id]);
+        if ($newHash !== null) {
+            self::db()->prepare(
+                "UPDATE users SET last_login_at = UTC_TIMESTAMP(), password_hash = ?
+                 WHERE id = ? AND account_status = 'active'"
+            )->execute([$newHash, $id]);
+        } else {
+            self::db()->prepare(
+                "UPDATE users SET last_login_at = UTC_TIMESTAMP()
+                 WHERE id = ? AND account_status = 'active'"
+            )->execute([$id]);
+        }
+
+        return self::isActive($id);
+    }
+
+    private static function isActive(int $id): bool
+    {
+        $stmt = self::db()->prepare(
+            "SELECT 1 FROM users WHERE id = ? AND account_status = 'active' LIMIT 1"
+        );
+        $stmt->execute([$id]);
+        return $stmt->fetchColumn() !== false;
     }
 
     /** Creates the user and technician profile in a single transaction. */
