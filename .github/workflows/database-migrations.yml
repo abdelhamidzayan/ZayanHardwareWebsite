@@ -3,7 +3,11 @@ name: Database migration integration
 on:
   pull_request:
   push:
-    branches: [main, feature/profiles-help-media, fix/audit-priority-issues, audit/system-rebuild-20261031]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   migrations:
