@@ -286,7 +286,86 @@ try {
          WHERE id = ?"
     )->execute([(int) $recoveryTask['id']]);
 
-    echo "Atomic issue/reply write integration passed: successful commit, DB failure rollback, and second-file move compensation.\n";
+    $diagnosticIssueId = (new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        null,
+        $storageRoot
+    ))->createIssue(
+        $ownerId,
+        'help_request',
+        'Atomic diagnostic timeline fixture',
+        'Fixture Device',
+        'power',
+        'Synthetic help request for diagnostic update transaction integration.',
+        'Power test baseline',
+        []
+    );
+    $diagnosticSource = makeUploadFile($sourceRoot, 'diagnostic-committed.pdf');
+    $diagnosticService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        null,
+        $storageRoot
+    );
+    $diagnosticCreated = $diagnosticService->createDiagnosticUpdate(
+        $diagnosticIssueId,
+        $ownerId,
+        'Measured current draw and confirmed the power rail value.',
+        [['tmp' => $diagnosticSource, 'size' => filesize($diagnosticSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+    );
+    expectContentWrite($diagnosticCreated['id'] > 0, 'Diagnostic update ID must be returned after commit.');
+    expectContentWrite(str_contains($diagnosticCreated['body'], 'Measured current draw'), 'Diagnostic body must be committed.');
+    $diagnosticState = $pdo->prepare('SELECT status FROM issues WHERE id = ?');
+    $diagnosticState->execute([$diagnosticIssueId]);
+    expectContentWrite($diagnosticState->fetchColumn() === 'in_progress', 'First diagnostic update must move an open help request to in_progress.');
+    expectContentWrite(!is_file($diagnosticSource), 'Committed diagnostic media must move to private storage.');
+
+    $diagnosticFailSource = makeUploadFile($sourceRoot, 'diagnostic-rollback.pdf');
+    $diagnosticFailService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        static function (): void {
+            throw new RuntimeException('synthetic diagnostic attachment insert failure');
+        },
+        $storageRoot
+    );
+    $diagnosticFailureObserved = false;
+    try {
+        $diagnosticFailService->createDiagnosticUpdate(
+            $diagnosticIssueId,
+            $ownerId,
+            'This diagnostic update must roll back when attachment persistence fails.',
+            [['tmp' => $diagnosticFailSource, 'size' => filesize($diagnosticFailSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $diagnosticFailureObserved = $error->getMessage() === 'synthetic diagnostic attachment insert failure';
+    }
+    expectContentWrite($diagnosticFailureObserved, 'Injected diagnostic media failure must be observed.');
+    $diagnosticCount = $pdo->prepare('SELECT COUNT(*) FROM issue_diagnostic_updates WHERE issue_id = ?');
+    $diagnosticCount->execute([$diagnosticIssueId]);
+    expectContentWrite((int) $diagnosticCount->fetchColumn() === 1, 'Diagnostic row must roll back when attachment persistence fails.');
+    $diagnosticState->execute([$diagnosticIssueId]);
+    expectContentWrite($diagnosticState->fetchColumn() === 'in_progress', 'Failed diagnostic update must not alter the issue status.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 2, 'Diagnostic rollback must remove only its failed media file.');
+
+    $wrongTypeRejected = false;
+    try {
+        $diagnosticService->createDiagnosticUpdate(
+            $issueId,
+            $ownerId,
+            'A technical post cannot receive diagnostic timeline events.',
+            []
+        );
+    } catch (DomainException $error) {
+        $wrongTypeRejected = $error->getMessage() === 'diagnostic_only_for_help_request';
+    }
+    expectContentWrite($wrongTypeRejected, 'Diagnostic timeline must only accept help_request posts.');
+
+    echo "Atomic issue/reply/diagnostic write integration passed: commit, rollback, media compensation and durable recovery.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, "Content-write integration failed: " . $error::class . ' ' . $error->getMessage() . PHP_EOL);
     exit(1);
