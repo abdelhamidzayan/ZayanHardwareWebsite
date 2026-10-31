@@ -101,7 +101,7 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 - Confirmed rollback permits removal of newly moved files. Cleanup failures are written to `storage_recovery_tasks`.
 - If the commit response is ambiguous, moved files are preserved and a pending recovery task is recorded rather than risking deletion of a file referenced by committed DB rows.
 - A successful explicit rollback after a commit exception is now treated as confirmed rollback. The service injects the commit operation for deterministic failure testing.
-- `tests/php/content-write-integration.php` covers successful attachment writes, rollback after attachment failure, later file-move failure, duplicate tokens, reply/diagnostic failure, edit-history rollback, failed compensation, confirmed rollback after commit exception, and a commit that succeeds while its acknowledgement is lost.
+- `tests/php/content-write-integration.php` covers successful attachment writes, rollback after attachment failure, a move adapter that moves a file but reports failure (the service now tracks and compensates the destination), later file-move failure, duplicate tokens, reply/diagnostic failure, edit-history rollback, failed compensation, confirmed rollback after commit exception, and a commit that succeeds while its acknowledgement is lost.
 - The database workflow is configured to run this test against the disposable fresh-install schema on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. This test has **not** passed on the current head yet.
 
 ### Shared image upload limits
