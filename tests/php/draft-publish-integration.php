@@ -114,6 +114,7 @@ function makeDraftPublishFixture(PDO $pdo, int $userId, string $privateRoot, str
         'source' => $source,
         'filename' => $filename,
         'model_id' => $modelId,
+        'title' => $title,
     ];
 }
 
@@ -144,9 +145,10 @@ try {
     $rollbackDraft = $pdo->prepare('SELECT id FROM post_drafts WHERE id = ? AND user_id = ?');
     $rollbackDraft->execute([$rollbackFixture['draft_id'], $userId]);
     expectDraftPublish($rollbackDraft->fetchColumn() !== false, 'Confirmed rollback must preserve the draft row.');
-    $rollbackIssueId = $pdo->prepare('SELECT COUNT(*) FROM issue_attachments WHERE original_file_path LIKE ?');
-    $rollbackIssueId->execute(['issues/%/' . $rollbackFixture['filename']]);
-    expectDraftPublish((int) $rollbackIssueId->fetchColumn() === 0, 'Rolled-back draft media must not be referenced by a published issue.');
+    $rollbackIssueCount = $pdo->prepare('SELECT COUNT(*) FROM issues WHERE title = ?');
+    $rollbackIssueCount->execute([$rollbackFixture['title']]);
+    expectDraftPublish((int) $rollbackIssueCount->fetchColumn() === 0, 'Confirmed rollback must not create an issue row.');
+
 
     // The caller cannot safely infer rollback just because the commit callback
     // threw. Preserve both path candidates and create recovery tasks.
@@ -177,14 +179,12 @@ try {
     expectDraftPublish($unknownDraft->fetchColumn() !== false, 'Unknown rolled-back fixture must retain its draft row.');
     $unknownTasks = $pdo->prepare(
         "SELECT COUNT(*) FROM storage_recovery_tasks
-         WHERE reason_code = 'draft_publish_commit_outcome_unknown'
-           AND file_path_hash IN (?, ?)"
+         WHERE aggregate_type = 'draft'
+           AND reason_code = 'draft_publish_commit_outcome_unknown'
+           AND file_path_hash = ?"
     );
     $draftPath = 'drafts/' . $unknownFixture['draft_id'] . '/' . $unknownFixture['filename'];
-    $unknownTasks->execute([
-        hash('sha256', $draftPath),
-        hash('sha256', 'issues/1/' . $unknownFixture['filename']),
-    ]);
+    $unknownTasks->execute([hash('sha256', $draftPath)]);
     expectDraftPublish((int) $unknownTasks->fetchColumn() >= 1, 'Unknown publish outcome must create durable recovery records.');
 
     // Simulate a successful database COMMIT whose acknowledgement is lost.
