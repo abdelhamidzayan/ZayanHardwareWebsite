@@ -1,33 +1,40 @@
 # Content system database updates
 
-These migrations extend the existing issue/reply records; they do not replace the existing rows or IDs.
+These migrations extend the issue/reply records; they do not replace existing IDs or rewrite technical content.
 
-Apply only after checking the local database schema and confirming the earlier baseline migrations have already been applied. The repository currently contains two different migration files with the `002` prefix, so do **not** run every SQL file with a blind alphabetical loop.
+## Fresh installations
 
-Apply the new content-system migrations in this order:
+Use the full, explicit sequence in [Fresh database installation order](../database/FRESH_INSTALL.md). It starts with `000_core_identity_schema.sql`, which supplies the `users` and `technician_profiles` baseline that was historically provisioned outside this repository.
 
-1. `004_content_types.sql` — adds the three content types and lifecycle statuses.
-2. `005_diagnostic_updates_and_repair_confirmation.sql` — adds the diagnostic timeline and repair confirmation metadata.
-3. `006_notifications_and_push_subscriptions.sql` — adds in-app notification and device push-subscription tables.
-4. `007_threaded_replies_and_edit_history.sql` — adds one-level threaded replies and reply edit history.
-5. `008_inline_media_tokens.sql` — tracks media rendered inline in safe text-token content.
-6. `009_soft_delete_posts.sql` — adds non-destructive post deletion metadata.
-7. `010_diagnostic_update_history.sql` — adds edit history and soft deletion for diagnostic updates.
+The two `002_` files are **sequential** in the supported fresh-install path:
 
-Before applying, confirm the database selected by the local `.env` is the intended development database and take a backup. Do not paste credentials or the complete `.env` file into chat.
+1. `002_final_registration_permissions.sql` normalizes roles/account state, creates normalized skill and consent tables, and preserves the legacy skill mapping.
+2. `002_registration_wizard.sql` transfers phone data from `technician_profiles` into `users`, preserves legacy specialization values, and then removes the superseded profile columns.
 
-After each migration, verify the expected columns/tables exist before proceeding. If a migration fails partway through, stop and inspect the schema; do not blindly rerun it because the `ALTER TABLE ADD COLUMN` statements are intentionally one-time changes.
+The CI workflow tests this exact sequence against disposable MySQL and MariaDB databases. The shared `002` numeric prefix is historical, so never use a blind alphabetical migration loop.
 
-The migrations preserve existing issue IDs, replies, attachments, issue-result records, edit history, and reputation events. Existing issues default to `help_request`, so old requests remain visible in the new content system.
+## Existing installations
 
-## Profile, composer and consent migrations
+Do not apply the fresh-install sequence to an existing database. Inspect the live schema and migration state first; file presence alone does not prove that a migration ran. DDL statements may commit implicitly, so a partially failed migration must be investigated before any retry.
 
-After the confirmed baseline through migration 010, the feature branch adds:
+The content-system migrations are applied after the initial issue schema:
 
-1. `011_profiles_personal_help_and_publication.sql`
-2. `012_post_composer_drafts_and_device_catalog.sql`
-3. `013_terms_acceptance_audit.sql`
+- `004_content_types.sql` — content types and lifecycle statuses.
+- `005_diagnostic_updates_and_repair_confirmation.sql` — diagnostic timeline and repair confirmation metadata.
+- `006_notifications_and_push_subscriptions.sql` — notifications and Web Push subscriptions.
+- `007_threaded_replies_and_edit_history.sql` — threaded replies and reply edit history.
+- `008_inline_media_tokens.sql` — safe inline-media token references.
+- `009_soft_delete_posts.sql` — non-destructive post deletion metadata.
+- `010_diagnostic_update_history.sql` — diagnostic edit history and soft deletion.
 
-Migration 013 uses `CREATE TABLE IF NOT EXISTS` so it is safe when `002_final_registration_permissions.sql` already created `terms_acceptances`; it also repairs installations that selected the alternate 002 migration and therefore do not have the table. It must still be reviewed and applied manually to the intended database after a backup.
+Profile, composer and consent additions follow migration 010:
 
-The two `002` files remain alternative schema histories, not sequential migrations. Confirm which one was applied to the target database before running any migration that depends on its profile/account schema.
+- `011_profiles_personal_help_and_publication.sql`
+- `012_post_composer_drafts_and_device_catalog.sql`
+- `013_terms_acceptance_audit.sql`
+- `014_rate_limit_buckets.sql`
+- `015_deleted_accounts_without_contact.sql`
+
+Migration 013 uses `CREATE TABLE IF NOT EXISTS` because the terms table is already created by the supported 002 sequence. Migrations 014 and 015 have already been applied to the owner's current local database; never replay them there.
+
+The migrations add tables/columns and preserve existing technical issue IDs, replies, attachments, issue-result records, edit history, and reputation events. Routine content deletion remains soft-delete/retention behavior; do not introduce physical content cleanup as part of schema installation.
