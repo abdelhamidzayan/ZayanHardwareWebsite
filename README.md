@@ -11,7 +11,7 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 3. **[Graphify guide](docs/graphify.md)** — how to generate and review the machine-readable code relationship graph.
 4. **[Contributor rules](AGENTS.md)** — mandatory safety, architecture, and Git rules.
 5. **[GitHub Actions and usage-budget policy](AGENTS.md#github-actions-and-usage-budget)** — CI requirements, quota exhaustion, and zero-overage safeguards.
-5. [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
+6. [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
 
 The architecture map is the first technical reference. Always verify the active branch, commit, runtime, and database before changing code. Documentation and CI do not prove that an unmerged branch is deployed.
 
