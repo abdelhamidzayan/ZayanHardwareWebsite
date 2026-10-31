@@ -131,6 +131,7 @@ final class IssueController extends Controller
                 'too_many_uploads' => 'الحد الأقصى 8 مرفقات للمنشور الواحد.',
                 'invalid_upload_size' => 'أحد المرفقات غير صالح أو أكبر من 8 ميجابايت.',
                 'invalid_upload_type' => 'المرفقات المسموحة صور JPG/PNG/WEBP/GIF أو PDF فقط.',
+                'invalid_image_dimensions' => 'أبعاد الصورة كبيرة جدًا. استخدم صورة لا تتجاوز 8000 بكسل لكل بُعد و20 مليون بكسل إجماليًا.',
                 default => 'تعذر قراءة المرفقات. حاول اختيار الملفات مرة أخرى.',
             };
             return $this->fail('/issues/create', $message);
