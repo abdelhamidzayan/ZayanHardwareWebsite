@@ -60,34 +60,8 @@ jobs:
           DB_NAME=zayan_fresh_install_test
           mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-          migrations=(
-            database/migrations/000_core_identity_schema.sql
-            database/migrations/001_issue_discussion.sql
-            database/migrations/002_final_registration_permissions.sql
-            database/migrations/002_registration_wizard.sql
-            database/migrations/003_featured_home_issues.sql
-            database/migrations/004_content_types.sql
-            database/migrations/005_diagnostic_updates_and_repair_confirmation.sql
-            database/migrations/006_notifications_and_push_subscriptions.sql
-            database/migrations/007_threaded_replies_and_edit_history.sql
-            database/migrations/008_inline_media_tokens.sql
-            database/migrations/009_soft_delete_posts.sql
-            database/migrations/010_diagnostic_update_history.sql
-            database/migrations/011_profiles_personal_help_and_publication.sql
-            database/migrations/012_post_composer_drafts_and_device_catalog.sql
-            database/migrations/013_terms_acceptance_audit.sql
-            database/migrations/014_rate_limit_buckets.sql
-            database/migrations/015_deleted_accounts_without_contact.sql
-            database/migrations/016_protect_technical_history.sql
-            database/migrations/017_block_physical_content_delete.sql
-            database/migrations/018_storage_recovery_tasks.sql
-            database/migrations/019_session_version_invalidation.sql
-          )
-
-          for migration in "${migrations[@]}"; do
-            echo "Applying ${migration}"
-            mysql --default-character-set=utf8mb4 -h 127.0.0.1 -uroot -proot "${DB_NAME}" < "${migration}"
-          done
+          echo "Applying the single consolidated fresh-install schema"
+          mysql --default-character-set=utf8mb4 -h 127.0.0.1 -uroot -proot "${DB_NAME}" < database/fresh_install.sql
 
           expected_tables=(
             users technician_profiles technician_profile_specialization_history storage_recovery_tasks
