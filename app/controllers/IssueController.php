@@ -8,9 +8,11 @@ use App\Core\App;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Issue;
+use App\Models\Database;
 use App\Models\DeviceCatalog;
 use App\Models\PostDraft;
 use App\Services\ContentEditorService;
+use App\Services\ContentWriteService;
 use App\Services\DraftPublishingService;
 use App\Services\NotificationService;
 use App\Services\AuthService;
@@ -137,27 +139,30 @@ final class IssueController extends Controller
             return $this->fail('/issues/create', $message);
         }
 
-        $issueId = Issue::create(
-            (int) $user['id'],
-            $type,
-            $title,
-            $type === 'help_request' ? $deviceModel : '',
-            $type === 'help_request' ? $category : '',
-            $description,
-            $type === 'help_request' ? $measurements : ''
-        );
-
-        $stored = ContentEditorService::storeUploads($issueId, (int) $user['id'], $uploads, $description);
-        $resolvedDescription = ContentEditorService::resolveInlineTokens($description, $stored['map']);
-        Issue::updateDescriptionContent($issueId, (int) $user['id'], $resolvedDescription);
-        ContentEditorService::pruneUnusedInlineMedia($issueId);
-
-        if ((int) $stored['failed'] > 0) {
-            $this->flash('info', 'تم نشر المنشور، لكن تعذر حفظ بعض المرفقات. يمكنك إضافتها مرة أخرى.');
-        } else {
-            $this->flash('success', 'تم نشر المنشور بنجاح.');
+        try {
+            $issueId = (new ContentWriteService(Database::connection()))->createIssue(
+                (int) $user['id'],
+                $type,
+                $title,
+                $type === 'help_request' ? $deviceModel : '',
+                $type === 'help_request' ? $category : '',
+                $description,
+                $type === 'help_request' ? $measurements : '',
+                $uploads
+            );
+            $this->flash('success', 'تم نشر المنشور وحفظ جميع مرفقاته بنجاح.');
+            return $this->redirect('/issues/' . $issueId);
+        } catch (\DomainException $error) {
+            $message = match ($error->getMessage()) {
+                'media_move_failed', 'storage_unavailable' => 'تعذر حفظ أحد المرفقات؛ لم يتم نشر المنشور حتى لا يظهر ناقصًا. حاول رفع الملفات مرة أخرى.',
+                default => 'تعذر نشر المنشور. لم يتم اعتماد أي جزء من العملية؛ راجع البيانات والمرفقات وحاول مرة أخرى.',
+            };
+            App::logException('ERROR', 'issue.publish_failed', $error, ['user_id' => (int) $user['id']]);
+            return $this->fail('/issues/create', $message);
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'issue.publish_failed', $error, ['user_id' => (int) $user['id']]);
+            return $this->fail('/issues/create', 'تعذر نشر المنشور بسبب خطأ داخلي. لم يتم اعتماد أي جزء من العملية.');
         }
-        return $this->redirect('/issues/' . $issueId);
     }
 
     public function deleteIssue(int $id): Response
@@ -413,11 +418,15 @@ final class IssueController extends Controller
         }
         try {
             $parentAuthorId = $parentReplyId ? Issue::replyAuthor((int) $parentReplyId) : null;
-            $replyId = Issue::addReply($id, (int) $user['id'], $body, $parentReplyId ? (int) $parentReplyId : null);
-            $stored = ContentEditorService::storeUploads($id, (int) $user['id'], $uploads, $body);
-            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $stored['map']);
-            Issue::updateReplyContent($replyId, (int) $user['id'], $resolvedBody);
-            ContentEditorService::pruneUnusedInlineMedia($id);
+            $created = (new ContentWriteService(Database::connection()))->createReply(
+                $id,
+                (int) $user['id'],
+                $body,
+                $parentReplyId ? (int) $parentReplyId : null,
+                $uploads
+            );
+            $replyId = $created['id'];
+            $resolvedBody = $created['body'];
             $issue = Issue::find($id);
             $replyTitle = $issue && $issue['content_type'] === 'help_request' ? 'رد جديد على طلب المساعدة' : 'تعليق جديد على مشاركتك';
 
@@ -439,10 +448,25 @@ final class IssueController extends Controller
                     $resolvedBody, 'new-reply:' . $replyId
                 );
             }
-            $this->flash((int) $stored['failed'] > 0 ? 'info' : 'success',
-                (int) $stored['failed'] > 0 ? 'تم نشر الرد، لكن تعذر حفظ بعض المرفقات.' : 'تم نشر ردك الفني.');
-        } catch (\DomainException) {
-            $this->flash('error', 'النقاش مغلق أو لم يعد متاحًا للرد.');
+            $this->flash('success', 'تم نشر ردك الفني وحفظ جميع مرفقاته بنجاح.');
+        } catch (\DomainException $error) {
+            $message = match ($error->getMessage()) {
+                'invalid_parent_reply' => 'التعليق الذي ترد عليه لم يعد متاحًا.',
+                'discussion_closed' => 'النقاش مغلق أو لم يعد متاحًا للرد.',
+                'media_move_failed', 'storage_unavailable' => 'تعذر حفظ أحد المرفقات؛ لم يتم نشر الرد حتى لا يظهر ناقصًا. حاول رفع الملفات مرة أخرى.',
+                default => 'تعذر نشر الرد. لم يتم اعتماد أي جزء من العملية.',
+            };
+            App::logException('WARNING', 'issue.reply_publish_failed', $error, [
+                'issue_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', $message);
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'issue.reply_publish_failed', $error, [
+                'issue_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', 'تعذر نشر الرد بسبب خطأ داخلي. لم يتم اعتماد أي جزء من العملية.');
         }
         return $this->redirect('/issues/' . $id . '#discussion');
     }
