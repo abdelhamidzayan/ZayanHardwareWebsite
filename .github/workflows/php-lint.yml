@@ -32,6 +32,8 @@ jobs:
         run: php tests/php/post-route-csrf-policy.php
       - name: Verify login errors do not disclose suspended-account status
         run: php tests/php/login-information-disclosure.php
+      - name: Verify account state changes revoke existing sessions
+        run: php tests/php/account-session-revocation-policy.php
       - name: Verify admin site update command hardening
         run: php tests/php/admin-update-hardening.php
       - name: Verify read-only database schema comparator CLI help
