@@ -174,6 +174,100 @@ final class ContentWriteService
         }
     }
 
+    /**
+     * @return array{body:string}
+     */
+    public function editIssue(
+        int $issueId,
+        int $userId,
+        string $title,
+        string $description,
+        string $measurements,
+        array $uploads
+    ): array {
+        $this->begin();
+        $movedFiles = [];
+        $commitStarted = false;
+
+        try {
+            Issue::edit($issueId, $userId, $title, $description, $measurements);
+            $map = $this->storeAttachments($issueId, $userId, $uploads, $description, $movedFiles);
+            $resolvedDescription = ContentEditorService::resolveInlineTokens($description, $map);
+            Issue::updateDescriptionContent($issueId, $userId, $resolvedDescription);
+
+            $commitStarted = true;
+            $this->pdo->commit();
+
+            return ['body' => $resolvedDescription];
+        } catch (Throwable $error) {
+            $this->rollbackAndCompensate($error, $issueId, $movedFiles, $commitStarted);
+            throw $error;
+        }
+    }
+
+    /**
+     * @return array{body:string}
+     */
+    public function editReply(
+        int $issueId,
+        int $replyId,
+        int $userId,
+        string $body,
+        array $uploads
+    ): array {
+        $this->begin();
+        $movedFiles = [];
+        $commitStarted = false;
+
+        try {
+            if (Issue::replyIssueId($replyId) !== $issueId) {
+                throw new \\DomainException('reply_not_in_issue');
+            }
+            Issue::editReply($replyId, $userId, $body);
+            $map = $this->storeAttachments($issueId, $userId, $uploads, $body, $movedFiles);
+            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $map);
+            Issue::updateReplyContent($replyId, $userId, $resolvedBody);
+
+            $commitStarted = true;
+            $this->pdo->commit();
+
+            return ['body' => $resolvedBody];
+        } catch (Throwable $error) {
+            $this->rollbackAndCompensate($error, $issueId, $movedFiles, $commitStarted);
+            throw $error;
+        }
+    }
+
+    /**
+     * @return array{body:string}
+     */
+    public function editDiagnosticUpdate(
+        int $issueId,
+        int $updateId,
+        int $userId,
+        string $body,
+        array $uploads
+    ): array {
+        $this->begin();
+        $movedFiles = [];
+        $commitStarted = false;
+
+        try {
+            Issue::editDiagnosticUpdate($issueId, $updateId, $userId, $body);
+            $map = $this->storeAttachments($issueId, $userId, $uploads, $body, $movedFiles);
+            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $map);
+            Issue::updateDiagnosticUpdateContent($updateId, $userId, $resolvedBody);
+
+            $commitStarted = true;
+            $this->pdo->commit();
+
+            return ['body' => $resolvedBody];
+        } catch (Throwable $error) {
+            $this->rollbackAndCompensate($error, $issueId, $movedFiles, $commitStarted);
+            throw $error;
+        }
+    }
+
     private function begin(): void
     {
         if ($this->pdo->inTransaction()) {
