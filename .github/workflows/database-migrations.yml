@@ -76,6 +76,7 @@ jobs:
             database/migrations/015_deleted_accounts_without_contact.sql
             database/migrations/016_protect_technical_history.sql
             database/migrations/017_block_physical_content_delete.sql
+            database/migrations/018_storage_recovery_tasks.sql
           )
 
           for migration in "${migrations[@]}"; do
@@ -84,7 +85,7 @@ jobs:
           done
 
           expected_tables=(
-            users technician_profiles technician_profile_specialization_history
+            users technician_profiles technician_profile_specialization_history storage_recovery_tasks
             issues issue_attachments issue_replies reply_votes issue_edit_history issue_results reputation_events
             terms_acceptances user_device_specializations skill_domains user_skill_domains user_skill_ratings
             skill_tests skill_test_attempts admin_password_resets account_deletion_requests security_audit_logs
@@ -187,6 +188,7 @@ jobs:
             trg_skill_domains_block_physical_delete
             trg_device_manufacturers_block_delete
             trg_device_models_block_physical_delete
+            trg_storage_recovery_tasks_no_delete
           )
           for trigger in "${expected_triggers[@]}"; do
             trigger_exists="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = '${DB_NAME}' AND TRIGGER_NAME = '${trigger}';")"
