@@ -33,24 +33,19 @@ Never conflate these states:
 
 Always report the exact branch and commit being discussed. A passing CI job does not prove local browser/PWA behavior or production deployment. A migration file existing in Git does not prove it ran on a database.
 
-## 4. Current verified GitHub snapshot — 2026-10-31
+## 4. GitHub branch and CI snapshot — 2026-10-31
 
-- Active audit/fix branch: `fix/audit-priority-issues`.
-- Application-code and CI verification baseline: `46960cf9efb33b2b0affa503d5e832725bdba4b4`. README/AI handoff documentation commits were added after this baseline on the same PR branch; always resolve the live branch HEAD before starting new work.
-- PR #14 is a **Draft**; it is not merged and must not be described as deployed.
-- On that exact head, GitHub Actions completed successfully:
-  - Graphify dependency graph: run [41138280152](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280152).
-  - PHP syntax check: run [41138280122](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280122).
-  - Database migration integration: run [41138280074](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280074).
-- Graphify artifact: `zayan-hardware-graphify`, artifact ID `13017416033`, expires 2026-11-13. It contains `.graphify/graph.json`, `.graphify/architecture.mmd`, and the summary.
-- Latest observed Graphify summary: status `ok`; 130 source files scanned; 84 routes; 161 SQL queries analyzed; 15 API calls (10 linked, 5 unresolved); 648 nodes; 1,440 edges; 38 table nodes; 61 foreign-key edges.
-- Graphify's only emitted warning was the duplicate `002_` migration prefix:
-  - `002_final_registration_permissions.sql`
-  - `002_registration_wizard.sql`
-  Never run or reorder these blindly. Inspect the target database's migration history and schema first.
-- Graphify is static analysis, not a runtime call trace. Five dynamic/unresolved JavaScript API calls remain for manual review. A missing edge is not proof that no dependency exists.
-- The documentation-only commits after `46960cf` do not change application behavior; the CI results above are for the code baseline, not a new runtime deployment.
-- PR #13 also contains an earlier Graphify audit implementation and a separate curated AI documentation set on another branch. Do not mix its older source baseline with PR #14 without comparing branches and resolving overlap deliberately.
+- Active audit branch: `audit/system-rebuild-20261031`.
+- Pull request: [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16), titled “Audit rebuild: fresh install, retention guards and route consistency”.
+- PR #16 is **Draft, open, and unmerged**. Its base is `audit/content-retention-consistency`; it is not a direct merge to `main`, and nothing on this branch should be described as deployed.
+- The last known branch head before the latest documentation/status edits was `6f1f0db0ecf9d9b0cf2aa8f43e7f396d540ab6e0`. Resolve the live PR head before every new session or change; never assume this SHA remains current.
+- Last confirmed green CI baseline: `55522a3cc204e961aaf9947773b15ff10321ad02`, with PHP/CLI/security/JavaScript run [41180453075](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453075), Graphify run [41180453042](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453042), and fresh-install matrix run [41180453039](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453039).
+- That green baseline predates the latest commits on PR #16. It verified migrations 000–017 and the earlier test set; it does **not** verify migration 018 or the latest content-write service/test changes.
+- The current migration workflow is configured to install migrations 000–018 and run `tests/php/content-write-integration.php` on the disposable `zayan_fresh_install_test` database for MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. The latest code additions remain **CI-unverified** until those jobs pass on their exact commit.
+- The owner reported GitHub Actions usage at **2,000 / 2,000 included minutes**, with the account notice showing reset on **2026-11-01**. The owner has not confirmed that a $0 Actions spending budget is configured. Do not manually rerun/dispatch workflows before the displayed reset or explicit owner authorization. Keep workflow YAML files intact; follow [the Actions usage policy](AGENTS.md#github-actions-and-usage-budget).
+- A green historical workflow run proves only the tests and commit it actually executed. It does not prove current branch state, local XAMPP/Kali behavior, PWA/Safari behavior, or deployment.
+- Graphify is static analysis, not a runtime call trace. Resolve its outstanding dynamic JavaScript API links manually and review every warning; never treat a missing graph edge as proof that no dependency exists.
+
 
 ## 5. Owner's local environment — latest reported state
 
@@ -70,13 +65,18 @@ Always report the exact branch and commit being discussed. A passing CI job does
 
 All local details above are a dated handoff. Recheck the actual machine before acting.
 
-## 6. Confirmed content-retention behavior and remaining review
+## 6. Technical-content preservation and current write path
 
-- `Issue::deleteIssue()` uses `deleted_at` (soft delete), not a physical row delete.
-- `Issue::deleteReply()` and `Issue::deleteDiagnosticUpdate()` also use `deleted_at`; reply edit history is stored separately. One relationship-preservation concern remains: `deleteReply()` sets child replies' `parent_reply_id` to NULL before soft-deleting the parent. Child text survives, but its thread relationship is lost; review the UI and intended tombstone behavior before changing it.
-- `ContentEditorService::pruneUnusedInlineMedia()` is intentionally a no-op so attachments referenced by previous body revisions are retained.
-- The issue creation/edit/reply/diagnostic controller flows perform multiple database and filesystem steps. A database failure between steps can leave a partially completed operation (for example, a post/reply saved before inline-token resolution). This is a consistency/rollback review item, not evidence that existing posts were deleted. Add failure-injection tests before changing these flows.
-- `GET /attachments/{id}` and issue audio require authentication; verify the intended visibility policy whenever issue privacy rules change. Personal-help attachment delivery additionally checks conversation participation; draft media checks draft ownership.
+- `Issue::deleteIssue()`, `Issue::deleteReply()`, and `Issue::deleteDiagnosticUpdate()` use soft deletion. Physical deletion of protected technical rows is additionally blocked by migrations 016/017 and their foreign-key/trigger guards.
+- `Issue::deleteReply()` preserves each child's `parent_reply_id`; a deleted parent is rendered as a text-free tombstone when it still has active children. Do not detach child replies from their original thread.
+- `ContentEditorService::pruneUnusedInlineMedia()` is intentionally a no-op. Existing attachments may still be referenced by prior edit-history versions, so removing an inline token from the latest body is not permission to delete the attachment or its file.
+- `ContentWriteService` now coordinates issue creation/editing, reply creation/editing, and diagnostic-update creation/editing through a single DB transaction plus staged private-file moves. Notifications occur after the content transaction commits.
+- Models used by the write service are transaction-aware, so they do not commit/rollback a transaction owned by `ContentWriteService`.
+- File compensation is reverse-ordered. A confirmed DB rollback permits removal of newly moved files; a failed cleanup is recorded in `storage_recovery_tasks` (migration 018). An ambiguous commit outcome preserves files and records a pending reconciliation task rather than risking deletion of a file a committed row may reference. There is no automatic recovery worker; pending tasks require an explicit, reviewed reconciliation process.
+- `tests/php/content-write-integration.php` covers successful writes, DB rollback, later-file-move failure, reply and diagnostic attachment failures, edit-history rollback, failed filesystem compensation, and ambiguous commit handling. The workflow includes this test on the three-engine fresh-install matrix, but the newest code is not yet CI-verified because the Actions quota was exhausted.
+- Shared image dimension/pixel checks are implemented in `ImageUploadPolicy` and are used by reviewed issue, draft, avatar and personal-help upload paths. This does not replace MIME validation or byte-size limits.
+- Remaining separate review areas include recoverable draft-media replacement/deletion, personal-help media transactions and reconciliation, the full POST authorization matrix, dynamic JS API references, browser/mobile Safari/PWA journeys, and the owner's local backup restore/schema comparison. No real database, private media tree, or owner backup may be modified during these reviews without explicit approval and a verified rollback plan.
+
 
 ## 7. Non-negotiable content preservation
 
