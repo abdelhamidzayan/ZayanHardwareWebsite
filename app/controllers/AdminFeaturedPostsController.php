@@ -64,7 +64,7 @@ final class AdminFeaturedPostsController extends Controller
             $check = $pdo->prepare('SELECT user_id FROM issues WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
             $check->execute([$id]);
             $issueOwnerId = $check->fetchColumn();
-            if ($issueOwnerId === false) throw new \\DomainException('issue_not_available');
+            if ($issueOwnerId === false) throw new \DomainException('issue_not_available');
 
             if ($action === 'feature') {
                 $stmt = $pdo->prepare(
@@ -93,9 +93,9 @@ final class AdminFeaturedPostsController extends Controller
                 ]);
             }
             $pdo->commit();
-        } catch (\\Throwable $error) {
+        } catch (\Throwable $error) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            if ($error instanceof \\DomainException) {
+            if ($error instanceof \DomainException) {
                 return $this->fail('/admin', $error->getMessage() === 'admin_not_active'
                     ? 'لم تعد تملك صلاحية إدارة المنشورات.'
                     : 'المنشور غير موجود أو لم يعد متاحًا.');
