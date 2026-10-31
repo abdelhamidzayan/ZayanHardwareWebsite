@@ -93,3 +93,10 @@ The owner database restore, private-media archive/sample restore, and real Apach
 6. At the end of each phase, report passed checks, failed checks, blocked local checks, changed files, and the next phase.
 
 Do not mark a phase complete while its acceptance criteria remain unverified.
+
+
+## 2026-10-31 — Object-level authorization regression expansion
+
+- Extended `tests/php/issue-authorization-integration.php` to reject cross-user edits and soft-deletes of technical posts, edits/deletes of another author's replies, unauthorized diagnostic creation/edit/delete, and accepting a solution on another member's help request. Existing moderator/admin result-review and self-vote protections remain covered.
+- Extended `tests/php/help-request-media-integration.php` to verify requester/helper access to private request and attachment metadata, reject a nonparticipant, and reject a nonparticipant attachment write.
+- These are focused model/service integration cases, not a claim that every POST route has exhaustive end-to-end authorization coverage. The remaining route-by-route authorization review stays open until all handlers and state transitions are reconciled.
