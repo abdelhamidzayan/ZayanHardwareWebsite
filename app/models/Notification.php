@@ -33,7 +33,7 @@ final class Notification extends Model
         $stmt = self::db()->prepare(
             'SELECT n.id, n.actor_user_id, n.issue_id, n.reply_id, n.type, n.title, n.body,
                     n.target_path, n.is_read, n.created_at, n.read_at,
-                    u.display_name AS actor_name
+                    u.display_name AS actor_name, u.avatar_key AS actor_avatar_key, u.avatar_path AS actor_avatar_path
              FROM notifications n
              LEFT JOIN users u ON u.id = n.actor_user_id
              WHERE n.user_id = ?

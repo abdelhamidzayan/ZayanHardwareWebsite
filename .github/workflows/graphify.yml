@@ -1,0 +1,47 @@
+name: Graphify dependency graph
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  graphify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test Graphify analyzer
+        run: python -m unittest discover -s tests/python -v
+      - name: Generate dependency graph
+        run: |
+          python tools/graphify/graphify.py --output-dir .graphify | tee graphify-summary.json
+          python tools/graphify/graphify.py --output-dir .graphify --check
+      - name: Add graph summary to workflow
+        run: |
+          {
+            echo "## Graphify dependency graph"
+            echo '~~~json'
+            cat graphify-summary.json
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Graphify output
+        uses: actions/upload-artifact@v4
+        with:
+          name: zayan-hardware-graphify
+          path: |
+            .graphify/graph.json
+            .graphify/architecture.mmd
+            graphify-summary.json
+          if-no-files-found: error
+          retention-days: 14

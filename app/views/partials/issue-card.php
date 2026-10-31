@@ -6,6 +6,8 @@
 $solved    = !empty($issue['solved']);
 $hasAudio  = !empty($issue['audio']);
 $audioSrc  = !empty($issue['audio_src']) ? $baseUrl . $issue['audio_src'] : '';
+$username  = trim((string) ($issue['username'] ?? ''));
+$avatarSrc = (string) ($issue['avatar_src'] ?? '/assets/avatars/technician-blue.svg');
 
 // Deterministic waveform (32 bars) so the same card always looks the same.
 $seed = (int) $issue['id'];
@@ -18,10 +20,18 @@ for ($i = 0; $i < 32; $i++) {
 ?>
 <article class="card issue-card">
     <header class="issue-card__head">
-        <span class="avatar" aria-hidden="true"><?= $e($issue['initials']) ?></span>
+        <?php if ($username !== '') : ?>
+            <a class="issue-card__avatar-link" href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode($username)) ?>" aria-label="الملف الشخصي لـ <?= $e($issue['author']) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . $avatarSrc) ?>" alt="" width="48" height="48" loading="lazy"></a>
+        <?php else : ?>
+            <span class="issue-card__avatar-link"><img class="avatar avatar-image" src="<?= $e($baseUrl . $avatarSrc) ?>" alt="" width="48" height="48" loading="lazy"></span>
+        <?php endif; ?>
         <div class="issue-card__who">
             <p class="issue-card__name">
-                <?= $e($issue['author']) ?>
+                <?php if ($username !== '') : ?>
+                    <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode($username)) ?>"><?= $e($issue['author']) ?></a>
+                <?php else : ?>
+                    <?= $e($issue['author']) ?>
+                <?php endif; ?>
                 <?php if (!empty($issue['expert'])) : ?>
                     <span class="badge">
                         <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
@@ -34,17 +44,20 @@ for ($i = 0; $i < 32; $i++) {
     </header>
 
     <div class="issue-card__body">
-        <?php if (($issue['content_type'] ?? 'help_request') === 'help_request' && !empty($issue['device'])) : ?>
-            <span class="tag tech"><?= $e($issue['device']) ?></span>
-        <?php else : ?>
-            <span class="tag"><?= $e($issue['type_label'] ?? 'منشور فني') ?></span>
-        <?php endif; ?>
+        <span class="tag"><?= $e($issue['type_label'] ?? 'معلومة فنية') ?></span>
+        <?php
+        $deviceLabel = trim((string) ($issue['manufacturer_name'] ?? '') . ' ' .
+            (string) ($issue['model_code'] ?? $issue['model_commercial_name'] ?? $issue['device'] ?? ''));
+        ?>
+        <?php if ($deviceLabel !== '') : ?><span class="tag tech"><?= $e($deviceLabel) ?></span><?php endif; ?>
         <h3 class="issue-card__title" dir="auto"><a class="issue-card__title-link" href="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>"><?= $e($issue['title']) ?></a></h3>
         <p class="issue-card__excerpt" dir="auto"><?= $e($issue['excerpt']) ?></p>
     </div>
 
     <?php if ($hasAudio) : ?>
-        <div class="audio" data-audio<?= $audioSrc !== '' ? ' data-src="' . $e($audioSrc) . '"' : '' ?>>
+        <div class="audio" data-audio<?= $audioSrc !== '' ? ' data-src="' . $e($audioSrc) . '"' : '' ?>
+            data-trim-start="<?= (int) ($issue['audio_trim_start_ms'] ?? 0) ?>"
+            data-trim-end="<?= (int) ($issue['audio_trim_end_ms'] ?? $issue['audio_duration_ms'] ?? 0) ?>">
             <button class="audio__btn" type="button" aria-label="تشغيل الملاحظة الصوتية"<?= $audioSrc === '' ? ' disabled' : '' ?>>
                 <svg class="icon audio__icon audio__icon--play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>
                 <svg class="icon audio__icon audio__icon--pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></svg>

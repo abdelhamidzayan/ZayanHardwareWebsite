@@ -1,10 +1,14 @@
 <?php
 $contentType = $issue['content_type'] ?? 'help_request';
 $isHelpRequest = $contentType === 'help_request';
-$typeLabel = match ($contentType) { 'technical_post' => 'معلومة فنية', 'discussion' => 'نقاش عام', default => 'طلب مساعدة' };
+$typeLabel = match ($contentType) { 'technical_post', 'discussion' => 'معلومة فنية', default => 'طلب مساعدة' };
+$steps = json_decode((string) ($issue['steps_json'] ?? ''), true);
+$steps = is_array($steps) ? array_values(array_filter($steps, static fn ($step): bool => is_string($step) && trim($step) !== '')) : [];
+$deviceLabel = trim((string) ($issue['manufacturer_name'] ?? '') . ' ' . (string) ($issue['model_code'] ?? $issue['model_commercial_name'] ?? $issue['device_model'] ?? ''));
 $resolved = $issue['status'] === 'resolved';
 $awaitingConfirmation = $issue['status'] === 'awaiting_confirmation';
 $closed = in_array($issue['status'], ['resolved', 'closed_unresolved'], true);
+$issueAvatarSrc = !empty($issue['author_avatar_path']) ? '/avatar/' . (int) $issue['user_id'] : '/assets/avatars/' . rawurlencode((string) ($issue['author_avatar_key'] ?? 'technician-blue')) . '.svg';
 $canReply = $currentUser !== null && in_array($issue['status'], ['open', 'in_progress'], true);
 $specializations = [
     'power' => 'Power', 'charging' => 'Charging', 'network' => 'Network',
@@ -31,47 +35,69 @@ foreach ($replies as $reply) {
 <div class="container issue-page">
     <section class="card issue-original">
         <div class="issue-original__author">
-            <span class="avatar"><?= $e(mb_strtoupper(mb_substr($issue['author_name'], 0, 1))) ?></span>
+            <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $issue['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . $issueAvatarSrc) ?>" alt="" width="48" height="48"></a>
             <div class="issue-original__identity">
                 <strong><?= $e($issue['author_name']) ?></strong>
                 <span class="muted"><?= $e($specializations[$issue['specialization'] ?? ''] ?? 'فني هاردوير') ?> · <?= $e($issue['created_at']) ?></span>
             </div>
             <?php if (in_array($issue['author_role'], ['admin', 'moderator'], true)) : ?><span class="badge">إشراف المنصة</span><?php endif; ?>
         </div>
-        <?php if ($isHelpRequest) : ?>
-            <div class="issue-tags">
-                <?php if (!empty($issue['device_model'])) : ?><span class="tag tech"><?= $e($issue['device_model']) ?></span><?php endif; ?>
-                <?php if (!empty($issue['category'])) : ?><span class="tag"><?= $e($specializations[$issue['category']] ?? $issue['category']) ?></span><?php endif; ?>
-            </div>
-        <?php else : ?>
-            <div class="issue-tags"><span class="tag"><?= $e($typeLabel) ?></span></div>
-        <?php endif; ?>
+        <div class="issue-tags">
+            <span class="tag"><?= $e($typeLabel) ?></span>
+            <?php if ($deviceLabel !== '') : ?><span class="tag tech"><?= $e($deviceLabel) ?></span><?php endif; ?>
+            <?php if ($isHelpRequest && !empty($issue['category'])) : ?><span class="tag"><?= $e($specializations[$issue['category']] ?? $issue['category']) ?></span><?php endif; ?>
+        </div>
         <h1 class="issue-title" dir="auto"><?= $e($issue['title']) ?></h1>
-        <div class="issue-description" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $issue['description'], $attachments, $baseUrl) ?></div>
+        <?php if (($issue['details_mode'] ?? 'text') === 'audio' && !empty($issue['audio_path'])) : ?>
+            <div class="issue-audio">
+                <audio controls preload="none" src="<?= $e($baseUrl) ?>/issues/<?= (int) $issue['id'] ?>/audio"
+                    data-audio-trim data-trim-start="<?= (int) ($issue['audio_trim_start_ms'] ?? 0) ?>"
+                    data-trim-end="<?= (int) ($issue['audio_trim_end_ms'] ?? $issue['audio_duration_ms'] ?? 0) ?>">
+                    المتصفح لا يدعم تشغيل الصوت.
+                </audio>
+                <span class="muted">تسجيل صوتي · <?= $e(gmdate('i:s', (int) round(max(0, (int) ($issue['audio_duration_ms'] ?? 0)) / 1000))) ?></span>
+            </div>
+        <?php elseif (!empty($issue['description'])) : ?>
+            <div class="issue-description" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $issue['description'], $attachments, $baseUrl) ?></div>
+        <?php endif; ?>
+        <?php if ($steps) : ?>
+            <section class="issue-tested-steps">
+                <h2>الخطوات والفحوصات المجربة</h2>
+                <ol>
+                    <?php foreach ($steps as $step) : ?>
+                        <li><span><?= $e($step) ?></span></li>
+                    <?php endforeach; ?>
+                </ol>
+            </section>
+        <?php endif; ?>
         <?php if (!empty($issue['measurements'])) : ?>
             <div class="issue-measurements"><strong>القياسات والملاحظات</strong><p dir="auto"><?= nl2br($e($issue['measurements'])) ?></p></div>
         <?php endif; ?>
         <?php if ($attachments) : ?>
-            <div class="issue-attachments">
-                <?php foreach ($attachments as $file) : ?>
-                    <?php if ((int) ($file['is_inline'] ?? 0) === 1) continue; ?>
-                    <?php
-                    $attachmentUrl = $baseUrl . '/attachments/' . (int) $file['id'];
-                    $mimeType = (string) $file['mime_type'];
-                    ?>
-                    <?php if (str_starts_with($mimeType, 'image/')) : ?>
-                        <a href="<?= $e($attachmentUrl) ?>" class="attachment-image-link" data-image-viewer data-image-src="<?= $e($attachmentUrl) ?>" aria-label="تكبير الصورة">
-                            <img src="<?= $e($attachmentUrl) ?>" alt="مرفق فني" loading="lazy">
-                        </a>
-                    <?php elseif (str_starts_with($mimeType, 'audio/')) : ?>
-                        <audio controls preload="none" src="<?= $e($attachmentUrl) ?>">
-                            المتصفح لا يدعم تشغيل الصوت.
-                        </audio>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </div>
+            <section class="issue-attachments">
+                <h2>المرفقات</h2>
+                <div class="issue-attachments__grid" data-image-gallery="issue-<?= (int) $issue['id'] ?>">
+                    <?php foreach ($attachments as $file) : ?>
+                        <?php if ((int) ($file['is_inline'] ?? 0) === 1) continue; ?>
+                        <?php
+                        $attachmentUrl = $baseUrl . '/attachments/' . (int) $file['id'];
+                        $mimeType = (string) $file['mime_type'];
+                        ?>
+                        <?php if (str_starts_with($mimeType, 'image/')) : ?>
+                            <a href="<?= $e($attachmentUrl) ?>" class="attachment-image-link" data-image-viewer data-image-gallery-item data-image-src="<?= $e($attachmentUrl) ?>" aria-label="فتح الصورة">
+                                <img src="<?= $e($attachmentUrl) ?>" alt="مرفق فني" loading="lazy">
+                            </a>
+                        <?php elseif (str_starts_with($mimeType, 'video/')) : ?>
+                            <video class="issue-attachment-video" controls preload="metadata" playsinline src="<?= $e($attachmentUrl) ?>">المتصفح لا يدعم تشغيل الفيديو.</video>
+                        <?php elseif (str_starts_with($mimeType, 'audio/')) : ?>
+                            <audio controls preload="none" src="<?= $e($attachmentUrl) ?>"></audio>
+                        <?php elseif ($mimeType === 'application/pdf') : ?>
+                            <a class="issue-attachment-file" href="<?= $e($attachmentUrl) ?>" target="_blank" rel="noopener">عرض ملف PDF</a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </section>
         <?php endif; ?>
-
         <?php if ($issue['updated_at'] !== $issue['created_at']) : ?>
             <div class="issue-latest-update">
                 <span class="issue-latest-update__label">آخر تحديث <span class="badge">معدّل</span></span>
@@ -233,9 +259,18 @@ foreach ($replies as $reply) {
         <?php else : ?>
             <?php foreach ($topLevelReplies as $reply) : ?>
                 <article id="reply-<?= (int) $reply['id'] ?>" class="card reply-card <?= (int) $reply['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
+                    <?php if (!empty($reply['deleted_at'])) : ?>
+                        <header class="reply-card__head">
+                            <div class="reply-card__identity">
+                                <strong>تعليق محذوف</strong>
+                                <span class="muted">تم الاحتفاظ بالردود المرتبطة به للحفاظ على سياق النقاش.</span>
+                            </div>
+                        </header>
+                        <div class="reply-card__body"><p class="muted">نص التعليق الأصلي لم يعد معروضًا.</p></div>
+                    <?php else : ?>
                     <header class="reply-card__head">
-                        <span class="avatar"><?= $e(mb_strtoupper(mb_substr($reply['display_name'], 0, 1))) ?></span>
-                        <div class="reply-card__identity"><strong><?= $e($reply['display_name']) ?></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
+                        <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $reply['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($reply['avatar_path']) ? '/avatar/' . (int) $reply['user_id'] : '/assets/avatars/' . rawurlencode((string) ($reply['avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="40" height="40" loading="lazy"></a>
+                        <div class="reply-card__identity"><strong><a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $reply['username'])) ?>"><?= $e($reply['display_name']) ?></a></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
                         <?php if (in_array($reply['role'], ['admin', 'moderator'], true)) : ?><span class="badge">خبير معتمد</span><?php endif; ?>
                     </header>
                     <div class="reply-card__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $reply['body'], $attachments, $baseUrl) ?></div>
@@ -281,13 +316,15 @@ foreach ($replies as $reply) {
                             </details>
                         <?php endif; ?>
                     </footer>
+
+                    <?php endif; ?>
                     <?php if (!empty($childrenByParent[(int) $reply['id']])) : ?>
                         <div class="reply-card__children" aria-label="الردود على التعليق">
                             <?php foreach ($childrenByParent[(int) $reply['id']] as $child) : ?>
                                 <article id="reply-<?= (int) $child['id'] ?>" class="reply-card reply-card--nested <?= (int) $child['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
                                     <header class="reply-card__head">
-                                        <span class="avatar"><?= $e(mb_strtoupper(mb_substr($child['display_name'], 0, 1))) ?></span>
-                                        <div class="reply-card__identity"><strong><?= $e($child['display_name']) ?></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
+                                        <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $child['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($child['avatar_path']) ? '/avatar/' . (int) $child['user_id'] : '/assets/avatars/' . rawurlencode((string) ($child['avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="36" height="36" loading="lazy"></a>
+                                        <div class="reply-card__identity"><strong><a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $child['username'])) ?>"><?= $e($child['display_name']) ?></a></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_deleted_at'])) : ?> · رد على تعليق محذوف<?php elseif (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
                                     </header>
                                     <div class="reply-card__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $child['body'], $attachments, $baseUrl) ?></div>
                                     <footer class="reply-card__actions">
@@ -378,10 +415,19 @@ foreach ($replies as $reply) {
     <?php endif; ?>
     <dialog class="image-viewer" data-image-viewer-dialog aria-label="عارض الصور">
         <div class="image-viewer__toolbar">
-            <span>اسحب للتحريك · استخدم عجلة الماوس أو أزرار التكبير</span>
-            <div><button type="button" class="btn btn--secondary" data-image-zoom-out aria-label="تصغير">−</button><button type="button" class="btn btn--secondary" data-image-zoom-in aria-label="تكبير">+</button><button type="button" class="btn btn--primary" data-image-viewer-close>إغلاق</button></div>
+            <span data-image-viewer-counter>1 / 1</span>
+            <div>
+                <button type="button" class="btn btn--secondary" data-image-zoom-out aria-label="تصغير">−</button>
+                <button type="button" class="btn btn--secondary" data-image-zoom-in aria-label="تكبير">+</button>
+                <button type="button" class="btn btn--secondary" data-image-fullscreen>ملء الشاشة</button>
+                <button type="button" class="btn btn--primary" data-image-viewer-close>إغلاق</button>
+            </div>
         </div>
-        <div class="image-viewer__viewport" data-image-viewer-viewport><img data-image-viewer-image alt="صورة فنية مكبرة" draggable="false"></div>
+        <div class="image-viewer__viewport" data-image-viewer-viewport>
+            <button type="button" class="image-viewer__nav image-viewer__nav--prev" data-image-prev aria-label="الصورة السابقة">‹</button>
+            <img data-image-viewer-image alt="صورة فنية مكبرة" draggable="false">
+            <button type="button" class="image-viewer__nav image-viewer__nav--next" data-image-next aria-label="الصورة التالية">›</button>
+        </div>
     </dialog>
     <script src="<?= $e($baseUrl) ?>/js/image-viewer.js" defer></script>
 </div>

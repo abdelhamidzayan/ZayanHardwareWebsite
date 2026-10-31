@@ -2,6 +2,7 @@
 $currentUser = $currentUser ?? null;
 $username = (string) ($currentUser['username'] ?? '');
 $profileHref = $username !== '' ? $baseUrl . '/profile/' . rawurlencode($username) : $baseUrl . '/feed';
+$avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int) $currentUser['id'] : $baseUrl . '/assets/avatars/' . rawurlencode((string) ($currentUser['avatar_key'] ?? 'technician-blue')) . '.svg';
 ?>
 <div class="help-page settings-page">
     <section class="help-hero" aria-labelledby="settings-title">
@@ -22,6 +23,51 @@ $profileHref = $username !== '' ? $baseUrl . '/profile/' . rawurlencode($usernam
                 <svg class="icon settings-row__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
         </div>
+    </section>
+
+    <section class="help-section" aria-labelledby="settings-avatar-title">
+        <div class="help-section__head"><div><h2 class="help-section__title" id="settings-avatar-title">الصورة الشخصية</h2><p class="help-section__intro">ارفع صورتك واقصّها، أو اختر Avatar جاهزًا يناسب هويتك الفنية.</p></div></div>
+        <form class="card avatar-settings" method="post" action="<?= $e($baseUrl) ?>/profile/avatar" enctype="multipart/form-data" data-avatar-form>
+            <?= $csrf() ?>
+            <div class="avatar-settings__current">
+                <img class="avatar avatar--lg avatar-image" src="<?= $e($avatarSrc) ?>" alt="صورتك الشخصية" width="80" height="80" data-avatar-current>
+                <div><strong><?= $e($currentUser['display_name'] ?? 'حسابي') ?></strong><p class="muted">ستظهر الصورة في ملفك والمنشورات والتعليقات والإشعارات.</p></div>
+            </div>
+            <div class="avatar-settings__choices" role="group" aria-label="اختيار Avatar">
+                <?php foreach (['technician-blue','technician-cyan','technician-violet','technician-green','technician-orange','technician-red'] as $avatarKey) : ?>
+                    <button class="avatar-choice<?= ($currentUser['avatar_key'] ?? 'technician-blue') === $avatarKey && empty($currentUser['avatar_path']) ? ' is-selected' : '' ?>" type="button" data-avatar-choice="<?= $e($avatarKey) ?>" aria-pressed="<?= ($currentUser['avatar_key'] ?? 'technician-blue') === $avatarKey && empty($currentUser['avatar_path']) ? 'true' : 'false' ?>">
+                        <img src="<?= $e($baseUrl . '/assets/avatars/' . $avatarKey . '.svg') ?>" alt="Avatar">
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <input type="hidden" name="avatar_key" value="<?= $e((string) ($currentUser['avatar_key'] ?? 'technician-blue')) ?>" data-avatar-key>
+            <div class="avatar-settings__upload">
+                <label class="btn btn--secondary" for="avatar-file">رفع صورة شخصية</label>
+                <input id="avatar-file" class="sr-only" type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" data-avatar-file>
+                <span class="field__hint">JPG أو PNG أو WEBP · حتى 5 ميجابايت. هنفتح أداة قص قبل الحفظ.</span>
+            </div>
+            <div class="avatar-crop" data-avatar-crop hidden>
+                <div class="avatar-crop__head"><strong>قص الصورة الشخصية</strong><button class="text-action" type="button" data-avatar-crop-cancel>إلغاء</button></div>
+                <div class="avatar-crop__viewport" data-avatar-viewport><img alt="معاينة قص الصورة" data-avatar-crop-image></div>
+                <label class="field"><span class="field__label">تكبير الصورة</span><input type="range" min="1" max="3" step="0.01" value="1" data-avatar-zoom></label>
+                <p class="field__hint">اسحب الصورة داخل الإطار لاختيار الجزء الظاهر.</p>
+                <button class="btn btn--secondary btn--block" type="button" data-avatar-crop-apply>اعتماد القص</button>
+            </div>
+            <p class="field__error" data-avatar-error role="status" aria-live="polite"></p>
+            <button class="btn btn--primary btn--block" type="submit">حفظ الصورة الشخصية</button>
+        </form>
+    </section>
+
+    <section class="help-section" aria-labelledby="settings-help-requests-title">
+        <div class="help-section__head"><div><h2 class="help-section__title" id="settings-help-requests-title">طلبات المساعدة الشخصية</h2><p class="help-section__intro">أنت المتحكم في استقبال طلبات المساعدة من الأعضاء.</p></div></div>
+        <form class="card help-availability" method="post" action="<?= $e($baseUrl) ?>/settings/help-availability">
+            <?= $csrf() ?>
+            <label class="check">
+                <input type="checkbox" name="accept_help_requests" value="1" <?= (int) ($currentUser['accept_help_requests'] ?? 1) === 1 ? 'checked' : '' ?>>
+                <span><strong>استقبال طلبات المساعدة الشخصية</strong><small class="muted">عند إيقاف الاختيار، لن يظهر زر طلب المساعدة في ملفك العام.</small></span>
+            </label>
+            <button class="btn btn--secondary" type="submit">حفظ التفضيل</button>
+        </form>
     </section>
 
     <section class="help-section" aria-labelledby="settings-help-title">

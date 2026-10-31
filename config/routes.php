@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 use App\Controllers\AuthController;
 use App\Controllers\AccountController;
+use App\Controllers\AvatarController;
+use App\Controllers\HelpRequestController;
+use App\Controllers\DraftController;
+use App\Controllers\DeviceCatalogController;
 use App\Controllers\AdminUserController;
 use App\Controllers\AdminFeaturedPostsController;
 use App\Controllers\AdminUpdateController;
@@ -20,18 +24,36 @@ use App\Controllers\SkillTestController;
 use App\Core\Router;
 
 return static function (Router $router): void {
-    $router->get('/', [HomeController::class, 'index']);
-    $router->get('/help', [PageController::class, 'help']);
-    $router->get('/policies', [PageController::class, 'policies']);
+    $router->getPublic('/', [HomeController::class, 'index']);
+    $router->getPublic('/help', [PageController::class, 'help']);
+    $router->getPublic('/policies', [PageController::class, 'policies']);
     $router->get('/settings', [PageController::class, 'settings']);
+    $router->post('/settings/help-availability', [PageController::class, 'saveHelpAvailability']);
     $router->get('/feed', [FeedController::class, 'index']);
     $router->get('/workbench', [WorkbenchController::class, 'index']);
     $router->get('/my-posts', [MyPostsController::class, 'index']);
     $router->get('/issues/create', [IssueController::class, 'create']);
     $router->post('/issues/create', [IssueController::class, 'create']);
 
+    $router->get('/drafts', [DraftController::class, 'index']);
+    $router->post('/drafts/save', [DraftController::class, 'save']);
+    $router->get('/drafts/{draftId}/data', [DraftController::class, 'data']);
+    $router->post('/drafts/{draftId}/media', [DraftController::class, 'upload']);
+    $router->post('/drafts/{draftId}/media/{mediaUuid}/rendered', [DraftController::class, 'uploadRendered']);
+    $router->post('/drafts/{draftId}/media/{mediaUuid}/editor', [DraftController::class, 'updateMediaEditor']);
+    $router->post('/drafts/{draftId}/media/{mediaUuid}/delete', [DraftController::class, 'deleteMedia']);
+    $router->get('/drafts/{draftId}/media/{mediaUuid}', [DraftController::class, 'media']);
+    $router->post('/drafts/{draftId}/delete', [DraftController::class, 'delete']);
+
+    $router->get('/devices/manufacturers', [DeviceCatalogController::class, 'manufacturers']);
+    $router->get('/devices/models', [DeviceCatalogController::class, 'models']);
+    $router->post('/devices/suggestions', [DeviceCatalogController::class, 'suggest']);
+    $router->get('/admin/device-model-suggestions', [DeviceCatalogController::class, 'adminIndex']);
+    $router->post('/admin/device-model-suggestions/{id}', [DeviceCatalogController::class, 'moderate']);
+
     $router->get('/issues/{id}', [IssueController::class, 'show']);
     $router->get('/attachments/{id}', [IssueController::class, 'attachment']);
+    $router->get('/issues/{id}/audio', [IssueController::class, 'audio']);
     $router->post('/issues/{id}/reply', [IssueController::class, 'reply']);
     $router->post('/issues/{id}/replies/{replyId}/edit', [IssueController::class, 'editReply']);
     $router->post('/issues/{id}/replies/{replyId}/delete', [IssueController::class, 'deleteReply']);
@@ -54,11 +76,11 @@ return static function (Router $router): void {
     $router->post('/push/subscribe', [PushController::class, 'subscribe']);
     $router->post('/push/unsubscribe', [PushController::class, 'unsubscribe']);
 
-    $router->get('/login', [AuthController::class, 'showLogin']);
-    $router->post('/login', [AuthController::class, 'login']);
-    $router->get('/register', [AuthController::class, 'showRegister']);
-    $router->post('/register', [AuthController::class, 'register']);
-    $router->get('/register/usernames', [AuthController::class, 'usernames']);
+    $router->getPublic('/login', [AuthController::class, 'showLogin']);
+    $router->postPublic('/login', [AuthController::class, 'login']);
+    $router->getPublic('/register', [AuthController::class, 'showRegister']);
+    $router->postPublic('/register', [AuthController::class, 'register']);
+    $router->getPublic('/register/usernames', [AuthController::class, 'usernames']);
     $router->post('/logout', [AuthController::class, 'logout']);
     $router->post('/account/deletion-request', [AccountController::class, 'requestDeletion']);
     $router->get('/skills/tests', [SkillTestController::class, 'index']);
@@ -76,7 +98,21 @@ return static function (Router $router): void {
     $router->post('/admin/users/{id}/status', [AdminUserController::class, 'setStatus']);
     $router->post('/admin/users/{id}/role', [AdminUserController::class, 'setRole']);
 
-    $router->get('/profile/{username}', [ProfileController::class, 'show']);
+    $router->getPublic('/profile/{username}', [ProfileController::class, 'show']);
+    $router->post('/profile/avatar', [AvatarController::class, 'update']);
+    $router->getPublic('/avatar/{userId}', [AvatarController::class, 'show']);
+    $router->get('/help-requests', [HelpRequestController::class, 'index']);
+    $router->get('/help-requests/attachments/{id}', [HelpRequestController::class, 'attachment']);
+    $router->get('/help-requests/{id}', [HelpRequestController::class, 'show']);
+    $router->post('/help-requests/create', [HelpRequestController::class, 'create']);
+    $router->post('/help-requests/{id}/accept', [HelpRequestController::class, 'accept']);
+    $router->post('/help-requests/{id}/decline', [HelpRequestController::class, 'decline']);
+    $router->post('/help-requests/{id}/messages', [HelpRequestController::class, 'send']);
+    $router->post('/help-requests/{id}/close', [HelpRequestController::class, 'close']);
+    $router->post('/help-requests/{id}/publication', [HelpRequestController::class, 'proposePublication']);
+    $router->post('/help-publications/{id}/respond', [HelpRequestController::class, 'respondPublication']);
+    $router->getPublic('/help-library', [HelpRequestController::class, 'library']);
+    $router->getPublic('/help-library/{id}', [HelpRequestController::class, 'publicPost']);
 
     // Navigation targets that are not built yet.
     foreach (['/search', '/market'] as $path) {

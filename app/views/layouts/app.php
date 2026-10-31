@@ -18,6 +18,12 @@ if (!isset($unreadCount)) {
 $headerNotifications = is_array($currentUser) && isset($currentUser['id'])
     ? \App\Models\Notification::forUser((int) $currentUser['id'], 5)
     : [];
+$headerHelpRequests = is_array($currentUser) && isset($currentUser['id'])
+    ? \App\Models\HelpRequest::forUser((int) $currentUser['id'], 'all', 5)
+    : [];
+$unreadHelpCount = is_array($currentUser) && isset($currentUser['id'])
+    ? \App\Models\HelpRequest::unreadCount((int) $currentUser['id'])
+    : 0;
 ?>
 <!DOCTYPE html>
 <html lang="<?= $e($lang) ?>" dir="<?= $e($dir) ?>">
@@ -45,6 +51,8 @@ $headerNotifications = is_array($currentUser) && isset($currentUser['id'])
 
 </div>
 <script src="<?= $e($baseUrl) ?>/js/content-editor.js" defer></script>
+<script src="<?= $e($baseUrl) ?>/js/image-viewer.js" defer></script>
+<script src="<?= $e($baseUrl) ?>/js/avatar-crop.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/pwa-guide.js" defer></script>
 </body>

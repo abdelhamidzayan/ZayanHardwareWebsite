@@ -5,26 +5,211 @@ namespace App\Services;
 
 use App\Models\Database;
 
-/** Persistent rate limiting on top of the rate_limit_hits table (works across requests). */
 final class RateLimiter
 {
-    public static function tooMany(string $bucket, int $max, int $windowSeconds): bool
-    {
-        $sql = 'SELECT COUNT(*) FROM rate_limit_hits WHERE bucket = ? AND hit_at > (UTC_TIMESTAMP() - INTERVAL '
-            . (int) $windowSeconds . ' SECOND)';
-        $stmt = Database::connection()->prepare($sql);
-        $stmt->execute([$bucket]);
+    /** Atomically limits an action per account and per source IP. */
+    public static function allowForUser(
+        string $action,
+        int $userId,
+        int $max,
+        int $windowSeconds,
+        ?int $ipMax = null
+    ): bool {
+        self::validateAction($action);
+        if ($userId < 1) return false;
 
-        return (int) $stmt->fetchColumn() >= $max;
+        $max = max(1, min(1000, $max));
+        $ipMax = max(1, min(10000, $ipMax ?? ($max * 5)));
+        $ip = self::sourceIp();
+        return self::consume([
+            ['key' => $action . ':user:' . $userId, 'limit' => $max],
+            ['key' => $action . ':ip:' . hash('sha256', $ip), 'limit' => $ipMax],
+        ], $windowSeconds);
     }
 
-    public static function hit(string $bucket): void
+    /** Atomically limits public/anonymous actions by source IP without storing the raw IP. */
+    public static function allowForIp(string $action, int $max, int $windowSeconds): bool
     {
-        $pdo = Database::connection();
-        $pdo->prepare('INSERT INTO rate_limit_hits (bucket, hit_at) VALUES (?, UTC_TIMESTAMP())')->execute([$bucket]);
+        self::validateAction($action);
+        $max = max(1, min(10000, $max));
+        return self::consume([
+            ['key' => $action . ':ip:' . hash('sha256', self::sourceIp()), 'limit' => $max],
+        ], $windowSeconds);
+    }
 
-        if (random_int(1, 100) === 1) {
-            $pdo->exec('DELETE FROM rate_limit_hits WHERE hit_at < (UTC_TIMESTAMP() - INTERVAL 1 DAY)');
+    /**
+     * Run an authentication check while both failure buckets are locked.
+     * Only invalid credentials consume a hit; successful logins do not.
+     *
+     * @return array{allowed:bool,result:?array}
+     */
+    public static function attemptForIpAndIdentifier(
+        string $action,
+        string $identifier,
+        int $ipMax,
+        int $identifierMax,
+        int $windowSeconds,
+        callable $attempt
+    ): array {
+        self::validateAction($action);
+        $ipMax = max(1, min(10000, $ipMax));
+        $identifierMax = max(1, min(1000, $identifierMax));
+        $windowSeconds = max(1, min(86400, $windowSeconds));
+        $buckets = [
+            ['key' => $action . ':ip:' . hash('sha256', self::sourceIp()), 'limit' => $ipMax],
+            ['key' => $action . ':identifier:' . hash('sha256', strtolower(trim($identifier))), 'limit' => $identifierMax],
+        ];
+        usort($buckets, static fn (array $a, array $b): int => strcmp($a['key'], $b['key']));
+
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $insert = $pdo->prepare(
+                'INSERT IGNORE INTO rate_limit_buckets (bucket, window_started_at, hit_count)
+                 VALUES (?, UTC_TIMESTAMP(), 0)'
+            );
+            foreach ($buckets as $bucket) $insert->execute([$bucket['key']]);
+
+            $select = $pdo->prepare(
+                'SELECT hit_count,
+                        (window_started_at <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ' . $windowSeconds . ' SECOND)) AS expired
+                 FROM rate_limit_buckets WHERE bucket = ? FOR UPDATE'
+            );
+            $states = [];
+            foreach ($buckets as $bucket) {
+                $select->execute([$bucket['key']]);
+                $row = $select->fetch();
+                if (!$row) throw new \RuntimeException('Unable to lock authentication rate-limit bucket.');
+                $states[] = [
+                    'key' => $bucket['key'],
+                    'limit' => $bucket['limit'],
+                    'count' => (int) $row['hit_count'],
+                    'expired' => (int) $row['expired'] === 1,
+                ];
+            }
+
+            foreach ($states as $state) {
+                if (!$state['expired'] && $state['count'] >= $state['limit']) {
+                    $pdo->commit();
+                    return ['allowed' => false, 'result' => null];
+                }
+            }
+
+            $result = $attempt();
+            if (is_array($result) && ($result['error'] ?? null) === 'invalid') {
+                $reset = $pdo->prepare(
+                    'UPDATE rate_limit_buckets
+                     SET window_started_at = UTC_TIMESTAMP(), hit_count = 1
+                     WHERE bucket = ?'
+                );
+                $increment = $pdo->prepare(
+                    'UPDATE rate_limit_buckets SET hit_count = hit_count + 1 WHERE bucket = ?'
+                );
+                foreach ($states as $state) {
+                    if ($state['expired']) $reset->execute([$state['key']]);
+                    else $increment->execute([$state['key']]);
+                }
+            }
+
+            $pdo->commit();
+            self::cleanupStaleBuckets($pdo);
+            return ['allowed' => true, 'result' => is_array($result) ? $result : null];
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
         }
+    }
+
+    private static function cleanupStaleBuckets(\PDO $pdo): void
+    {
+        if (mt_rand(1, 100) !== 1) return;
+        try {
+            $pdo->exec(
+                'DELETE FROM rate_limit_buckets
+                 WHERE updated_at < (UTC_TIMESTAMP() - INTERVAL 2 DAY)'
+            );
+        } catch (\Throwable $cleanupError) {
+            \App\Core\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
+        }
+    }
+
+    private static function validateAction(string $action): void
+    {
+        if (!preg_match('/^[a-z][a-z0-9_.-]{1,47}$/', $action)) {
+            throw new \InvalidArgumentException('Invalid rate-limit action.');
+        }
+    }
+
+    private static function sourceIp(): string
+    {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        return is_string($ip) && $ip !== '' ? $ip : 'unknown';
+    }
+
+    /**
+     * Consume one or more shared fixed-window buckets in a single transaction.
+     * Bucket rows are locked in stable order to reduce deadlock risk.
+     *
+     * @param list<array{key:string,limit:int}> $buckets
+     */
+    private static function consume(array $buckets, int $windowSeconds): bool
+    {
+        $windowSeconds = max(1, min(86400, $windowSeconds));
+        usort($buckets, static fn (array $a, array $b): int => strcmp($a['key'], $b['key']));
+
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $insert = $pdo->prepare(
+                'INSERT IGNORE INTO rate_limit_buckets (bucket, window_started_at, hit_count)
+                 VALUES (?, UTC_TIMESTAMP(), 0)'
+            );
+            foreach ($buckets as $bucket) $insert->execute([$bucket['key']]);
+
+            $select = $pdo->prepare(
+                'SELECT hit_count,
+                        (window_started_at <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ' . $windowSeconds . ' SECOND)) AS expired
+                 FROM rate_limit_buckets WHERE bucket = ? FOR UPDATE'
+            );
+            $states = [];
+            foreach ($buckets as $bucket) {
+                $select->execute([$bucket['key']]);
+                $row = $select->fetch();
+                if (!$row) throw new \RuntimeException('Unable to lock rate-limit bucket.');
+                $states[] = [
+                    'key' => $bucket['key'],
+                    'limit' => $bucket['limit'],
+                    'count' => (int) $row['hit_count'],
+                    'expired' => (int) $row['expired'] === 1,
+                ];
+            }
+
+            foreach ($states as $state) {
+                if (!$state['expired'] && $state['count'] >= $state['limit']) {
+                    $pdo->commit();
+                    return false;
+                }
+            }
+
+            $reset = $pdo->prepare(
+                'UPDATE rate_limit_buckets
+                 SET window_started_at = UTC_TIMESTAMP(), hit_count = 1
+                 WHERE bucket = ?'
+            );
+            $increment = $pdo->prepare(
+                'UPDATE rate_limit_buckets SET hit_count = hit_count + 1 WHERE bucket = ?'
+            );
+            foreach ($states as $state) {
+                if ($state['expired']) $reset->execute([$state['key']]);
+                else $increment->execute([$state['key']]);
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+
+        self::cleanupStaleBuckets($pdo);
+        return true;
     }
 }

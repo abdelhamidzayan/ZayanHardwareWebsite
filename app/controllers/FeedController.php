@@ -20,10 +20,13 @@ final class FeedController extends Controller
         foreach ($issues as &$issue) {
             $name = trim((string) ($issue['author'] ?? ''));
             $issue['initials'] = $name !== '' ? mb_substr($name, 0, 2, 'UTF-8') : '؟';
+            $issue['avatar_src'] = !empty($issue['author_avatar_path'])
+                ? '/avatar/' . (int) $issue['user_id']
+                : '/assets/avatars/' . rawurlencode((string) ($issue['author_avatar_key'] ?? 'technician-blue')) . '.svg';
             $issue['expert'] = in_array($issue['role'] ?? '', ['admin', 'moderator'], true);
             $issue['type_label'] = match ($issue['content_type'] ?? 'help_request') {
                 'technical_post' => 'معلومة فنية',
-                'discussion' => 'نقاش عام',
+                'discussion' => 'معلومة فنية',
                 default => 'طلب مساعدة',
             };
             $issue['role'] = match ($issue['role'] ?? '') {
@@ -49,8 +52,14 @@ final class FeedController extends Controller
             $issue['excerpt'] = mb_strimwidth($description, 0, 180, '…', 'UTF-8');
             $issue['solved'] = ($issue['status'] ?? '') === 'resolved';
             $issue['comments'] = (int) ($issue['comments'] ?? 0);
-            $issue['audio'] = '';
-            $issue['audio_src'] = '';
+            $issue['audio'] = !empty($issue['audio_path'])
+                ? gmdate('i:s', (int) round(max(0, (
+                    (int) ($issue['audio_trim_end_ms'] ?? $issue['audio_duration_ms'] ?? 0)
+                    - (int) ($issue['audio_trim_start_ms'] ?? 0)
+                )) / 1000))
+                : '';
+            $issue['audio_src'] = !empty($issue['audio_path']) ? '/issues/' . (int) $issue['id'] . '/audio' : '';
+            if ($issue['audio'] && $issue['excerpt'] === '') $issue['excerpt'] = 'تسجيل صوتي مرفق';
         }
         unset($issue);
 

@@ -1,0 +1,563 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use App\Core\App;
+use App\Core\Controller;
+use App\Core\Csrf;
+use App\Core\Response;
+use App\Models\PostDraft;
+use App\Services\AuthService;
+use App\Services\ImageUploadPolicy;
+use App\Services\RateLimiter;
+
+final class DraftController extends Controller
+{
+    public function index(): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return $this->redirect('/login');
+
+        return $this->view('drafts/index', [
+            'title' => 'مسوداتي',
+            'active' => 'profile',
+            'currentUser' => $user,
+            'drafts' => PostDraft::listForUser((int) $user['id']),
+        ]);
+    }
+
+    public function save(): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!Csrf::verify($this->request->input('_token'))) {
+            return Response::json(['error' => 'csrf_failed', 'message' => 'انتهت صلاحية الجلسة. حدّث الصفحة وحاول مرة أخرى.'], 419);
+        }
+
+        $payloadJson = $this->request->input('payload_json');
+        if (!is_string($payloadJson) || strlen($payloadJson) > 120000) {
+            return Response::json(['error' => 'payload_invalid', 'message' => 'حجم المسودة أكبر من المسموح.'], 422);
+        }
+
+        try {
+            $payload = json_decode($payloadJson, true, 32, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return Response::json(['error' => 'payload_invalid', 'message' => 'بيانات المسودة غير صالحة.'], 422);
+        }
+        if (!is_array($payload)) {
+            return Response::json(['error' => 'payload_invalid'], 422);
+        }
+
+        $payload = $this->normalizePayload($payload);
+        $draftId = $this->request->input('draft_id');
+        $draftId = is_string($draftId) && preg_match('/^[a-f0-9-]{36}$/i', $draftId) ? strtolower($draftId) : null;
+        $revision = filter_var($this->request->input('revision', 0), FILTER_VALIDATE_INT);
+        if ($revision === false || $revision < 0) {
+            return Response::json(['error' => 'revision_invalid'], 422);
+        }
+
+        $result = PostDraft::save($draftId, (int) $user['id'], $payload, $revision);
+        if ($result['conflict']) {
+            return Response::json([
+                'error' => 'revision_conflict',
+                'message' => 'المسودة اتعدلت من جهاز آخر. احتفظنا بنسختك ولم نستبدل النسخة الأحدث.',
+                'server' => $result,
+            ], 409);
+        }
+
+        return Response::json([
+            'id' => $result['id'],
+            'revision' => $result['revision'],
+            'saved_at' => gmdate('c'),
+        ]);
+    }
+
+    public function data(string $draftId): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        $draft = PostDraft::findForUser($draftId, (int) $user['id']);
+        if (!$draft) return Response::json(['error' => 'draft_not_found'], 404);
+
+        $media = [];
+        foreach ($draft['media'] as $item) {
+            $media[] = [
+                'media_uuid' => $item['media_uuid'],
+                'media_kind' => $item['media_kind'],
+                'mime_type' => $item['mime_type'],
+                'file_size' => (int) $item['file_size'],
+                'sort_order' => (int) $item['sort_order'],
+                'duration_ms' => $item['duration_ms'] !== null ? (int) $item['duration_ms'] : null,
+                'editor_state' => $item['editor_state'],
+                'url' => $this->mediaUrl($draftId, (string) $item['media_uuid'], !empty($item['rendered_path'])),
+                'original_url' => $this->mediaUrl($draftId, (string) $item['media_uuid']),
+            ];
+        }
+
+        return Response::json([
+            'id' => $draft['id'],
+            'revision' => (int) $draft['revision'],
+            'payload' => $draft['payload'],
+            'media' => $media,
+            'updated_at' => $draft['updated_at'],
+        ]);
+    }
+
+    public function upload(string $draftId): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!Csrf::verify($this->request->input('_token'))) {
+            return Response::json(['error' => 'csrf_failed'], 419);
+        }
+        if (!RateLimiter::allowForUser('draft.upload', (int) $user['id'], 12, 600, 50)) {
+            return Response::json(['error' => 'rate_limited', 'message' => 'وصلت للحد المسموح لعمليات الرفع. انتظر قليلًا ثم حاول مرة أخرى.'], 429);
+        }
+        $draft = PostDraft::findForUser($draftId, (int) $user['id']);
+        if (!$draft) return Response::json(['error' => 'draft_not_found'], 404);
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) {
+            return Response::json(['error' => 'revision_invalid'], 422);
+        }
+
+        $files = $_FILES['media'] ?? null;
+        if (!is_array($files) || !isset($files['name'])) {
+            return Response::json(['error' => 'file_missing'], 422);
+        }
+
+        $names = is_array($files['name']) ? $files['name'] : [$files['name']];
+        $tmpNames = is_array($files['tmp_name'] ?? null) ? $files['tmp_name'] : [$files['tmp_name'] ?? ''];
+        $errors = is_array($files['error'] ?? null) ? $files['error'] : [$files['error'] ?? UPLOAD_ERR_NO_FILE];
+        $sizes = is_array($files['size'] ?? null) ? $files['size'] : [$files['size'] ?? 0];
+
+        $existing = $draft['media'];
+        $existingNonAudio = count(array_filter(
+            $existing,
+            static fn (array $item): bool => $item['media_kind'] !== 'audio'
+        ));
+        $existingAudio = count(array_filter($existing, static fn (array $item): bool => $item['media_kind'] === 'audio')) > 0;
+        $privateRoot = App::root('storage/private/drafts/' . $draftId);
+        if (!is_dir($privateRoot) && !mkdir($privateRoot, 0750, true) && !is_dir($privateRoot)) {
+            return Response::json(['error' => 'storage_unavailable'], 500);
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $saved = [];
+        $currentRevision = $expectedRevision;
+        try {
+            foreach ($names as $index => $name) {
+                $error = (int) ($errors[$index] ?? UPLOAD_ERR_NO_FILE);
+                if ($error === UPLOAD_ERR_NO_FILE) continue;
+                $tmp = (string) ($tmpNames[$index] ?? '');
+                $size = (int) ($sizes[$index] ?? 0);
+                if ($error !== UPLOAD_ERR_OK || $tmp === '' || !is_uploaded_file($tmp) || $size < 1) {
+                    throw new \DomainException('upload_invalid');
+                }
+
+                $mime = $finfo->file($tmp) ?: '';
+                $kind = '';
+                $extension = '';
+                $maxBytes = 0;
+                if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                    $kind = 'image';
+                    $extension = match ($mime) { 'image/jpeg' => 'jpg', 'image/png' => 'png', default => 'webp' };
+                    $maxBytes = 12 * 1024 * 1024;
+                    try {
+                        ImageUploadPolicy::inspect($tmp);
+                    } catch (\DomainException $error) {
+                        throw new \DomainException('image_dimensions_invalid', 0, $error);
+                    }
+                } elseif (in_array($mime, ['video/mp4', 'video/webm', 'video/quicktime'], true)) {
+                    $kind = 'video';
+                    $extension = match ($mime) { 'video/mp4' => 'mp4', 'video/webm' => 'webm', default => 'mov' };
+                    $maxBytes = 50 * 1024 * 1024;
+                } elseif (in_array($mime, ['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/aac'], true)) {
+                    $kind = 'audio';
+                    $extension = match ($mime) {
+                        'audio/webm' => 'webm', 'audio/ogg' => 'ogg', 'audio/mpeg' => 'mp3',
+                        'audio/wav', 'audio/x-wav' => 'wav', 'audio/mp4' => 'm4a', default => 'aac'
+                    };
+                    $maxBytes = 25 * 1024 * 1024;
+                } else {
+                    throw new \DomainException('mime_invalid');
+                }
+                if ($size > $maxBytes) throw new \DomainException('file_too_large');
+                $savedNonAudio = count(array_filter(
+                    $saved,
+                    static fn (array $item): bool => $item['kind'] !== 'audio'
+                ));
+                if ($kind !== 'audio' && $existingNonAudio + $savedNonAudio >= 8) {
+                    throw new \DomainException('media_limit');
+                }
+                if ($kind === 'audio' && ($existingAudio || count(array_filter($saved, static fn (array $item): bool => $item['kind'] === 'audio')) > 0)) {
+                    throw new \DomainException('single_audio_only');
+                }
+
+                $uuid = PostDraft::newId();
+                $filename = $uuid . '.' . $extension;
+                $destination = $privateRoot . DIRECTORY_SEPARATOR . $filename;
+                if (!move_uploaded_file($tmp, $destination)) throw new \DomainException('storage_failed');
+
+                $relativePath = 'drafts/' . $draftId . '/' . $filename;
+                $sha256 = hash_file('sha256', $destination);
+                if (!is_string($sha256)) {
+                    PostDraft::cleanupPrivateMedia($relativePath);
+                    throw new \DomainException('storage_failed');
+                }
+
+                try {
+                    $currentRevision = PostDraft::addMedia(
+                        $draftId,
+                        $uuid,
+                        $kind,
+                        $relativePath,
+                        $mime,
+                        $size,
+                        $sha256,
+                        null,
+                        count($existing) + count($saved),
+                        (int) $user['id'],
+                        $currentRevision
+                    );
+                } catch (\Throwable $e) {
+                    $cleanupState = PostDraft::cleanupUploadIfUnreferenced(
+                        $draftId,
+                        $uuid,
+                        (int) $user['id'],
+                        $relativePath,
+                        'storage_path'
+                    );
+                    if ($cleanupState === 'referenced') {
+                        $currentRevision++;
+                        $saved[] = [
+                            'media_uuid' => $uuid,
+                            'media_kind' => $kind,
+                            'mime_type' => $mime,
+                            'file_size' => $size,
+                            'sort_order' => count($existing) + count($saved),
+                            'url' => $this->mediaUrl($draftId, $uuid),
+                            'original_url' => $this->mediaUrl($draftId, $uuid),
+                        ];
+                        continue;
+                    }
+                    throw $e;
+                }
+
+                $saved[] = [
+                    'media_uuid' => $uuid,
+                    'media_kind' => $kind,
+                    'mime_type' => $mime,
+                    'file_size' => $size,
+                    'sort_order' => count($existing) + count($saved),
+                    'url' => $this->mediaUrl($draftId, $uuid),
+                    'original_url' => $this->mediaUrl($draftId, $uuid),
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Remove media already stored by this request when any later file fails.
+            foreach ($saved as $item) {
+                PostDraft::deleteMediaForRollback($draftId, (string) $item['media_uuid'], (int) $user['id']);
+            }
+            if ($e instanceof \DomainException && $e->getMessage() === 'draft_revision_conflict') {
+                return $this->revisionConflict($draftId, (int) $user['id']);
+            }
+            if (!$e instanceof \DomainException) {
+                throw $e;
+            }
+            $message = match ($e->getMessage()) {
+                'media_limit' => 'الحد الأقصى 8 صور وفيديوهات، ويسمح بتسجيل صوتي واحد منفصل.',
+                'mime_invalid' => 'نوع الملف غير مدعوم. استخدم صور JPG/PNG/WEBP أو فيديو MP4/WEBM أو تسجيلًا صوتيًا.',
+                'file_too_large' => 'حجم الملف تجاوز الحد المسموح لنوعه.',
+                'image_dimensions_invalid' => 'أبعاد الصورة غير صالحة أو كبيرة جدًا.',
+                'single_audio_only' => 'مسموح بتسجيل صوتي واحد فقط لكل منشور.',
+                'storage_unavailable', 'storage_failed' => 'تعذر حفظ الملف على الخادم.',
+                default => 'تعذر رفع الملف. حاول مرة أخرى.',
+            };
+            return Response::json([
+                'error' => $e->getMessage(),
+                'message' => $message,
+                'revision' => PostDraft::currentRevision($draftId, (int) $user['id']),
+            ], 422);
+        }
+
+        return Response::json(['media' => $saved, 'revision' => $currentRevision], 201);
+    }
+
+    public function uploadRendered(string $draftId, string $mediaUuid): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
+
+        if (!RateLimiter::allowForUser('draft.rendered_upload', (int) $user['id'], 20, 600, 80)) {
+            return Response::json(['error' => 'rate_limited', 'message' => 'وصلت للحد المسموح لحفظ الصور المعدلة. حاول مرة أخرى بعد قليل.'], 429);
+        }
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
+        $media = PostDraft::ownedMedia($draftId, $mediaUuid, (int) $user['id']);
+        if (!$media || $media['media_kind'] !== 'image') return Response::json(['error' => 'media_not_found'], 404);
+        $file = $_FILES['rendered'] ?? null;
+        if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
+            || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+            return Response::json(['error' => 'rendered_file_missing'], 422);
+        }
+
+        $tmp = (string) $file['tmp_name'];
+        $size = (int) ($file['size'] ?? 0);
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
+        if ($size < 1 || $size > 12 * 1024 * 1024
+            || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            return Response::json(['error' => 'rendered_file_invalid', 'message' => 'نسخة الصورة المعدلة غير صالحة أو أكبر من 12 ميجابايت.'], 422);
+        }
+        try {
+            ImageUploadPolicy::inspect($tmp);
+        } catch (\DomainException) {
+            return Response::json(['error' => 'rendered_image_dimensions_invalid', 'message' => 'أبعاد الصورة المعدلة أكبر من الحد المسموح.'], 422);
+        }
+
+        $directory = App::root('storage/private/drafts/' . $draftId);
+        if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
+            return Response::json(['error' => 'storage_unavailable'], 500);
+        }
+        $extension = match ($mime) { 'image/jpeg' => 'jpg', 'image/png' => 'png', default => 'webp' };
+        $filename = $mediaUuid . '-rendered-' . bin2hex(random_bytes(5)) . '.' . $extension;
+        $destination = $directory . DIRECTORY_SEPARATOR . $filename;
+        if (!move_uploaded_file($tmp, $destination)) return Response::json(['error' => 'storage_failed'], 500);
+        $relative = 'drafts/' . $draftId . '/' . $filename;
+        $relative = 'drafts/' . $draftId . '/' . $filename;
+        $sha = hash_file('sha256', $destination);
+        if (!is_string($sha)) {
+            PostDraft::cleanupPrivateMedia($relative);
+            return Response::json(['error' => 'save_failed'], 500);
+        }
+        try {
+            $newRevision = PostDraft::setRenderedPath(
+                $draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha, $expectedRevision
+            );
+        } catch (\Throwable $error) {
+            $cleanupState = PostDraft::cleanupUploadIfUnreferenced(
+                $draftId,
+                $mediaUuid,
+                (int) $user['id'],
+                $relative,
+                'rendered_path'
+            );
+            if ($cleanupState === 'referenced') {
+                $newRevision = $expectedRevision + 1;
+            } elseif ($cleanupState === 'unknown') {
+                App::logException('ERROR', 'draft.rendered_upload_outcome_unknown', $error, [
+                    'draft_id' => $draftId,
+                    'media_uuid' => $mediaUuid,
+                    'user_id' => (int) $user['id'],
+                ]);
+                return Response::json([
+                    'error' => 'save_outcome_unknown',
+                    'message' => 'تعذر تأكيد نتيجة الحفظ. احتفظنا بالملف لحين المراجعة؛ حدّث المسودة قبل إعادة الرفع.',
+                ], 503);
+            } elseif ($error instanceof \DomainException && $error->getMessage() === 'draft_revision_conflict') {
+                return $this->revisionConflict($draftId, (int) $user['id']);
+            } else {
+                throw $error;
+            }
+        }
+        if ($newRevision === null) {
+            PostDraft::cleanupPrivateMedia($relative);
+            return Response::json(['error' => 'media_not_found'], 404);
+        }
+        if (!empty($media['rendered_path'])) {
+            PostDraft::cleanupPrivateMedia((string) $media['rendered_path']);
+        }
+
+        return Response::json([
+            'saved' => true,
+            'revision' => $newRevision,
+            'rendered_url' => $this->mediaUrl($draftId, $mediaUuid, true),
+            'original_url' => $this->mediaUrl($draftId, $mediaUuid),
+        ]);
+    }
+
+    public function updateMediaEditor(string $draftId, string $mediaUuid): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
+
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
+
+        $stateJson = $this->request->input('editor_state');
+        if (!is_string($stateJson) || strlen($stateJson) > 350000) {
+            return Response::json(['error' => 'editor_state_invalid'], 422);
+        }
+        try {
+            $state = json_decode($stateJson, true, 32, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return Response::json(['error' => 'editor_state_invalid'], 422);
+        }
+        if (!is_array($state)) return Response::json(['error' => 'editor_state_invalid'], 422);
+
+        $sortOrder = filter_var($this->request->input('sort_order', 0), FILTER_VALIDATE_INT);
+        if ($sortOrder === false || $sortOrder < 0 || $sortOrder > 100) return Response::json(['error' => 'sort_order_invalid'], 422);
+
+        try {
+            $newRevision = PostDraft::updateMediaEditorState(
+                $draftId, $mediaUuid, (int) $user['id'], $state, $sortOrder, $expectedRevision
+            );
+        } catch (\DomainException $e) {
+            if ($e->getMessage() === 'draft_revision_conflict') return $this->revisionConflict($draftId, (int) $user['id']);
+            if ($e->getMessage() === 'draft_not_found') return Response::json(['error' => 'draft_not_found'], 404);
+            throw $e;
+        }
+        if ($newRevision === null) return Response::json(['error' => 'media_not_found'], 404);
+        return Response::json(['saved' => true, 'revision' => $newRevision]);
+    }
+
+    public function deleteMedia(string $draftId, string $mediaUuid): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
+        $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
+        if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
+        try {
+            $newRevision = PostDraft::deleteMedia($draftId, $mediaUuid, (int) $user['id'], $expectedRevision);
+        } catch (\DomainException $e) {
+            if ($e->getMessage() === 'draft_revision_conflict') return $this->revisionConflict($draftId, (int) $user['id']);
+            if ($e->getMessage() === 'draft_not_found') return Response::json(['error' => 'draft_not_found'], 404);
+            throw $e;
+        }
+        if ($newRevision === null) return Response::json(['error' => 'media_not_found'], 404);
+        return Response::json(['deleted' => true, 'revision' => $newRevision]);
+    }
+
+    public function media(string $draftId, string $mediaUuid): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        $media = PostDraft::ownedMedia($draftId, $mediaUuid, (int) $user['id']);
+        if (!$media) return $this->notFound();
+
+        $variant = ($this->request->query['variant'] ?? '') === 'rendered' ? 'rendered' : 'original';
+        $relative = $variant === 'rendered' && !empty($media['rendered_path'])
+            ? (string) $media['rendered_path']
+            : (string) $media['storage_path'];
+        $root = realpath(App::root('storage/private'));
+        if ($root === false || $relative === '' || str_contains($relative, '..')) return $this->notFound();
+        $file = realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, ltrim($relative, '/')));
+        if ($file === false || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) || !is_file($file)) {
+            return $this->notFound();
+        }
+
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
+        $allowed = [
+            'image/jpeg', 'image/png', 'image/webp',
+            'video/mp4', 'video/webm', 'video/quicktime',
+            'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/aac',
+        ];
+        if (!in_array($mime, $allowed, true)) return $this->notFound();
+
+        $size = (int) filesize($file);
+        $start = 0;
+        $end = max(0, $size - 1);
+        $status = 200;
+        $range = $_SERVER['HTTP_RANGE'] ?? '';
+        $headers = [];
+        if (is_string($range) && preg_match('/^bytes=(\\d*)-(\\d*)$/', trim($range), $match) && $size > 0) {
+            if ($match[1] === '' && $match[2] !== '') {
+                $suffix = (int) $match[2];
+                $start = max(0, $size - $suffix);
+            } else {
+                $start = (int) $match[1];
+                if ($match[2] !== '') $end = min($end, (int) $match[2]);
+            }
+            if ($start > $end || $start >= $size) {
+                return new Response('', 416, ['Content-Range' => 'bytes */' . $size, 'Cache-Control' => 'private, no-store']);
+            }
+            $status = 206;
+            $headers['Content-Range'] = 'bytes ' . $start . '-' . $end . '/' . $size;
+        }
+        $length = $size > 0 ? $end - $start + 1 : 0;
+        $headers += [
+            'Content-Type' => $mime,
+            'Content-Length' => (string) $length,
+            'Content-Disposition' => 'inline; filename="draft-media-' . preg_replace('/[^a-f0-9-]/i', '', $mediaUuid) . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+            'Accept-Ranges' => 'bytes',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+        ];
+        return Response::streamFile($file, $start, $length, $status, $headers);
+    }
+
+    public function delete(string $draftId): Response
+    {
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
+        if (!PostDraft::deleteForUser($draftId, (int) $user['id'])) {
+            return Response::json(['error' => 'draft_not_found'], 404);
+        }
+        return Response::json(['deleted' => true]);
+    }
+
+    private function normalizePayload(array $payload): array
+    {
+        $stringFields = ['content_type', 'title', 'manufacturer_id', 'device_model_id', 'device_model_label', 'category', 'details_mode', 'description'];
+        $clean = [];
+        foreach ($stringFields as $field) {
+            $value = $payload[$field] ?? '';
+            $clean[$field] = is_scalar($value) ? trim((string) $value) : '';
+        }
+        if (!in_array($clean['content_type'], ['technical_post', 'help_request'], true)) $clean['content_type'] = 'technical_post';
+        if (!in_array($clean['details_mode'], ['text', 'audio'], true)) $clean['details_mode'] = 'text';
+        if (mb_strlen($clean['title']) > 180) $clean['title'] = mb_substr($clean['title'], 0, 180);
+        if (mb_strlen($clean['description']) > 10000) $clean['description'] = mb_substr($clean['description'], 0, 10000);
+
+        $steps = $payload['steps'] ?? [];
+        if (!is_array($steps)) $steps = [];
+        $clean['steps'] = [];
+        foreach (array_slice($steps, 0, 50) as $step) {
+            if (!is_string($step)) continue;
+            $step = trim($step);
+            if ($step !== '') $clean['steps'][] = mb_substr($step, 0, 2000);
+        }
+        $audio = $payload['audio'] ?? null;
+        if ($clean['details_mode'] === 'audio' && is_array($audio)) {
+            $duration = max(0, min(1800000, (int) ($audio['duration_ms'] ?? 0)));
+            $trimStart = max(0, min($duration, (int) ($audio['trim_start_ms'] ?? 0)));
+            $trimEnd = max($trimStart, min($duration, (int) ($audio['trim_end_ms'] ?? $duration)));
+            $waveform = $audio['waveform'] ?? [];
+            if (!is_array($waveform)) $waveform = [];
+            $clean['audio'] = [
+                'duration_ms' => $duration,
+                'trim_start_ms' => $trimStart,
+                'trim_end_ms' => $trimEnd,
+                'waveform' => array_slice(array_map(
+                    static fn ($value): float => max(0.0, min(1.0, (float) $value)),
+                    array_filter($waveform, static fn ($value): bool => is_numeric($value))
+                ), 0, 128),
+            ];
+        } else {
+            $clean['audio'] = null;
+        }
+
+        $clean['updated_at_local'] = gmdate('c');
+        return $clean;
+    }
+
+    private function revisionConflict(string $draftId, int $userId): Response
+    {
+        $draft = PostDraft::findForUser($draftId, $userId);
+        return Response::json([
+            'error' => 'revision_conflict',
+            'revision' => (int) ($draft['revision'] ?? 0),
+        ], 409);
+    }
+
+    private function mediaUrl(string $draftId, string $mediaUuid, bool $rendered = false): string
+    {
+        $url = \App\Core\Request::basePath() . '/drafts/' . rawurlencode($draftId) . '/media/' . rawurlencode($mediaUuid);
+        return $rendered ? $url . '?variant=rendered' : $url;
+    }
+}

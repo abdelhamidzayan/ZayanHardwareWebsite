@@ -25,6 +25,7 @@
   const contactLabel = form.querySelector('[data-contact-label]');
   const contactHint = form.querySelector('[data-contact-hint]');
   const password = form.querySelector('[data-password-input]');
+  const termsAcceptance = form.querySelector('[data-terms-acceptance]');
   const username = form.querySelector('[data-username-input]');
   const usernameStatus = form.querySelector('[data-username-status]');
   const suggestionBox = form.querySelector('[data-username-suggestions]');
@@ -291,6 +292,11 @@
       setFieldError('password', 'كلمة المرور طويلة جدًا (الحد 72 بايت)');
       valid = false;
     } else setFieldError('password', '');
+
+    if (!termsAcceptance || !termsAcceptance.checked) {
+      setFieldError('terms_acceptance', 'يجب الموافقة على قواعد المنصة وسياسة الخصوصية.');
+      valid = false;
+    } else setFieldError('terms_acceptance', '');
     return valid;
   };
 

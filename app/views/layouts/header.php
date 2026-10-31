@@ -1,16 +1,16 @@
 <?php
 /**
- * Shared authenticated header: brand, search, notifications and account menu.
+ * Shared authenticated header: brand, conversations, notifications and account menu.
  * Category chips intentionally removed to keep the feed focused.
  */
 $unreadCount = (int) ($unreadCount ?? 0);
-$searchQuery = $searchQuery ?? '';
 $currentUser = $currentUser ?? null;
 $displayName = trim((string) ($currentUser['display_name'] ?? 'حسابي'));
 $username = (string) ($currentUser['username'] ?? '');
 $profileHref = $username !== '' ? $baseUrl . '/profile/' . rawurlencode($username) : $baseUrl . '/login';
 $nameParts = preg_split('/\\s+/u', $displayName) ?: [$displayName];
 $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset($nameParts[1]) ? mb_substr($nameParts[1], 0, 1) : ''));
+$avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int) $currentUser['id'] : $baseUrl . '/assets/avatars/' . rawurlencode((string) ($currentUser['avatar_key'] ?? 'technician-blue')) . '.svg';
 ?>
 <header class="app-header">
     <div class="topbar">
@@ -21,65 +21,28 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
             <span class="brand__name"><?= $e($appName) ?></span>
         </a>
 
-        <form class="searchbar topbar__search" action="<?= $e($baseUrl) ?>/search" method="get" role="search">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input class="searchbar__input" type="search" name="q" maxlength="100"
-                   value="<?= $e($searchQuery) ?>"
-                   placeholder="ابحث عن عطل أو موديل"
-                   aria-label="بحث">
-        </form>
-
         <div class="header-actions">
-        <details class="notification-menu">
-            <summary class="icon-btn notification-menu__trigger" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
-                <svg class="icon notification-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/>
-                    <path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/>
-                </svg>
-                <?php if ($unreadCount > 0) : ?>
-                    <span class="notification-btn__count" aria-label="<?= $e((string) $unreadCount) ?> إشعارات غير مقروءة"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span>
-                <?php endif; ?>
-            </summary>
-            <div class="notification-menu__panel" aria-label="أحدث الإشعارات">
-                <div class="notification-menu__head">
-                    <strong>الإشعارات</strong>
-                    <?php if ($unreadCount > 0) : ?><span><?= $unreadCount > 99 ? '99+' : $unreadCount ?> غير مقروء</span><?php endif; ?>
-                </div>
-                <?php if (empty($headerNotifications)) : ?>
-                    <div class="notification-menu__empty">
-                        <span class="notification-menu__empty-icon" aria-hidden="true">✓</span>
-                        <strong>أنت على اطلاع</strong>
-                        <p>لا توجد إشعارات جديدة حاليًا.</p>
-                    </div>
-                <?php else : ?>
-                    <div class="notification-menu__list">
-                        <?php foreach ($headerNotifications as $headerNotification) : ?>
-                            <form class="notification-menu__form" method="post" action="<?= $e($baseUrl) ?>/notifications/<?= (int) $headerNotification['id'] ?>/open">
-                                <?= $csrf() ?>
-                                <button class="notification-menu__item <?= (int) $headerNotification['is_read'] === 1 ? 'is-read' : 'is-unread' ?>" type="submit">
-                                    <span class="notification-menu__item-mark" aria-hidden="true"></span>
-                                    <span class="notification-menu__item-copy">
-                                        <strong><?= $e($headerNotification['title']) ?></strong>
-                                        <span><?= $e($headerNotification['body']) ?></span>
-                                        <small><?= $e((string) ($headerNotification['actor_name'] ?? 'النظام')) ?> · <?= $e($headerNotification['created_at']) ?></small>
-                                    </span>
-                                </button>
-                            </form>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                <a class="notification-menu__all" href="<?= $e($baseUrl) ?>/notifications">عرض كل الإشعارات</a>
-            </div>
-        </details>
+        <a class="icon-btn header-page-link help-request-menu__trigger" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة<?= $unreadHelpCount > 0 ? ' (' . $unreadHelpCount . ' غير مقروءة)' : '' ?>">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 12h8M12 8v8"/></svg>
+            <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
+        </a>
+
+        <a class="icon-btn header-page-link notification-menu__trigger" href="<?= $e($baseUrl) ?>/notifications" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
+            <svg class="icon notification-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/>
+                <path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/>
+            </svg>
+            <?php if ($unreadCount > 0) : ?><span class="notification-btn__count" aria-label="<?= $e((string) $unreadCount) ?> إشعارات غير مقروءة"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span><?php endif; ?>
+        </a>
         <details class="account-menu">
             <summary class="account-menu__trigger" aria-label="قائمة الحساب">
-                <span class="avatar account-menu__avatar" aria-hidden="true"><?= $e($avatarInitials) ?></span>
+                <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="38" height="38">
                 <span class="account-menu__name"><?= $e($displayName) ?></span>
                 <svg class="icon account-menu__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
             </summary>
             <div class="account-menu__panel">
                 <div class="account-menu__identity">
-                    <span class="avatar" aria-hidden="true"><?= $e($avatarInitials) ?></span>
+                    <img class="avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="48" height="48">
                     <div class="account-menu__identity-copy">
                         <strong><?= $e($displayName) ?></strong>
                         <?php if ($username !== '') : ?><span dir="ltr">@<?= $e($username) ?></span><?php endif; ?>
@@ -89,9 +52,21 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg>
                     <span>طاولتي</span>
                 </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/drafts">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg>
+                    <span>مسوداتي</span>
+                </a>
                 <a class="account-menu__item" href="<?= $e($baseUrl) ?>/my-posts">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
                     <span>مشاركاتي</span>
+                </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help-requests">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg>
+                    <span>طلبات المساعدة الشخصية</span>
+                </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help-library">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M4 6h16M8 10h8M8 14h6"/></svg>
+                    <span>مكتبة المساعدات</span>
                 </a>
                 <details class="account-menu__group">
                     <summary class="account-menu__item account-menu__group-trigger">
@@ -119,6 +94,10 @@ $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset(
                     <span>الإعدادات</span>
                 </a>
                 <?php if (($currentUser['role'] ?? '') === 'admin') : ?>
+                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin/device-model-suggestions">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5M8 17h8"/></svg>
+                        <span>مراجعة موديلات الأجهزة</span>
+                    </a>
                     <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
                         <span>الإدارة</span>

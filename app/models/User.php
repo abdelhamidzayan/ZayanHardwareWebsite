@@ -52,7 +52,8 @@ final class User extends Model
     public static function findById(int $id): ?array
     {
         $stmt = self::db()->prepare(
-            'SELECT id, username, display_name, email, role, account_status, created_at
+            'SELECT id, username, display_name, email, role, account_status, created_at,
+                   avatar_key, avatar_path, accept_help_requests
              FROM users WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -63,6 +64,7 @@ final class User extends Model
     public static function findProfileByUsername(string $username): ?array
     {
         $sql = 'SELECT u.id, u.username, u.display_name, u.role, u.account_status, u.created_at,
+                       u.avatar_key, u.avatar_path, u.accept_help_requests,
                        p.device_focus,
                        (SELECT GROUP_CONCAT(uds.device_type ORDER BY FIELD(uds.device_type, \'iphone\', \'android\') SEPARATOR \',\')
                         FROM user_device_specializations uds WHERE uds.user_id = u.id) AS device_specializations,
@@ -88,22 +90,46 @@ final class User extends Model
         return $stmt->fetchAll();
     }
 
-    /** Save the account's username and core technician specialization from registration stage 2. */
+    /**
+     * Save registration-stage profile data using the normalized schema created
+     * by the registration and skills migrations. Assessment-backed ratings are
+     * historical evidence and are never deleted when self-selected skills change.
+     */
     public static function saveRegistrationStage2(int $userId, string $username, string $specialization, ?string $experience, array $devices): void
     {
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
             $pdo->prepare('UPDATE users SET username = ? WHERE id = ?')->execute([$username, $userId]);
-            $pdo->prepare('UPDATE technician_profiles SET specialization = ?, experience = ? WHERE user_id = ?')
-                ->execute([$specialization, $experience, $userId]);
+
+            $validDevices = array_values(array_unique(array_filter(
+                $devices,
+                static fn ($device): bool => is_string($device) && in_array($device, ['iphone', 'android'], true)
+            )));
+            $deviceFocus = $validDevices[0] ?? null;
+            $validExperience = in_array($experience, ['lt1', '1-3', '3-5', '5-10', 'gt10'], true)
+                ? $experience : null;
+
+            $pdo->prepare(
+                'UPDATE technician_profiles SET device_focus = ?, board_experience = ? WHERE user_id = ?'
+            )->execute([$deviceFocus, $validExperience, $userId]);
+
             $pdo->prepare('DELETE FROM user_device_specializations WHERE user_id = ?')->execute([$userId]);
             $deviceStmt = $pdo->prepare('INSERT INTO user_device_specializations (user_id, device_type) VALUES (?, ?)');
-            foreach (array_unique($devices) as $device) {
-                if (in_array($device, ['iphone', 'android'], true)) {
-                    $deviceStmt->execute([$userId, $device]);
-                }
+            foreach ($validDevices as $device) {
+                $deviceStmt->execute([$userId, $device]);
             }
+
+            $pdo->prepare('DELETE FROM user_skill_domains WHERE user_id = ?')->execute([$userId]);
+            $pdo->prepare(
+                'INSERT INTO user_skill_domains (user_id, skill_domain_id)
+                 SELECT ?, id FROM skill_domains WHERE slug = ? AND is_active = 1'
+            )->execute([$userId, $specialization]);
+            $pdo->prepare(
+                'INSERT IGNORE INTO user_skill_ratings (user_id, skill_domain_id, rating)
+                 SELECT ?, id, 0 FROM skill_domains WHERE slug = ? AND is_active = 1'
+            )->execute([$userId, $specialization]);
+
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -111,7 +137,24 @@ final class User extends Model
         }
     }
 
-    /** Save optional profile details; avatar upload is intentionally not implemented yet. */
+    /** Save the selected built-in avatar or a validated uploaded avatar path. */
+    public static function saveAvatar(int $userId, string $avatarKey, ?string $avatarPath = null): void
+    {
+        $allowed = ['technician-blue', 'technician-cyan', 'technician-violet', 'technician-green', 'technician-orange', 'technician-red'];
+        if ($avatarPath === null && !in_array($avatarKey, $allowed, true)) {
+            throw new \InvalidArgumentException('Invalid avatar key.');
+        }
+        self::db()->prepare('UPDATE users SET avatar_key = ?, avatar_path = ? WHERE id = ?')
+            ->execute([$avatarKey, $avatarPath, $userId]);
+    }
+
+    public static function setHelpRequestsEnabled(int $userId, bool $enabled): void
+    {
+        self::db()->prepare('UPDATE users SET accept_help_requests = ? WHERE id = ?')
+            ->execute([$enabled ? 1 : 0, $userId]);
+    }
+
+    /** Save optional profile details. */
     public static function saveOptionalProfile(int $userId, string $workshop, string $biography): void
     {
         self::db()->prepare('UPDATE technician_profiles SET workshop_name = ?, biography = ? WHERE user_id = ?')
@@ -144,10 +187,11 @@ final class User extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
-            $pdo->prepare('UPDATE technician_profiles SET workshop_name = ?, specialization = ? WHERE user_id = ?')
-                ->execute([$workshop !== '' ? $workshop : null, $skills[0] ?? null, $userId]);
+            $pdo->prepare('UPDATE technician_profiles SET workshop_name = ? WHERE user_id = ?')
+                ->execute([$workshop !== '' ? $workshop : null, $userId]);
             $pdo->prepare('DELETE FROM user_skill_domains WHERE user_id = ?')->execute([$userId]);
-            $pdo->prepare('DELETE FROM user_skill_ratings WHERE user_id = ?')->execute([$userId]);
+            // Ratings are backed by approved assessments. Editing the self-selected
+            // skill list must never erase earned assessment history or reset scores.
             $domainStmt = $pdo->prepare('INSERT INTO user_skill_domains (user_id, skill_domain_id) SELECT ?, id FROM skill_domains WHERE slug = ? AND is_active = 1');
             $ratingStmt = $pdo->prepare('INSERT IGNORE INTO user_skill_ratings (user_id, skill_domain_id, rating) SELECT ?, id, 0 FROM skill_domains WHERE slug = ? AND is_active = 1');
             foreach (array_unique($skills) as $skill) {
@@ -208,6 +252,14 @@ final class User extends Model
                     $deviceStmt->execute([$id, $device]);
                 }
             }
+
+            $pdo->prepare(
+                'INSERT INTO terms_acceptances (user_id, terms_version, ip_hash) VALUES (?, ?, ?)'
+            )->execute([
+                $id,
+                (string) ($account['terms_version'] ?? ''),
+                $account['terms_ip_hash'] ?? null,
+            ]);
 
             $pdo->commit();
             return $id;

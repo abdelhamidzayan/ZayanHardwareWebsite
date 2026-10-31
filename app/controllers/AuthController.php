@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\App;
 use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Response;
@@ -25,6 +26,7 @@ final class AuthController extends Controller
     public function login(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
+            App::security('auth.csrf.rejected', ['ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
 
             return $this->redirect('/login');
@@ -33,32 +35,42 @@ final class AuthController extends Controller
         $identifier = $this->text('identifier');
         $password   = $this->text('password');
 
-        $ipBucket = 'login:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-        $idBucket = 'login:id:' . hash('sha256', strtolower(trim($identifier)));
-        if (RateLimiter::tooMany($ipBucket, 20, 900) || RateLimiter::tooMany($idBucket, 5, 900)) {
+        $guardedAttempt = RateLimiter::attemptForIpAndIdentifier(
+            'auth.login',
+            $identifier,
+            20,
+            5,
+            900,
+            static fn (): array => AuthService::attempt($identifier, $password)
+        );
+        if (!$guardedAttempt['allowed']) {
+            App::security('auth.login.rate_limited', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد 15 دقيقة.');
-
             return $this->redirect('/login');
         }
 
-        $result = AuthService::attempt($identifier, $password);
-
+        $result = $guardedAttempt['result'] ?? ['user' => null, 'error' => 'invalid'];
         if ($result['error'] === 'invalid') {
-            RateLimiter::hit($ipBucket);
-            RateLimiter::hit($idBucket);
+            App::security('auth.login.failed', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'بيانات الدخول غير صحيحة.');
-
             return $this->redirect('/login');
         }
         if ($result['error'] === 'blocked') {
+            App::security('auth.login.blocked_account', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'هذا الحساب موقوف. تواصل مع الإدارة.');
-
             return $this->redirect('/login');
         }
 
         $user = $result['user'];
         User::markLoggedIn((int) $user['id'], $user['new_hash'] ?? null);
         AuthService::login((int) $user['id']);
+        App::security('auth.login.succeeded', ['user_id' => (int) $user['id'], 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
 
         $this->flash('success', 'تم تسجيل الدخول بنجاح.');
 
@@ -68,11 +80,14 @@ final class AuthController extends Controller
     public function logout(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
+            App::security('auth.csrf.rejected', ['ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
 
             return $this->redirect('/feed');
         }
 
+        $currentUser = AuthService::user();
+        App::audit('auth.logout', ['user_id' => (int) ($currentUser['id'] ?? 0)]);
         AuthService::logout();
         $this->flash('info', 'تم تسجيل الخروج.');
 
@@ -88,16 +103,18 @@ final class AuthController extends Controller
     public function register(): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) {
+            App::security('auth.csrf.rejected', ['ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
             $this->flash('error', 'انتهت صلاحية الصفحة. أعد المحاولة.');
             return $this->redirect('/register');
         }
 
-        $bucket = 'register:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-        if (RateLimiter::tooMany($bucket, 5, 3600)) {
+        if (!RateLimiter::allowForIp('auth.register', 5, 3600)) {
+            App::security('auth.register.rate_limited', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
             $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد قليل.');
             return $this->redirect('/register');
         }
-        RateLimiter::hit($bucket);
 
         $result = AuthService::register($this->request->body);
         if ($result['errors']) return $this->registerForm($result['errors'], 422);
@@ -105,6 +122,7 @@ final class AuthController extends Controller
         // Registration creates an active account, so establish the session immediately.
         $userId = (int) ($result['userId'] ?? 0);
         if ($userId > 0) {
+            App::audit('account.registered', ['user_id' => $userId]);
             User::markLoggedIn($userId);
             AuthService::login($userId);
             $this->flash('success', 'تم إنشاء حسابك وتسجيل دخولك بنجاح.');
@@ -117,16 +135,12 @@ final class AuthController extends Controller
 
     public function usernames(): Response
     {
-        $bucket = 'register:usernames:ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-        if (RateLimiter::tooMany($bucket, 90, 60)) {
-            RateLimiter::hit($bucket);
-            return new Response(
-                json_encode(['available' => []], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                429,
-                ['Content-Type' => 'application/json; charset=utf-8', 'Cache-Control' => 'no-store']
-            );
+        if (!RateLimiter::allowForIp('auth.usernames', 90, 60)) {
+            App::security('auth.usernames.rate_limited', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
+            return Response::json(['available' => []], 429);
         }
-        RateLimiter::hit($bucket);
 
         $names = $this->request->query['names'] ?? [];
         if (!is_array($names)) $names = [];
@@ -155,7 +169,7 @@ final class AuthController extends Controller
             if (!is_string($value)) unset($old[$key]);
         }
         $countries = require dirname(__DIR__, 2) . '/config/countries.php';
-        $firstStepErrors = ['display_name', 'contact', 'password'];
+        $firstStepErrors = ['display_name', 'contact', 'password', 'terms_acceptance'];
         $profileErrors = ['profile_bio', 'workshop_name'];
         if (!$errors || count(array_intersect(array_keys($errors), $firstStepErrors)) > 0) {
             $activeStep = 1;

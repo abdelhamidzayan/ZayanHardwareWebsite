@@ -3,7 +3,11 @@ name: PHP syntax check
 on:
   pull_request:
   push:
-    branches: [main, feat/registration-permissions-final-spec]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -15,7 +19,24 @@ jobs:
           php-version: '8.2'
       - name: Check PHP syntax
         run: |
-          find app config public -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app bin config public tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Verify CLI boot does not start a browser session
+        run: php tests/php/cli-boot.php
+      - name: Verify RateLimiter API references
+        run: php tests/php/rate-limiter-api.php
+      - name: Verify draft media rollback preserves files
+        run: php tests/php/draft-publish-rollback.php
+      - name: Verify public route access policy
+        run: php tests/php/router-public-routes.php
+      - name: Verify read-only database schema comparator CLI help
+        run: php bin/compare-database-schema.php --help
+
+      - name: Verify HTTP access logs use real request metadata
+        run: php tests/php/logging-http-access.php
+      - name: Verify exception logs redact secrets
+        run: php tests/php/logging-exception-redaction.php
+      - name: Verify image upload pixel limits and malformed input rejection
+        run: php tests/php/upload-policy.php
       - name: Check JavaScript syntax
         run: |
           find public/js -type f -name '*.js' -print0 | xargs -0 -n1 node --check

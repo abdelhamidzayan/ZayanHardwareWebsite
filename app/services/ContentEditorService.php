@@ -12,10 +12,24 @@ final class ContentEditorService
     public static function validateUploads(mixed $files, mixed $tokens): array
     {
         if ($files === null) return [];
-        if (!is_array($files) || !isset($files['name']) || !is_array($files['name'])) {
+        if (!is_array($files) || !isset($files['name'], $files['error'], $files['tmp_name'], $files['size'])
+            || !is_array($files['name']) || !is_array($files['error'])
+            || !is_array($files['tmp_name']) || !is_array($files['size'])) {
             throw new \DomainException('invalid_upload_structure');
         }
-        if (count($files['name']) > 8) throw new \DomainException('too_many_uploads');
+        $fileCount = count($files['name']);
+        if (count($files['error']) !== $fileCount || count($files['tmp_name']) !== $fileCount
+            || count($files['size']) !== $fileCount) {
+            throw new \DomainException('invalid_upload_structure');
+        }
+        foreach (array_keys($files['name']) as $index) {
+            if (!array_key_exists($index, $files['error'])
+                || !array_key_exists($index, $files['tmp_name'])
+                || !array_key_exists($index, $files['size'])) {
+                throw new \DomainException('invalid_upload_structure');
+            }
+        }
+        if ($fileCount > 8) throw new \DomainException('too_many_uploads');
 
         $tokenList = is_array($tokens) ? $tokens : [];
         $allowed = [
@@ -27,6 +41,7 @@ final class ContentEditorService
         ];
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $uploads = [];
+        $seenTokens = [];
         foreach ($files['name'] as $index => $name) {
             $error = (int) ($files['error'][$index] ?? UPLOAD_ERR_NO_FILE);
             if ($error === UPLOAD_ERR_NO_FILE) continue;
@@ -38,11 +53,20 @@ final class ContentEditorService
             }
             $mime = $finfo->file($tmp) ?: '';
             if (!isset($allowed[$mime])) throw new \DomainException('invalid_upload_type');
+            if (str_starts_with($mime, 'image/')) {
+                try {
+                    ImageUploadPolicy::inspect($tmp);
+                } catch (\DomainException $error) {
+                    throw new \DomainException('invalid_image_dimensions', 0, $error);
+                }
+            }
 
             $token = $tokenList[$index] ?? ('upload-' . $index);
-            if (!is_string($token) || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $token)) {
+            if (!is_string($token) || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $token)
+                || isset($seenTokens[$token])) {
                 throw new \DomainException('invalid_upload_token');
             }
+            $seenTokens[$token] = true;
             $uploads[] = [
                 'tmp' => $tmp, 'size' => $size, 'mime' => $mime,
                 'ext' => $allowed[$mime], 'token' => $token,
@@ -90,7 +114,10 @@ final class ContentEditorService
                 if ($isInline) $map[$upload['token']] = $attachmentId;
             } catch (\Throwable $e) {
                 @unlink($destination);
-                App::log('error', 'Unable to save content media: ' . $e->getMessage());
+                App::logException('ERROR', 'issue.attachment_save_failed', $e, [
+                    'issue_id' => $issueId,
+                    'user_id' => $userId,
+                ]);
                 $failed++;
             }
         }
@@ -133,35 +160,97 @@ final class ContentEditorService
                 }
                 continue;
             }
-            $html .= nl2br(htmlspecialchars($part, ENT_QUOTES, 'UTF-8'));
+            $html .= self::renderFormattedText($part);
         }
         return $html;
     }
 
-    /** Remove orphaned inline media after a body is edited; ordinary attachments are untouched. */
+    /**
+     * Render the small formatting vocabulary used by the technical composer.
+     * All user text is escaped before the only supported markup is introduced.
+     */
+    private static function renderFormattedText(string $text): string
+    {
+        $lines = preg_split('/\\r?\\n/', $text) ?: [];
+        $html = '';
+        $listType = null;
+        $paragraph = [];
+
+        $closeList = static function () use (&$html, &$listType): void {
+            if ($listType !== null) {
+                $html .= $listType === 'ol' ? '</ol>' : '</ul>';
+                $listType = null;
+            }
+        };
+        $flushParagraph = static function () use (&$html, &$paragraph, $closeList): void {
+            if (!$paragraph) return;
+            $closeList();
+            $escaped = htmlspecialchars(implode("\n", $paragraph), ENT_QUOTES, 'UTF-8');
+            $escaped = preg_replace('/\\*\\*(.+?)\\*\\*/s', '<strong>$1</strong>', $escaped) ?? $escaped;
+            $html .= '<p>' . nl2br($escaped) . '</p>';
+            $paragraph = [];
+        };
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') {
+                $flushParagraph();
+                $closeList();
+                continue;
+            }
+            if (preg_match('/^#{1,3}\\s+(.+)$/u', $trimmed, $heading)) {
+                $flushParagraph();
+                $closeList();
+                $safe = htmlspecialchars(trim($heading[1]), ENT_QUOTES, 'UTF-8');
+                $html .= '<h3>' . $safe . '</h3>';
+                continue;
+            }
+            if (preg_match('/^[-─]{5,}$/u', $trimmed)) {
+                $flushParagraph();
+                $closeList();
+                $html .= '<hr>';
+                continue;
+            }
+            if (preg_match('/^\\d+\\.\\s+(.+)$/u', $trimmed, $ordered)) {
+                $flushParagraph();
+                if ($listType !== 'ol') {
+                    $closeList();
+                    $html .= '<ol>';
+                    $listType = 'ol';
+                }
+                $safe = htmlspecialchars($ordered[1], ENT_QUOTES, 'UTF-8');
+                $safe = preg_replace('/\\*\\*(.+?)\\*\\*/s', '<strong>$1</strong>', $safe) ?? $safe;
+                $html .= '<li>' . $safe . '</li>';
+                continue;
+            }
+            if (preg_match('/^[•*-]\\s+(.+)$/u', $trimmed, $bullet)) {
+                $flushParagraph();
+                if ($listType !== 'ul') {
+                    $closeList();
+                    $html .= '<ul>';
+                    $listType = 'ul';
+                }
+                $safe = htmlspecialchars($bullet[1], ENT_QUOTES, 'UTF-8');
+                $safe = preg_replace('/\\*\\*(.+?)\\*\\*/s', '<strong>$1</strong>', $safe) ?? $safe;
+                $html .= '<li>' . $safe . '</li>';
+                continue;
+            }
+
+            $closeList();
+            $paragraph[] = $line;
+        }
+        $flushParagraph();
+        $closeList();
+        return $html;
+    }
+
+    /**
+     * Published inline media is retained even when an edit removes its token
+     * from the current body. Previous body versions may still reference the
+     * attachment, so automatic pruning would destroy revision history.
+     */
     public static function pruneUnusedInlineMedia(int $issueId): void
     {
-        $referenced = [];
-        foreach (Issue::allInlineContent($issueId) as $body) {
-            if (preg_match_all('/\[\[image:(\d+)\]\]/', $body, $matches)) {
-                foreach ($matches[1] as $id) $referenced[(int) $id] = true;
-            }
-        }
-
-        $privateRoot = realpath(App::root('storage/private'));
-        foreach (Issue::inlineAttachments($issueId) as $attachment) {
-            $id = (int) $attachment['id'];
-            if (isset($referenced[$id])) continue;
-            if ($privateRoot !== false) {
-                $relative = ltrim(str_replace('\\', '/', (string) $attachment['file_path']), '/');
-                if (!str_contains($relative, '..')) {
-                    $target = realpath($privateRoot . DIRECTORY_SEPARATOR . $relative);
-                    if ($target !== false && str_starts_with($target, $privateRoot . DIRECTORY_SEPARATOR) && is_file($target)) {
-                        @unlink($target);
-                    }
-                }
-            }
-            Issue::deleteInlineAttachment($issueId, $id);
-        }
+        // Intentionally retain attachment rows and their files.
     }
 }
