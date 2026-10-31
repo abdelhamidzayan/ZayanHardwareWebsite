@@ -479,19 +479,34 @@ final class Issue extends Model
     public static function vote(int $replyId, int $userId): void
     {
         $pdo = self::db();
-        $stmt = $pdo->prepare('SELECT user_id FROM issue_replies WHERE id = ? AND deleted_at IS NULL');
-        $stmt->execute([$replyId]);
-        $owner = $stmt->fetchColumn();
-        if ($owner === false || (int) $owner === $userId) {
-            throw new \DomainException('invalid_vote');
-        }
-        $stmt = $pdo->prepare('SELECT id FROM reply_votes WHERE reply_id = ? AND user_id = ?');
-        $stmt->execute([$replyId, $userId]);
-        if ($stmt->fetchColumn()) {
-            $pdo->prepare('DELETE FROM reply_votes WHERE reply_id = ? AND user_id = ?')->execute([$replyId, $userId]);
-        } else {
-            $pdo->prepare("INSERT INTO reply_votes (reply_id, user_id, vote_type) VALUES (?, ?, 'helpful')")
-                ->execute([$replyId, $userId]);
+        $pdo->beginTransaction();
+        try {
+            // Serialize toggles for the same reply so two concurrent clicks cannot
+            // both observe "not voted" and race into the unique constraint.
+            $stmt = $pdo->prepare(
+                'SELECT r.user_id FROM issue_replies r
+                 INNER JOIN issues i ON i.id = r.issue_id
+                 WHERE r.id = ? AND r.deleted_at IS NULL AND i.deleted_at IS NULL
+                 FOR UPDATE'
+            );
+            $stmt->execute([$replyId]);
+            $owner = $stmt->fetchColumn();
+            if ($owner === false || (int) $owner === $userId) {
+                throw new \DomainException('invalid_vote');
+            }
+
+            $stmt = $pdo->prepare('SELECT id FROM reply_votes WHERE reply_id = ? AND user_id = ? FOR UPDATE');
+            $stmt->execute([$replyId, $userId]);
+            if ($stmt->fetchColumn()) {
+                $pdo->prepare('DELETE FROM reply_votes WHERE reply_id = ? AND user_id = ?')->execute([$replyId, $userId]);
+            } else {
+                $pdo->prepare("INSERT INTO reply_votes (reply_id, user_id, vote_type) VALUES (?, ?, 'helpful')")
+                    ->execute([$replyId, $userId]);
+            }
+            $pdo->commit();
+        } catch (\Throwable $error) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $error;
         }
     }
 
@@ -586,6 +601,16 @@ final class Issue extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
+            $reviewer = $pdo->prepare(
+                "SELECT role, account_status FROM users WHERE id = ? LIMIT 1 FOR UPDATE"
+            );
+            $reviewer->execute([$reviewerId]);
+            $reviewerAccount = $reviewer->fetch();
+            if (!$reviewerAccount || $reviewerAccount['account_status'] !== 'active'
+                || !in_array($reviewerAccount['role'], ['admin', 'moderator'], true)) {
+                throw new \DomainException('reviewer_not_authorized');
+            }
+
             $stmt = $pdo->prepare('SELECT id, submitted_by, was_repaired, helpful_reply_id, review_status FROM issue_results WHERE id = ? AND issue_id = ? FOR UPDATE');
             $stmt->execute([$resultId, $issueId]);
             $result = $stmt->fetch();
