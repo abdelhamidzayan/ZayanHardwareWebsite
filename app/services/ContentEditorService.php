@@ -41,6 +41,7 @@ final class ContentEditorService
         ];
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $uploads = [];
+        $seenTokens = [];
         foreach ($files['name'] as $index => $name) {
             $error = (int) ($files['error'][$index] ?? UPLOAD_ERR_NO_FILE);
             if ($error === UPLOAD_ERR_NO_FILE) continue;
@@ -61,9 +62,11 @@ final class ContentEditorService
             }
 
             $token = $tokenList[$index] ?? ('upload-' . $index);
-            if (!is_string($token) || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $token)) {
+            if (!is_string($token) || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $token)
+                || isset($seenTokens[$token])) {
                 throw new \DomainException('invalid_upload_token');
             }
+            $seenTokens[$token] = true;
             $uploads[] = [
                 'tmp' => $tmp, 'size' => $size, 'mime' => $mime,
                 'ext' => $allowed[$mime], 'token' => $token,
