@@ -100,6 +100,24 @@ try {
     expectSessionVersion((int) $_SESSION['auth_version'] === $initialVersion + 1, 'The new login must store the incremented auth_version.');
     expectSessionVersion((int) (AuthService::user()['id'] ?? 0) === $userId, 'The new version-bound session should be accepted.');
 
+    // A role/status transition must invalidate every other device session too.
+    $preSuspensionVersion = (int) $_SESSION['auth_version'];
+    $pdo->prepare(
+        "UPDATE users SET account_status = 'suspended', auth_version = auth_version + 1 WHERE id = ?"
+    )->execute([$userId]);
+    $resetRequestCache();
+    expectSessionVersion(AuthService::user() === null, 'A session must be rejected immediately after account suspension.');
+    expectSessionVersion(!isset($_SESSION['user_id']), 'The suspended account session must be cleared.');
+
+    // Simulate another device presenting its old cookie after an administrator reactivates the account.
+    $pdo->prepare(
+        "UPDATE users SET account_status = 'active', auth_version = auth_version + 1 WHERE id = ?"
+    )->execute([$userId]);
+    $_SESSION = ['user_id' => $userId, 'auth_version' => $preSuspensionVersion];
+    $resetRequestCache();
+    expectSessionVersion(AuthService::user() === null, 'A stale cookie must not become valid again after account reactivation.');
+    expectSessionVersion(!isset($_SESSION['user_id']), 'The pre-suspension session must remain invalid after reactivation.');
+
     $pdo->rollBack();
     AuthService::logout();
     echo "Auth session-version integration passed: password reset invalidates the previous session.\n";
