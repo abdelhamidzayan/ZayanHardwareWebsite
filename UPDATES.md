@@ -3,7 +3,7 @@
 ## 2026-10-31 — Phase 1: backup/restore gate, schema comparator, and logging hardening
 
 - **Type:** Database / Infrastructure / Security / Tests / Documentation
-- **Summary:** Added a read-only schema/row-count comparison CLI, expanded log redaction and retention coverage, added a disposable backup/restore/checksum/compare step to the three-engine migration workflow, and documented safe triage for pending storage recovery tasks.
+- **Summary:** Added a read-only schema/row-count comparison CLI, expanded log redaction for Authorization/Cookie headers, bearer/query tokens, and session IDs, plus retention coverage, added a disposable backup/restore/checksum/compare step to the three-engine migration workflow, and documented safe triage for pending storage recovery tasks.
 - **Code areas:** `bin/compare-database-schema.php`; `app/core/App.php`; `tests/php/logging-exception-redaction.php`; `.github/workflows/database-migrations.yml`.
 - **Database:** No migration added or applied by this checkpoint. The GitHub workflow creates a new disposable restore-test schema for each CI job; it does not target the owner's database.
 - **Safety:** Comparator uses read-only information_schema queries and SELECT row counts. Restore flow creates a new target and intentionally does not overwrite an existing database. Raw Authorization/Cookie headers, bearer values, access/refresh/id/general token values are redacted before log output.
