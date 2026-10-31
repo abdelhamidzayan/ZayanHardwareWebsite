@@ -37,18 +37,16 @@ Always report the exact branch and commit being discussed. A passing CI job does
 
 ## 4. GitHub branch and CI snapshot — 2026-10-31
 
-- Active audit branch: `audit/system-rebuild-20261031`.
-- Pull request: [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16), titled “Audit rebuild: fresh install, retention guards and route consistency”.
-- PR #16 is **Draft, open, and unmerged**. Its base is `audit/content-retention-consistency`; it is not a direct merge to `main`, and nothing on this branch should be described as deployed.
-- The audit branch receives frequent commits. Do not trust any SHA copied from an older handoff; resolve the live head from PR #16 before every new session or change.
-- Last confirmed green CI baseline: `55522a3cc204e961aaf9947773b15ff10321ad02`, with PHP/CLI/security/JavaScript run [41180453075](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453075), Graphify run [41180453042](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453042), and fresh-install matrix run [41180453039](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453039).
-- That green baseline predates the latest commits on PR #16. It verified migrations 000–017 and the earlier test set; it does **not** verify migration 018 or the latest content-write service/test changes.
-- The current migration workflow is configured to install migrations 000–018 and run `tests/php/content-write-integration.php`, `tests/php/device-catalog-integration.php`, and the other database suites on the disposable `zayan_fresh_install_test` database for MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. The PHP lint workflow includes all tracked PHP files; Graphify checks graph generation/determinism. The latest code additions remain **CI-unverified** until those jobs pass on their exact commit.
-- To avoid duplicate Actions consumption, each workflow now triggers on `push` only for `main` and on `pull_request` for branch review, with a concurrency group per PR/ref and `cancel-in-progress: true`. This is a trigger optimization, not removal or disabling of workflows.
-- The owner reported GitHub Actions usage at **2,000 / 2,000 included minutes**, with the account notice showing reset on **2026-11-01**. The owner has not confirmed that a $0 Actions spending budget is configured. Do not manually rerun/dispatch workflows before the displayed reset or explicit owner authorization. Keep workflow YAML files intact; follow [the Actions usage policy](AGENTS.md#github-actions-and-usage-budget).
-- A green historical workflow run proves only the tests and commit it actually executed. It does not prove current branch state, local XAMPP/Kali behavior, PWA/Safari behavior, or deployment.
-- Graphify is static analysis, not a runtime call trace. Resolve its outstanding dynamic JavaScript API links manually and review every warning; never treat a missing graph edge as proof that no dependency exists.
-
+- PR [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16), “Audit rebuild: fresh install, retention guards and route consistency”, was merged on 2026-10-31 into `audit/content-retention-consistency`.
+- Merge commit: `098442813eb5a55e96d5fff27ce127f9b5f08591`. The merge did **not** target `main` and is not a deployment.
+- The current completion work is isolated on `phase1/foundation-reliability-20261031`; resolve its live head before future work.
+- The most recent successful CI baseline recorded before the latest migrations/content-write additions was `55522a3cc204e961aaf9947773b15ff10321ad02`. It verified migrations 000–017 and the then-current PHP/CLI, Graphify, and database integration checks.
+- The merged PR head added migration 018 and additional integration coverage for content writes, draft recovery, device catalog, upload policy, and other paths. The workflows are configured for a clean 000–018 install on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
+- Latest recorded runs for the merged PR head `be51064a6ed551d4e3a48861cd5bab7a64eb8ade` were PHP `41210049298`, Graphify `41210049297`, and database matrix `41210049340`. All completed without executing any workflow steps because the included Actions minutes were exhausted. They are neither passing test results nor application-test failures.
+- The owner-reported Actions quota was 2,000/2,000 minutes, with a displayed reset date of 2026-11-01. Recheck live usage and budget before opening a PR or triggering workflows; the owner has not confirmed a $0 spending budget.
+- Keep workflow YAML and matrices enabled. Do not rerun jobs that have no executed steps until usage resets or paid Actions usage is explicitly authorized.
+- `main`, the merged audit branch, the Phase 1 branch, the owner's local Kali/XAMPP checkout, local database, and any hosted deployment are separate states. Never report a branch merge as a deployment.
+- Graphify is static analysis, not a runtime execution trace. Dynamic JavaScript API sites and other unresolved edges require manual source review.
 ## 5. Owner's local environment — latest reported state
 
 - Local project: `/opt/lampp/htdocs/zayan_hardware`.
