@@ -11,7 +11,7 @@ $profileHref = $username !== '' ? $baseUrl . '/profile/' . rawurlencode($usernam
 $nameParts = preg_split('/\\s+/u', $displayName) ?: [$displayName];
 $avatarInitials = mb_strtoupper(mb_substr($nameParts[0] ?? 'ح', 0, 1) . (isset($nameParts[1]) ? mb_substr($nameParts[1], 0, 1) : ''));
 $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int) $currentUser['id'] : $baseUrl . '/assets/avatars/' . rawurlencode((string) ($currentUser['avatar_key'] ?? 'technician-blue')) . '.svg';
-$headerPath = \\App\\Core\\Request::capture()->path;
+$headerPath = \App\Core\Request::capture()->path;
 $helpRequestsActive = $headerPath === '/help-requests' || str_starts_with($headerPath, '/help-requests/');
 $notificationsActive = $headerPath === '/notifications' || str_starts_with($headerPath, '/notifications/');
 $accountActivePrefixes = ['/profile/', '/workbench', '/drafts', '/my-posts', '/settings', '/admin'];
