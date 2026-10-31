@@ -81,6 +81,17 @@ if (!isset($byId[$parentId], $byId[$childId])
     exit(1);
 }
 
+$hardDeleteBlocked = false;
+try {
+    $pdo->prepare('DELETE FROM issue_replies WHERE id = ?')->execute([$parentId]);
+} catch (PDOException) {
+    $hardDeleteBlocked = true;
+}
+if (!$hardDeleteBlocked) {
+    fwrite(STDERR, "The database must reject physical deletion of a parent reply that has a child.\\n");
+    exit(1);
+}
+
 $storedCount = $pdo->prepare(
     'SELECT COUNT(*) FROM issue_replies WHERE id IN (?, ?)'
 );
