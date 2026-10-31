@@ -3,7 +3,7 @@
  * app/views/layouts/guest.php — public pages: login, registration, help and policies.
  */
 $authPage = $authPage ?? false;
-$guestPath = \\App\\Core\\Request::capture()->path;
+$guestPath = \App\Core\Request::capture()->path;
 $guestLoginActive = $guestPath === '/login';
 $guestHelpActive = $guestPath === '/help';
 ?>
