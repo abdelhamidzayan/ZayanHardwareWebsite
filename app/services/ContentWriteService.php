@@ -130,16 +130,20 @@ final class ContentWriteService
 
         try {
             $stmt = $this->pdo->prepare(
-                "SELECT status FROM issues
+                "SELECT content_type, status FROM issues
                  WHERE id = ? AND user_id = ?
                    AND status IN ('open','in_progress','awaiting_confirmation')
                    AND deleted_at IS NULL FOR UPDATE"
             );
             $stmt->execute([$issueId, $userId]);
-            $status = $stmt->fetchColumn();
-            if ($status === false) {
-                throw new \\DomainException('not_owner_or_closed');
+            $issue = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$issue) {
+                throw new \DomainException('not_owner_or_closed');
             }
+            if ($issue['content_type'] !== 'help_request') {
+                throw new \DomainException('diagnostic_only_for_help_request');
+            }
+            $status = (string) $issue['status'];
 
             $this->pdo->prepare(
                 'INSERT INTO issue_diagnostic_updates (issue_id, user_id, body) VALUES (?, ?, ?)'
