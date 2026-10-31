@@ -238,6 +238,7 @@ final class PostDraft extends Model
     ): ?int {
         $pdo = self::db();
         self::beginRevisionMutation($draftId, $userId, $expectedRevision);
+        $media = null;
         try {
             $stmt = $pdo->prepare(
                 'SELECT storage_path, rendered_path FROM post_draft_media
@@ -260,6 +261,11 @@ final class PostDraft extends Model
             return $nextRevision;
         } catch (\Throwable $e) {
             self::rollbackRevisionMutation();
+            if (is_array($media) && self::cleanupDeletedMediaIfUnreferenced($draftId, $mediaUuid, $userId, $media)) {
+                // A lost COMMIT acknowledgement must not make the UI retry a
+                // deletion that has already removed the media row.
+                return $expectedRevision + 1;
+            }
             throw $e;
         }
     }
@@ -269,6 +275,7 @@ final class PostDraft extends Model
     {
         $pdo = self::db();
         $pdo->beginTransaction();
+        $media = null;
         try {
             $draft = $pdo->prepare('SELECT id FROM post_drafts WHERE id = ? AND user_id = ? FOR UPDATE');
             $draft->execute([$draftId, $userId]);
@@ -297,9 +304,33 @@ final class PostDraft extends Model
             self::removePrivateFile((string) $media['storage_path']);
             if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);
         } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($pdo->inTransaction()) self::rollbackRevisionMutation();
+            if (is_array($media)) {
+                self::cleanupDeletedMediaIfUnreferenced($draftId, $mediaUuid, $userId, $media);
+            }
             throw $e;
         }
+    }
+
+    private static function cleanupDeletedMediaIfUnreferenced(
+        string $draftId,
+        string $mediaUuid,
+        int $userId,
+        array $media
+    ): bool {
+        $paths = [
+            'storage_path' => (string) ($media['storage_path'] ?? ''),
+            'rendered_path' => (string) ($media['rendered_path'] ?? ''),
+        ];
+        $checked = false;
+        foreach ($paths as $column => $relativePath) {
+            if ($relativePath === '') continue;
+            $checked = true;
+            if (self::cleanupUploadIfUnreferenced($draftId, $mediaUuid, $userId, $relativePath, $column) !== 'removed') {
+                return false;
+            }
+        }
+        return $checked;
     }
 
     private static function beginRevisionMutation(string $draftId, int $userId, int $expectedRevision): void
