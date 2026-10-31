@@ -224,11 +224,50 @@ final class DraftPublishingService
             return $issueId;
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            foreach (array_reverse($moved) as $move) {
-                if (is_file($move['to'])) @rename($move['to'], $move['from']);
+
+            $restoreFailures = self::restoreMovedFiles($moved);
+            if ($restoreFailures !== []) {
+                App::log('CRITICAL', 'Draft publishing rollback could not restore every media file; retained files were not deleted.', [
+                    'restore_failures' => $restoreFailures,
+                    'issue_directory' => $createdDirectory,
+                ], 'audit');
+            } elseif ($createdDirectory !== null && is_dir($createdDirectory) && !@rmdir($createdDirectory)) {
+                App::log('WARNING', 'Draft publishing rollback left a non-empty issue media directory.', [
+                    'issue_directory' => $createdDirectory,
+                ], 'audit');
             }
-            if ($createdDirectory !== null && is_dir($createdDirectory)) @rmdir($createdDirectory);
+
             throw $e;
         }
+    }
+
+    /**
+     * Restore moved draft files after a failed publish.
+     * Failed restorations are reported to the caller; destination files are never deleted.
+     *
+     * @param array<int, array{from:string,to:string}> $moved
+     * @return array<int, array{from:string,to:string,reason:string}>
+     */
+    public static function restoreMovedFiles(array $moved): array
+    {
+        $failures = [];
+        foreach (array_reverse($moved) as $move) {
+            $from = (string) ($move['from'] ?? '');
+            $to = (string) ($move['to'] ?? '');
+            if ($from === '' || $to === '') {
+                $failures[] = ['from' => $from, 'to' => $to, 'reason' => 'invalid_move_record'];
+                continue;
+            }
+            if (!is_file($to)) {
+                if (!is_file($from)) {
+                    $failures[] = ['from' => $from, 'to' => $to, 'reason' => 'both_paths_missing'];
+                }
+                continue;
+            }
+            if (!@rename($to, $from)) {
+                $failures[] = ['from' => $from, 'to' => $to, 'reason' => 'restore_rename_failed'];
+            }
+        }
+        return $failures;
     }
 }
