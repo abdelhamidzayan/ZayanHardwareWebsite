@@ -8,6 +8,7 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Database;
 use App\Services\AuthService;
+use App\Services\AdminRosterService;
 
 final class AdminUserController extends Controller
 {
@@ -46,7 +47,7 @@ final class AdminUserController extends Controller
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
-            $this->assertActiveAdmin($pdo, (int) $admin['id']);
+            AdminRosterService::assertActorActive($pdo, (int) $admin['id']);
             $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found');
@@ -102,12 +103,12 @@ final class AdminUserController extends Controller
             if (!$target || $target['account_status'] === 'deleted') {
                 throw new \DomainException('user_not_found_or_unchanged');
             }
-            if ($target['role'] === 'admin' && $target['account_status'] === 'active' && $status !== 'active') {
-                $activeAdmins = (int) $pdo->query(
-                    "SELECT COUNT(*) FROM users WHERE role = 'admin' AND account_status = 'active'"
-                )->fetchColumn();
-                if ($activeAdmins <= 1) throw new \DomainException('last_admin');
-            }
+            AdminRosterService::assertCanChangeStatus(
+                $pdo,
+                (string) $target['role'],
+                (string) $target['account_status'],
+                $status
+            );
             $stmt = $pdo->prepare("UPDATE users SET account_status = ? WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([$status, $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found_or_unchanged');
@@ -173,10 +174,12 @@ final class AdminUserController extends Controller
             if (!$target) throw new \DomainException('user_not_found');
             $oldRole = (string) $target['role'];
 
-            if ($oldRole === 'admin' && $target['account_status'] === 'active' && $role !== 'admin') {
-                $admins = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND account_status = 'active'")->fetchColumn();
-                if ($admins <= 1) throw new \DomainException('last_admin');
-            }
+            AdminRosterService::assertCanChangeRole(
+                $pdo,
+                $oldRole,
+                (string) $target['account_status'],
+                $role
+            );
 
             $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $id]);
             $pdo->prepare(
@@ -209,16 +212,6 @@ final class AdminUserController extends Controller
     {
         $user = AuthService::user();
         return $user !== null && ($user['role'] ?? '') === 'admin' ? $user : null;
-    }
-
-    private function assertActiveAdmin(\PDO $pdo, int $adminId): void
-    {
-        $stmt = $pdo->prepare('SELECT role, account_status FROM users WHERE id = ? FOR UPDATE');
-        $stmt->execute([$adminId]);
-        $actor = $stmt->fetch();
-        if (!$actor || $actor['role'] !== 'admin' || $actor['account_status'] !== 'active') {
-            throw new \DomainException('admin_not_active');
-        }
     }
 
     private function text(string $key): string
