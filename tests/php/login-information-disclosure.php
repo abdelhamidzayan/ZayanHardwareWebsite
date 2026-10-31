@@ -21,15 +21,15 @@ foreach ($requiredEvents as $event) {
     }
 }
 
-$invalidPosition = strpos($source, "if (\$result['error'] === 'invalid')");
-$blockedPosition = strpos($source, "if (\$result['error'] === 'blocked')");
+$invalidPosition = strpos($source, 'if ($result[\'error\'] === \'invalid\')');
+$blockedPosition = strpos($source, 'if ($result[\'error\'] === \'blocked\')');
 if ($invalidPosition === false || $blockedPosition === false || $blockedPosition <= $invalidPosition) {
     fwrite(STDERR, "Unable to locate both invalid and blocked login result branches.\n");
     exit(1);
 }
 
 $invalidBlock = substr($source, $invalidPosition, $blockedPosition - $invalidPosition);
-$blockedEnd = strpos($source, "\$user = \$result['user'];", $blockedPosition);
+$blockedEnd = strpos($source, '$user = $result[\'user\'];', $blockedPosition);
 $blockedBlock = substr(
     $source,
     $blockedPosition,
