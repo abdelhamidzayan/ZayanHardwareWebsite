@@ -24,7 +24,8 @@ flowchart TD
 
 - `public/index.php` loads Composer autoloading (or its PSR-4 fallback), boots the application, registers `config/routes.php`, captures the request, and dispatches it.
 - `App::boot()` loads environment/configuration, installs error and shutdown logging, prunes expired application log files, and starts a browser session only for non-CLI requests.
-- `Router` applies the guest-route allowlist before matching routes, resolves route parameters, invokes a controller, and returns a `Response`.
+- `Router` applies the guest-route policy declared with each public route before invoking controllers, resolves route parameters, and returns a `Response`.
+- `getPublic()` and `postPublic()` must be used only for intentionally public endpoints. The current public surface includes home, login, registration, help/policies, member profiles, public avatars, and consent-approved help-library entries. Personal inboxes, drafts, issue discussions, attachments, account actions, and administration remain authenticated.
 - `Controller` is the shared base for rendering views, internal redirects, 404 responses, and flash messages.
 - `Model` delegates database access to `Database::connection()`; models use PDO prepared statements and transactions where a multi-step write must be atomic.
 
@@ -48,7 +49,7 @@ The repeatable source scanner is maintained in `tools/graphify/graphify.py`. It 
 | Administration | `AdminUserController`, `AdminFeaturedPostsController`, `AdminUpdateController` | user, featured-content, and update models/services |
 | Static help, policies, settings | `PageController` | `User`, views |
 
-The authoritative route declarations are in `config/routes.php`. The router currently restricts unauthenticated requests to the explicit home, login, registration, username lookup, help, and policy routes. Keep the allowlist synchronized with any future public endpoints.
+The authoritative route declarations and guest exposure are both in `config/routes.php`: public routes use `getPublic()` or `postPublic()`; every route registered with `get()` or `post()` is private to authenticated members. This keeps the guest allowlist synchronized with the route table.
 
 ## Core feature dependency flows
 
