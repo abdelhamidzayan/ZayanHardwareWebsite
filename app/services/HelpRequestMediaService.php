@@ -190,7 +190,7 @@ final class HelpRequestMediaService
         }
 
         try {
-            Database::connection()->prepare(
+            Database::newConnection()->prepare(
                 "INSERT INTO storage_recovery_tasks
                     (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code,
                      status, attempts, last_attempt_at, last_error_code)
