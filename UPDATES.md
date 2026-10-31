@@ -1,5 +1,17 @@
 # Zayan Hardware — Update Log
 
+## 2026-10-31 — Consolidate the development baseline on main
+
+- **Type:** Integration / Security / Database / Documentation
+- **Summary:** Merged the accumulated product feature stack plus Phase 1 reliability and Phase 2 session/CSRF security baselines into the single authoritative `main` branch.
+- **Code areas:** Profiles/avatars, personal help and private attachments, drafts/audio/image composer, device catalog, technical content preservation, migrations 000–019, session invalidation, admin updater hardening, Graphify, CI workflows, tests, and release documentation.
+- **Database:** Migration 019 is included and CI-tested on disposable MySQL/MariaDB databases. It has not been applied to the owner's local database.
+- **Safety:** PR #17 merged as `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`; PR #18 merged as `dadddde53f394a0fe353b575ec13dbeb85749f6e`. No live database, private-media tree, or hosted deployment was modified. The account-anonymization CLI remains removed; no worker or cron is approved.
+- **Verification:** Phase 1 head `4bf013f81fc71bc32f8b221fefc1c778d00419d8`: [PHP 41238247509](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247509), [Graphify 41238247478](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247478), [database matrix 41238247686](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247686) all passed. Phase 2 head `c23dde25f2bee53068c85e775ca56fa93f52e0a9`: [PHP 41238382181](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382181), [Graphify 41238382162](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382162), [database matrix 41238382193](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382193) all passed.
+- **Remaining gates:** Owner database backup restore, private-media sample restore, exhaustive manual authorization/SQL/XSS/upload/recovery review, browser/mobile/PWA acceptance, and deployment are not complete. The local Kali worktree remains dirty and must be reconciled without discarding its files.
+- **Status:** Unified development baseline merged into `main`; not deployed and not yet declared production-ready.
+
+
 
 ## 2026-10-31 — Phase 1 CI reverified after authorization regression additions
 
