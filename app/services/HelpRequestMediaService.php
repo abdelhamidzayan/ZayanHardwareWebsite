@@ -74,7 +74,10 @@ final class HelpRequestMediaService
         int $userId,
         array $uploads,
         ?callable $moveFile = null,
-        ?callable $removeFile = null
+        ?callable $removeFile = null,
+        ?callable $afterAttachment = null,
+        ?callable $commitTransaction = null,
+        ?string $storageRoot = null
     ): int {
         if (!$uploads) return 0;
 
@@ -84,8 +87,14 @@ final class HelpRequestMediaService
         $remove = $removeFile !== null
             ? \Closure::fromCallable($removeFile)
             : static fn (string $path): bool => !is_file($path) || unlink($path);
+        $afterInsert = $afterAttachment !== null ? \Closure::fromCallable($afterAttachment) : null;
+        $commit = $commitTransaction !== null
+            ? \Closure::fromCallable($commitTransaction)
+            : static function (PDO $pdo): void { $pdo->commit(); };
 
-        $directory = App::root('storage/private') . DIRECTORY_SEPARATOR . 'help-requests' . DIRECTORY_SEPARATOR . $requestId;
+        $privateRoot = rtrim($storageRoot ?? App::root('storage/private'), '/\\');
+        if ($privateRoot === '') return count($uploads);
+        $directory = $privateRoot . DIRECTORY_SEPARATOR . 'help-requests' . DIRECTORY_SEPARATOR . $requestId;
         if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
             return count($uploads);
         }
@@ -102,9 +111,8 @@ final class HelpRequestMediaService
             try {
                 $pdo->beginTransaction();
                 if (($move)($upload['tmp'], $target) !== true) {
-                    if ($pdo->inTransaction()) $pdo->rollBack();
-                    $failed++;
-                    continue;
+                    $moved = is_file($target);
+                    throw new \RuntimeException('help_attachment_move_failed');
                 }
                 $moved = true;
 
@@ -116,9 +124,10 @@ final class HelpRequestMediaService
                     $upload['mime'],
                     (int) $upload['size']
                 );
+                if ($afterInsert !== null) ($afterInsert)($requestId, $messageId, $relativePath);
 
                 $commitStarted = true;
-                $pdo->commit();
+                ($commit)($pdo);
             } catch (Throwable $error) {
                 $rollbackConfirmed = !$commitStarted;
                 if ($pdo->inTransaction()) {
