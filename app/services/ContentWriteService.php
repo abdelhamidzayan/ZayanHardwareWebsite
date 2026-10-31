@@ -221,7 +221,7 @@ final class ContentWriteService
 
         try {
             if (Issue::replyIssueId($replyId) !== $issueId) {
-                throw new \\DomainException('reply_not_in_issue');
+                throw new \DomainException('reply_not_in_issue');
             }
             Issue::editReply($replyId, $userId, $body);
             $map = $this->storeAttachments($issueId, $userId, $uploads, $body, $movedFiles);
