@@ -65,6 +65,11 @@ $pdo->prepare(
 )->execute([$manufacturerId, $ordinaryUserId, $commercialName, $modelCode]);
 $suggestionId = (int) $pdo->lastInsertId();
 
+if (DeviceCatalog::searchModels($manufacturerId, str_repeat('x', 81)) !== []) {
+    fwrite(STDERR, "Device model search must reject overlong queries before querying the catalog.\n");
+    exit(1);
+}
+
 $unauthorizedRejected = false;
 try {
     DeviceCatalog::moderateSuggestion($suggestionId, $ordinaryUserId, true);
@@ -99,6 +104,12 @@ $model->execute([(int) $approved['approved_model_id'], $manufacturerId]);
 $modelRow = $model->fetch(PDO::FETCH_ASSOC);
 if (!$modelRow || (int) $modelRow['created_by'] !== $ordinaryUserId || (int) $modelRow['approved_by'] !== $adminId) {
     fwrite(STDERR, "Approved catalog model must retain submitter and approver attribution.\n");
+    exit(1);
+}
+
+$searchResults = DeviceCatalog::searchModels($manufacturerId, $commercialName);
+if (count($searchResults) !== 1 || (int) $searchResults[0]['id'] !== (int) $modelRow['id']) {
+    fwrite(STDERR, "Approved models from active manufacturers must be discoverable in model search.\n");
     exit(1);
 }
 
