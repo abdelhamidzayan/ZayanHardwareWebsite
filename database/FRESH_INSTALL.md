@@ -1,68 +1,53 @@
-# Fresh database installation order
+# Fresh database installation
 
-This is the supported **new-install** sequence for Zayan Hardware. The repository originally began with a database that already contained `users` and `technician_profiles`, but those base table definitions were not stored in source control. Migration `000_core_identity_schema.sql` now supplies that missing baseline for a brand-new database.
+The supported fresh-install path is now **one SQL file**:
 
-## Before running
+`database/fresh_install.sql`
 
-- Create a dedicated empty database with `utf8mb4_unicode_ci`.
-- Confirm the selected database name and host explicitly.
-- Take a backup before any schema operation on a non-empty database.
-- Never point the fresh-install sequence at an existing local or hosted database.
-- The files `014_rate_limit_buckets.sql` and `015_deleted_accounts_without_contact.sql` have already been applied to the owner's current local database; do not replay them there.
-- These migrations contain DDL. MySQL/MariaDB implicitly commit many DDL statements, so a migration file is not one atomic transaction. If a step fails, stop and inspect the disposable target schema rather than blindly retrying.
+It creates the complete Zayan Hardware schema on MySQL 8.0+ or MariaDB 10.4+.
 
-## Explicit order
+## New database setup
 
-The duplicate `002_` prefix is historical. These two files are **sequential**, not alternatives: the first normalizes account/skill data and prepares profile fields; the second transfers phone and legacy profile data, then removes the old profile columns after preserving their values.
+1. Create a dedicated empty database using `utf8mb4` and `utf8mb4_unicode_ci`.
+2. Select that database in phpMyAdmin or your SQL client.
+3. Execute the entire `database/fresh_install.sql` file once.
+4. Configure the same database credentials in the application's environment.
+5. Register the trusted owner account.
+6. Promote that account using the guarded owner-only CLI command below.
 
-1. `000_core_identity_schema.sql`
-2. `001_issue_discussion.sql`
-3. `002_final_registration_permissions.sql`
-4. `002_registration_wizard.sql`
-5. `003_featured_home_issues.sql`
-6. `004_content_types.sql`
-7. `005_diagnostic_updates_and_repair_confirmation.sql`
-8. `006_notifications_and_push_subscriptions.sql`
-9. `007_threaded_replies_and_edit_history.sql`
-10. `008_inline_media_tokens.sql`
-11. `009_soft_delete_posts.sql`
-12. `010_diagnostic_update_history.sql`
-13. `011_profiles_personal_help_and_publication.sql`
-14. `012_post_composer_drafts_and_device_catalog.sql`
-15. `013_terms_acceptance_audit.sql`
-16. `014_rate_limit_buckets.sql`
-17. `015_deleted_accounts_without_contact.sql`
-18. `016_protect_technical_history.sql`
-19. `017_block_physical_content_delete.sql`
-20. `018_storage_recovery_tasks.sql`
-21. `019_session_version_invalidation.sql`
+Example database creation:
 
-`013` intentionally uses `CREATE TABLE IF NOT EXISTS`: the terms table is created by the registration migration, and this later file also repairs installations where that table was absent.
+```sql
+CREATE DATABASE zayan_hardware
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+```
 
-Migration 016 changes foreign-key delete rules to `RESTRICT` for technical content, personal-help history, skill evidence and attribution. Migration 017 adds `BEFORE DELETE` guards to core technical and audit tables, including standalone posts/replies with no dependent rows. Migration 018 creates a durable recovery queue for filesystem compensation failures and protects its audit rows from physical deletion. Migration 019 adds an account authentication version; an administrative password reset increments it and invalidates previously issued sessions. These migrations do not delete or rewrite existing content. The normal application workflow uses soft deletion and account anonymization. Draft rows/media and transient notification/push records remain governed by their separate lifecycle.
-
-## Verification requirements
-
-After installation, verify:
-
-- `users` and `technician_profiles` exist with the final registration columns.
-- `users.auth_version` exists and new login sessions store the current value. Password resets, account status transitions, role changes, deletion requests, and final identity anonymization must increment it so existing sessions stay revoked even after reactivation.
-- Legacy `technician_profiles.phone`, `specialization`, and `experience` columns are gone only after the phone/specialization history transfer has completed.
-- Required content, reply, diagnosis, edit-history, help-request, draft, device-catalog, notification, push, terms, audit, and rate-limit tables exist.
-- All application tables use InnoDB.
-- Foreign keys and indexes match the current migrations.
-- A disposable account can register, log in, and create a technical post with a reply and attachment.
-
-## First administrator
-
-A clean installation runs migrations before a user exists. Therefore the historical `002_final_registration_permissions.sql` bootstrap statement has no account to promote on an empty database. Create the owner's account through registration, then run the guarded operator-only command from the project root:
+Then from the project root:
 
 ```bash
 DB_NAME=zayan_hardware php bin/bootstrap-first-admin.php --username=OWNER_USERNAME --confirm-database=zayan_hardware --confirm-first-admin
 ```
 
-Replace `OWNER_USERNAME` and `zayan_hardware` with the actual username and configured database name. The command requires CLI access, exact database-name confirmation, an active account, and zero existing administrator accounts. It serializes concurrent attempts and writes a security-audit record. It refuses to run when any admin already exists. Do not make the first public registrant an administrator automatically.
+Replace the username and database name with the actual values. The command requires an active account, exact database-name confirmation, and zero existing administrators. It serializes concurrent attempts and records a security-audit event. **The fresh-install SQL never promotes the first registered account automatically.**
 
-## Existing installations
+## Important safety rules
 
-Do not apply `000` or replay the sequence against an existing database. Existing installations must be assessed from their live schema and applied migration history. In particular, migrations `014` and `015` must not be rerun against the owner's already-migrated local database.
+- This is a **fresh install only**. Never run it against an existing database or a database containing data.
+- Backups and media archives are separate from schema creation. This SQL does not restore old posts, attachments, or private media.
+- MySQL/MariaDB implicitly commit DDL. If execution fails, inspect the disposable target. For a genuinely new empty target, drop and recreate only that target before retrying; do not blindly replay partial DDL.
+- All application tables use InnoDB and utf8mb4. The schema includes identity/registration, technical posts, replies, votes, diagnosis timeline, edit history, repair outcomes, notifications, push subscriptions, personal help, consent-based publication, device catalog, drafts/media, rate limiting, account lifecycle/security audit, storage recovery tasks, session-version invalidation, retention foreign keys, and physical-delete protection triggers.
+- Technical posts, replies, attachments, diagnostic history, skill evidence, consent records, and audit records are retained. Use application soft-delete/anonymization workflows rather than physical DELETE.
+- No database is created or modified automatically by deployment or by the PHP application.
+
+## Incremental migration history
+
+The numbered files under `database/migrations/` are retained as historical incremental migrations and for legacy/upgrade testing. The duplicate `002_` prefix is historical and those two files are sequential in the old upgrade path. **Do not execute the numbered sequence in addition to `fresh_install.sql` on a new database.**
+
+The consolidated file is built from the final schema represented by migrations 000–019. The duplicate terms table creation in migration 013 is omitted because it is already created in migration 002. The historical oldest-user auto-promotion in migration 002 is intentionally not part of the new-install SQL; first-admin assignment must use the guarded command above.
+
+## Verification
+
+GitHub Actions runs the single-file fresh install against MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, then checks required tables, final profile columns, auth_version, foreign keys, retention rules, physical-delete triggers, first-admin bootstrap, and representative technical-content writes.
+
+Owner-machine acceptance remains separate: restore any available old database backup only into a separately named disposable database, and restore private media only into an isolated directory. Never overwrite the new live database or private storage tree during verification.
