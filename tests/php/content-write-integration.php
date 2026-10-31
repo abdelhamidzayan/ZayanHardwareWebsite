@@ -237,6 +237,55 @@ try {
     expectContentWrite(!is_file($replySource), 'Reply upload should have moved before the injected failure.');
     expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 1, 'Reply rollback must remove its moved media file.');
 
+    $orphanSource = makeUploadFile($sourceRoot, 'recovery-task.pdf');
+    $orphanTitle = 'Content write recovery task ' . bin2hex(random_bytes(4));
+    $orphanService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => false,
+        static function (): void {
+            throw new RuntimeException('synthetic failure to force recovery task');
+        },
+        $storageRoot
+    );
+    $orphanFailureObserved = false;
+    try {
+        $orphanService->createIssue(
+            $ownerId,
+            'technical_post',
+            $orphanTitle,
+            null,
+            null,
+            'The moved file must remain tracked when compensation fails.',
+            '',
+            [['tmp' => $orphanSource, 'size' => filesize($orphanSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $orphanFailureObserved = $error->getMessage() === 'synthetic failure to force recovery task';
+    }
+    expectContentWrite($orphanFailureObserved, 'Compensation failure injection must be observed.');
+    $issueCount->execute([$orphanTitle]);
+    expectContentWrite((int) $issueCount->fetchColumn() === 0, 'Issue row must roll back before a recovery task is recorded.');
+
+    $recoveryQuery = $pdo->prepare(
+        "SELECT id, file_path, status FROM storage_recovery_tasks
+         WHERE aggregate_type = 'issue' AND reason_code = 'compensation_failed'
+           AND status = 'pending' ORDER BY id DESC LIMIT 1"
+    );
+    $recoveryQuery->execute();
+    $recoveryTask = $recoveryQuery->fetch(PDO::FETCH_ASSOC);
+    expectContentWrite(is_array($recoveryTask), 'Failed compensation must create a durable recovery task.');
+    $orphanPath = $storageRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $recoveryTask['file_path']);
+    expectContentWrite(is_file($orphanPath), 'The file must be preserved while its recovery task is pending.');
+
+    if (!unlink($orphanPath)) {
+        throw new RuntimeException('Unable to clean the synthetic orphan file.');
+    }
+    $pdo->prepare(
+        "UPDATE storage_recovery_tasks SET status = 'completed', completed_at = UTC_TIMESTAMP()
+         WHERE id = ?"
+    )->execute([(int) $recoveryTask['id']]);
+
     echo "Atomic issue/reply write integration passed: successful commit, DB failure rollback, and second-file move compensation.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, "Content-write integration failed: " . $error::class . ' ' . $error->getMessage() . PHP_EOL);
