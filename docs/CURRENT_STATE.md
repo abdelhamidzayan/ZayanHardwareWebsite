@@ -98,7 +98,9 @@ Implemented but awaiting CI verification:
 - Added a route policy test that scans all 49 declared POST routes, verifies CSRF in the handler or an explicit same-controller delegate, and locks the public POST allow-list to `/login` and `/register`.
 - Added [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md).
 
-**Not yet verified:** the new PHP tests, migration 019 across the database matrix, complete POST route scan, full authorization matrix review, refreshed Graphify report/artifact review, and fixes for any further findings. No Phase 2 CI result is claimed yet.
+**CI status:** PHP and Graphify passed on Phase 2 commit `74c377cd3ca8f14b191ffa5af3e2fd6cb31d0c08`; the database matrix was running when these notes were last refreshed. A documentation-only update followed, so the latest branch head must receive its own final CI check.
+
+**Remaining review:** finish object-level ownership/participant and model-boundary review; review upload/private-file paths, XSS/output encoding and SQL access beyond the reviewed templates/DOM sinks; inspect external updater/sudoers on the owner's machine. No Phase 2 completion is claimed.
 
 ## 9. Working rules for all three phases
 
