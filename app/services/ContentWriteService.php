@@ -341,13 +341,18 @@ final class ContentWriteService
             $filename = bin2hex(random_bytes(16)) . '.' . $extension;
             $destination = $directory . DIRECTORY_SEPARATOR . $filename;
             $moved = ($this->moveFile)($temporaryPath, $destination);
-            if ($moved !== true || !is_file($destination)) {
+            $destinationExists = is_file($destination);
+
+            // Some filesystem adapters can finish the move and still report a
+            // failure (for example, an error while finalizing the operation).
+            // Track any file that actually appeared before raising the failure,
+            // otherwise rollback would leave an unjournaled orphan behind.
+            if ($destinationExists) {
+                $movedFiles[] = $destination;
+            }
+            if ($moved !== true || !$destinationExists) {
                 throw new \DomainException('media_move_failed');
             }
-
-            // Track the file immediately after the successful move so all later
-            // failures compensate it, including an attachment INSERT failure.
-            $movedFiles[] = $destination;
             $isInline = isset($referencedTokens[$token]);
             $attachmentId = Issue::addAttachment(
                 $issueId,
