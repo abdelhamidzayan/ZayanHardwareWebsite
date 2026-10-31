@@ -305,8 +305,9 @@ final class PostDraft extends Model
             if (!empty($media['rendered_path'])) self::removePrivateFile((string) $media['rendered_path']);
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) self::rollbackRevisionMutation();
-            if (is_array($media)) {
-                self::cleanupDeletedMediaIfUnreferenced($draftId, $mediaUuid, $userId, $media);
+            if (is_array($media)
+                && self::cleanupDeletedMediaIfUnreferenced($draftId, $mediaUuid, $userId, $media)) {
+                return;
             }
             throw $e;
         }
@@ -371,10 +372,17 @@ final class PostDraft extends Model
         return $revision;
     }
 
-    private static function rollbackRevisionMutation(): void
+    private static function rollbackRevisionMutation(): bool
     {
         $pdo = self::db();
-        if ($pdo->inTransaction()) $pdo->rollBack();
+        if (!$pdo->inTransaction()) return true;
+        try {
+            $pdo->rollBack();
+            return true;
+        } catch (\Throwable $error) {
+            App::logException('CRITICAL', 'draft.revision_rollback_failed', $error);
+            return false;
+        }
     }
 
     public static function currentRevision(string $draftId, int $userId): int
@@ -389,12 +397,58 @@ final class PostDraft extends Model
 
     public static function deleteForUser(string $id, int $userId): bool
     {
-        $stmt = self::db()->prepare('SELECT m.storage_path, m.rendered_path FROM post_draft_media m JOIN post_drafts d ON d.id = m.draft_id WHERE d.id = ? AND d.user_id = ?');
+        $pdo = self::db();
+        $stmt = $pdo->prepare(
+            'SELECT m.storage_path, m.rendered_path
+             FROM post_draft_media m
+             JOIN post_drafts d ON d.id = m.draft_id
+             WHERE d.id = ? AND d.user_id = ?'
+        );
         $stmt->execute([$id, $userId]);
         $paths = $stmt->fetchAll();
-        $delete = self::db()->prepare('DELETE FROM post_drafts WHERE id = ? AND user_id = ?');
-        $delete->execute([$id, $userId]);
-        if ($delete->rowCount() !== 1) return false;
+
+        try {
+            $delete = $pdo->prepare('DELETE FROM post_drafts WHERE id = ? AND user_id = ?');
+            $delete->execute([$id, $userId]);
+            if ($delete->rowCount() !== 1) return false;
+        } catch (\Throwable $error) {
+            // A single-statement autocommit can lose its acknowledgement after
+            // the row was deleted. Confirm through an independent connection
+            // before touching any file.
+            try {
+                $check = Database::newConnection()->prepare(
+                    'SELECT id FROM post_drafts WHERE id = ? AND user_id = ? LIMIT 1'
+                );
+                $check->execute([$id, $userId]);
+                $draftStillExists = $check->fetchColumn() !== false;
+                if (!$draftStillExists) {
+                    foreach ($paths as $item) {
+                        self::removePrivateFile((string) $item['storage_path']);
+                        if (!empty($item['rendered_path'])) self::removePrivateFile((string) $item['rendered_path']);
+                    }
+                    self::removePrivateDirectory($id);
+                    return true;
+                }
+            } catch (\Throwable $inspectionError) {
+                App::logException('CRITICAL', 'draft.delete_outcome_inspection_failed', $inspectionError, [
+                    'draft_id' => $id,
+                    'user_id' => $userId,
+                ]);
+            }
+
+            foreach ($paths as $item) {
+                self::recordStorageRecoveryTask((string) $item['storage_path'], 'draft_delete_outcome_unknown');
+                if (!empty($item['rendered_path'])) {
+                    self::recordStorageRecoveryTask((string) $item['rendered_path'], 'draft_delete_outcome_unknown');
+                }
+            }
+            App::logException('ERROR', 'draft.delete_outcome_unknown', $error, [
+                'draft_id' => $id,
+                'user_id' => $userId,
+            ]);
+            throw $error;
+        }
+
         foreach ($paths as $item) {
             self::removePrivateFile((string) $item['storage_path']);
             if (!empty($item['rendered_path'])) self::removePrivateFile((string) $item['rendered_path']);
