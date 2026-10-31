@@ -48,7 +48,7 @@ final class AdminUserController extends Controller
         $pdo->beginTransaction();
         try {
             AdminRosterService::assertActorActive($pdo, (int) $admin['id']);
-            $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND account_status <> 'deleted'");
+            $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, auth_version = auth_version + 1 WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found');
 
