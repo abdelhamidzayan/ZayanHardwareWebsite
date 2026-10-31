@@ -486,6 +486,9 @@ final class IssueController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->fail('/issues/' . $id, 'انتهت صلاحية الصفحة. أعد المحاولة.');
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+        if (!RateLimiter::allowForUser('issues.vote', (int) $user['id'], 40, 300, 120)) {
+            return $this->fail('/issues/' . $id . '#discussion', 'وصلت للحد المسموح من تقييم الردود في فترة قصيرة. حاول مرة أخرى لاحقًا.');
+        }
         $replyId = filter_var($this->request->input('reply_id'), FILTER_VALIDATE_INT);
         if (!$replyId || $replyId < 1) return $this->fail('/issues/' . $id, 'الرد غير صحيح.');
         try {
