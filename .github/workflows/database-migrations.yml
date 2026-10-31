@@ -408,3 +408,35 @@ jobs:
           DB_USER: root
           DB_PASS: root
         run: php tests/php/account-retention-integration.php
+      - name: Verify disposable database backup, restore, and schema/data equivalence
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: |
+          set -euo pipefail
+          SOURCE_DB="zayan_fresh_install_test"
+          RESTORE_DB="zayan_fresh_install_restore_test"
+          BACKUP_FILE="${RUNNER_TEMP}/zayan-fresh-install.sql.gz"
+          CHECKSUM_FILE="${BACKUP_FILE}.sha256"
+
+          # The CI source is disposable. Create a compressed dump and verify
+          # both gzip integrity and the SHA-256 checksum before restoring it.
+          mysqldump -h 127.0.0.1 -uroot -proot \
+            --single-transaction --quick --routines --triggers --events \
+            --hex-blob --default-character-set=utf8mb4 "${SOURCE_DB}" \
+            | gzip -c > "${BACKUP_FILE}"
+          gzip -t "${BACKUP_FILE}"
+          (cd "${RUNNER_TEMP}" && sha256sum "$(basename "${BACKUP_FILE}")" > "$(basename "${CHECKSUM_FILE}")")
+          (cd "${RUNNER_TEMP}" && sha256sum --check "$(basename "${CHECKSUM_FILE}")")
+
+          # Never drop or overwrite a database. A fresh CI service must not
+          # already contain this one-time restore target.
+          mysql -h 127.0.0.1 -uroot -proot -e \
+            "CREATE DATABASE ${RESTORE_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          gzip -dc "${BACKUP_FILE}" | mysql -h 127.0.0.1 -uroot -proot "${RESTORE_DB}"
+
+          php bin/compare-database-schema.php --compare-to="${RESTORE_DB}" --rows
+
