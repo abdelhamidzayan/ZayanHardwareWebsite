@@ -46,6 +46,7 @@ final class AdminUserController extends Controller
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
+            $this->assertActiveAdmin($pdo, (int) $admin['id']);
             $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found');
@@ -94,6 +95,19 @@ final class AdminUserController extends Controller
             }
             $adminRosterLockAcquired = true;
             $pdo->beginTransaction();
+            $this->assertActiveAdmin($pdo, (int) $admin['id']);
+            $targetStmt = $pdo->prepare('SELECT role, account_status FROM users WHERE id = ? FOR UPDATE');
+            $targetStmt->execute([$id]);
+            $target = $targetStmt->fetch();
+            if (!$target || $target['account_status'] === 'deleted') {
+                throw new \DomainException('user_not_found_or_unchanged');
+            }
+            if ($target['role'] === 'admin' && $target['account_status'] === 'active' && $status !== 'active') {
+                $activeAdmins = (int) $pdo->query(
+                    "SELECT COUNT(*) FROM users WHERE role = 'admin' AND account_status = 'active'"
+                )->fetchColumn();
+                if ($activeAdmins <= 1) throw new \DomainException('last_admin');
+            }
             $stmt = $pdo->prepare("UPDATE users SET account_status = ? WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([$status, $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found_or_unchanged');
@@ -114,7 +128,11 @@ final class AdminUserController extends Controller
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            if ($e instanceof \DomainException) return $this->fail('/admin/users', 'الحساب غير موجود أو لم تتغير حالته.');
+            if ($e instanceof \DomainException) return $this->fail('/admin/users', match ($e->getMessage()) {
+                'last_admin' => 'لا يمكن تعطيل أو حظر آخر مدير نشط.',
+                'admin_not_active' => 'لم تعد تملك صلاحية تنفيذ إدارة الحسابات.',
+                default => 'الحساب غير موجود أو لم تتغير حالته.',
+            });
             throw $e;
         } finally {
             if ($adminRosterLockAcquired) {
@@ -148,12 +166,14 @@ final class AdminUserController extends Controller
             }
             $adminRosterLockAcquired = true;
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('SELECT role FROM users WHERE id = ? AND account_status <> \'deleted\' FOR UPDATE');
+            $this->assertActiveAdmin($pdo, (int) $admin['id']);
+            $stmt = $pdo->prepare('SELECT role, account_status FROM users WHERE id = ? AND account_status <> \'deleted\' FOR UPDATE');
             $stmt->execute([$id]);
-            $oldRole = $stmt->fetchColumn();
-            if ($oldRole === false) throw new \DomainException('user_not_found');
+            $target = $stmt->fetch();
+            if (!$target) throw new \DomainException('user_not_found');
+            $oldRole = (string) $target['role'];
 
-            if ($oldRole === 'admin' && $role !== 'admin') {
+            if ($oldRole === 'admin' && $target['account_status'] === 'active' && $role !== 'admin') {
                 $admins = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND account_status = 'active'")->fetchColumn();
                 if ($admins <= 1) throw new \DomainException('last_admin');
             }
@@ -189,6 +209,16 @@ final class AdminUserController extends Controller
     {
         $user = AuthService::user();
         return $user !== null && ($user['role'] ?? '') === 'admin' ? $user : null;
+    }
+
+    private function assertActiveAdmin(\PDO $pdo, int $adminId): void
+    {
+        $stmt = $pdo->prepare('SELECT role, account_status FROM users WHERE id = ? FOR UPDATE');
+        $stmt->execute([$adminId]);
+        $actor = $stmt->fetch();
+        if (!$actor || $actor['role'] !== 'admin' || $actor['account_status'] !== 'active') {
+            throw new \DomainException('admin_not_active');
+        }
     }
 
     private function text(string $key): string
