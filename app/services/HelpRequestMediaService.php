@@ -4,7 +4,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\App;
+use App\Models\Database;
 use App\Models\HelpRequest;
+use PDO;
+use Throwable;
 
 final class HelpRequestMediaService
 {
@@ -58,35 +61,151 @@ final class HelpRequestMediaService
         return $uploads;
     }
 
-    public static function store(int $requestId, int $messageId, int $userId, array $uploads): int
-    {
+    /**
+     * Save each private attachment with a DB transaction and filesystem compensation.
+     * The surrounding message remains valid when an individual attachment fails;
+     * the returned count lets the controller report that partial result accurately.
+     *
+     * @param array<int,array{tmp:string,size:int,mime:string,ext:string}> $uploads
+     */
+    public static function store(
+        int $requestId,
+        int $messageId,
+        int $userId,
+        array $uploads,
+        ?callable $moveFile = null,
+        ?callable $removeFile = null
+    ): int {
         if (!$uploads) return 0;
+
+        $move = $moveFile !== null
+            ? \Closure::fromCallable($moveFile)
+            : static fn (string $source, string $target): bool => move_uploaded_file($source, $target);
+        $remove = $removeFile !== null
+            ? \Closure::fromCallable($removeFile)
+            : static fn (string $path): bool => !is_file($path) || unlink($path);
+
         $directory = App::root('storage/private') . DIRECTORY_SEPARATOR . 'help-requests' . DIRECTORY_SEPARATOR . $requestId;
-        if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) return count($uploads);
+        if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
+            return count($uploads);
+        }
+
+        $pdo = Database::connection();
         $failed = 0;
         foreach ($uploads as $upload) {
             $filename = bin2hex(random_bytes(20)) . '.' . $upload['ext'];
             $target = $directory . DIRECTORY_SEPARATOR . $filename;
-            if (!move_uploaded_file($upload['tmp'], $target)) {
-                $failed++;
-                continue;
-            }
+            $relativePath = 'help-requests/' . $requestId . '/' . $filename;
+            $commitStarted = false;
+            $moved = false;
+
             try {
+                $pdo->beginTransaction();
+                if (($move)($upload['tmp'], $target) !== true) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $failed++;
+                    continue;
+                }
+                $moved = true;
+
                 HelpRequest::addAttachment(
-                    $requestId, $messageId, $userId,
-                    'help-requests/' . $requestId . '/' . $filename,
-                    $upload['mime'], (int) $upload['size']
+                    $requestId,
+                    $messageId,
+                    $userId,
+                    $relativePath,
+                    $upload['mime'],
+                    (int) $upload['size']
                 );
-            } catch (\Throwable $e) {
-                @unlink($target);
-                App::logException('ERROR', 'help_request.attachment_save_failed', $e, [
+
+                $commitStarted = true;
+                $pdo->commit();
+            } catch (Throwable $error) {
+                $rollbackConfirmed = !$commitStarted;
+                if ($pdo->inTransaction()) {
+                    try {
+                        $pdo->rollBack();
+                        $rollbackConfirmed = true;
+                    } catch (Throwable $rollbackError) {
+                        $rollbackConfirmed = false;
+                        App::logException('CRITICAL', 'help_request.media_rollback_failed', $rollbackError, [
+                            'request_id' => $requestId,
+                            'message_id' => $messageId,
+                            'user_id' => $userId,
+                        ]);
+                    }
+                }
+
+                // The move callback may have completed the move before throwing.
+                $moved = $moved || is_file($target);
+                if ($moved && !$rollbackConfirmed) {
+                    self::recordRecoveryTask($requestId, $relativePath, 'commit_outcome_unknown');
+                } elseif ($moved) {
+                    try {
+                        if (is_file($target) && ($remove)($target) !== true) {
+                            self::recordRecoveryTask($requestId, $relativePath, 'compensation_failed');
+                        }
+                    } catch (Throwable $cleanupError) {
+                        App::logException('ERROR', 'help_request.media_compensation_failed', $cleanupError, [
+                            'request_id' => $requestId,
+                            'message_id' => $messageId,
+                            'user_id' => $userId,
+                        ]);
+                        self::recordRecoveryTask($requestId, $relativePath, 'compensation_failed');
+                    }
+                }
+
+                App::logException('ERROR', 'help_request.attachment_save_failed', $error, [
                     'request_id' => $requestId,
                     'message_id' => $messageId,
                     'user_id' => $userId,
+                    'commit_started' => $commitStarted,
+                    'rollback_confirmed' => $rollbackConfirmed,
                 ]);
                 $failed++;
             }
         }
         return $failed;
+    }
+
+    private static function recordRecoveryTask(int $requestId, string $relativePath, string $reason): void
+    {
+        $expectedPrefix = 'help-requests/' . $requestId . '/';
+        if (!str_starts_with($relativePath, $expectedPrefix)
+            || str_contains($relativePath, '..')
+            || str_contains($relativePath, '\\')) {
+            App::log('CRITICAL', 'help_request.media_recovery_path_rejected', [
+                'request_id' => $requestId,
+                'reason_code' => $reason,
+            ]);
+            return;
+        }
+
+        try {
+            Database::connection()->prepare(
+                "INSERT INTO storage_recovery_tasks
+                    (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code,
+                     status, attempts, last_attempt_at, last_error_code)
+                 VALUES ('help_request', ?, ?, ?, ?, 'pending', 1, UTC_TIMESTAMP(), ?)
+                 ON DUPLICATE KEY UPDATE
+                    aggregate_id = VALUES(aggregate_id),
+                    reason_code = VALUES(reason_code),
+                    status = 'pending',
+                    attempts = attempts + 1,
+                    last_attempt_at = UTC_TIMESTAMP(),
+                    last_error_code = VALUES(last_error_code),
+                    completed_at = NULL"
+            )->execute([
+                $requestId,
+                $relativePath,
+                hash('sha256', $relativePath),
+                $reason,
+                $reason === 'commit_outcome_unknown' ? 'commit_unknown' : 'unlink_failed',
+            ]);
+        } catch (Throwable $error) {
+            App::logException('CRITICAL', 'help_request.media_recovery_task_write_failed', $error, [
+                'request_id' => $requestId,
+                'reason_code' => $reason,
+            ]);
+        }
     }
 }
