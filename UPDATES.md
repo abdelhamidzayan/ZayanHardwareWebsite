@@ -1,5 +1,18 @@
 # Zayan Hardware — Update Log
 
+## 2026-10-31 — Phase 1: backup/restore gate, schema comparator, and logging hardening
+
+- **Type:** Database / Infrastructure / Security / Tests / Documentation
+- **Summary:** Added a read-only schema/row-count comparison CLI, expanded log redaction and retention coverage, and added a disposable backup/restore/checksum/compare step to the three-engine migration workflow. Added a safe runbook for verifying the owner backup in a separate restore database.
+- **Code areas:** `bin/compare-database-schema.php`; `app/core/App.php`; `tests/php/logging-exception-redaction.php`; `.github/workflows/database-migrations.yml`.
+- **Database:** No migration added or applied by this checkpoint. The GitHub workflow creates a new disposable restore-test schema for each CI job; it does not target the owner's database.
+- **Safety:** Comparator uses read-only information_schema queries and SELECT row counts. Restore flow creates a new target and intentionally does not overwrite an existing database. Raw Authorization/Cookie headers, bearer values, access/refresh/id/general token values are redacted before log output.
+- **Verification:** GitHub source files and workflow configuration were fetched and reviewed. PHP lint, isolated log test, database restore matrix, and runtime checks have **not yet been executed** on this branch. The previous PR #16 CI runs executed zero steps due to exhausted Actions minutes; recheck usage before triggering new runs.
+- **Documentation:** [Completion plan](docs/COMPLETION_PLAN.md) · [Current state](docs/CURRENT_STATE.md) · [Backup/restore runbook](docs/DATABASE_BACKUP_RESTORE.md) · [README](README.md).
+- **Status:** Implemented on `phase1/foundation-reliability-20261031`; not yet test-verified, merged, or deployed.
+
+---
+
 ## 2026-10-31 — Start the three-phase completion program
 
 - **Type:** Project planning / Infrastructure
