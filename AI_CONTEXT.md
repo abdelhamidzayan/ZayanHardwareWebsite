@@ -1,6 +1,6 @@
 # Zayan Hardware — AI Context and Handoff
 
-> **Start here in every new AI conversation.** This file is the durable project handoff. For the actual source architecture, open [Architecture and dependency map](docs/architecture-code-map.md). For the automated source graph, read [Graphify](docs/graphify.md).
+> **Start here in every new AI conversation.** Read [Contributor Rules](AGENTS.md), [Current Project State](docs/CURRENT_STATE.md), and [Update Log](UPDATES.md) first. This file is the durable project handoff. For the actual source architecture, open [Architecture and dependency map](docs/architecture-code-map.md). For the automated source graph, read [Graphify](docs/graphify.md). The short reusable prompt is [here](docs/AI_START_PROMPT.md).
 
 ## 1. Project identity and scope
 
@@ -13,13 +13,15 @@
 
 ## 2. Mandatory reading order
 
-1. `AGENTS.md` — non-negotiable safety and contribution rules.
-2. [Architecture and dependency map](docs/architecture-code-map.md) — request lifecycle, route/controller/service/model/view relationships.
-3. [Graphify guide](docs/graphify.md) — generate/check the machine-readable source graph and understand its limitations.
-4. [Security hardening](docs/security-hardening.md) — rate limits, private media, account retention.
-5. [Post composer and drafts](docs/post-composer-and-drafts.md) and [profiles/personal help](docs/profiles-personal-help.md) when working on those features.
-6. [Account retention policy](docs/account-retention.md) and [content-system migrations](docs/content-system-migrations.md) before touching account lifecycle or schema.
-7. Read the actual source at the active branch before changing anything. Documentation is a map, not a substitute for source inspection.
+1. [Contributor rules](AGENTS.md) — non-negotiable safety, architecture, documentation, and Git rules.
+2. [Current project state](docs/CURRENT_STATE.md) — current direction and known verification caveats.
+3. [Update log](UPDATES.md) — chronological feature/change history and exact verification claims.
+4. [Architecture and dependency map](docs/architecture-code-map.md) — request lifecycle, route/controller/service/model/view relationships.
+5. [Graphify guide](docs/graphify.md) — use when architectural dependencies are relevant or a Graphify review is requested.
+6. [Security hardening](docs/security-hardening.md) — rate limits, private media, account retention.
+7. [Post composer and drafts](docs/post-composer-and-drafts.md) and [profiles/personal help](docs/profiles-personal-help.md) when working on those features.
+8. [Account retention policy](docs/account-retention.md) and [content-system migrations](docs/content-system-migrations.md) before touching account lifecycle or schema.
+9. Read the actual source at the active branch before changing anything. Documentation is a map, not a substitute for source inspection.
 
 ## 3. Source-of-truth boundaries
 
@@ -46,7 +48,6 @@ Always report the exact branch and commit being discussed. A passing CI job does
 - The owner reported GitHub Actions usage at **2,000 / 2,000 included minutes**, with the account notice showing reset on **2026-11-01**. The owner has not confirmed that a $0 Actions spending budget is configured. Do not manually rerun/dispatch workflows before the displayed reset or explicit owner authorization. Keep workflow YAML files intact; follow [the Actions usage policy](AGENTS.md#github-actions-and-usage-budget).
 - A green historical workflow run proves only the tests and commit it actually executed. It does not prove current branch state, local XAMPP/Kali behavior, PWA/Safari behavior, or deployment.
 - Graphify is static analysis, not a runtime call trace. Resolve its outstanding dynamic JavaScript API links manually and review every warning; never treat a missing graph edge as proof that no dependency exists.
-
 
 ## 5. Owner's local environment — latest reported state
 
@@ -80,7 +81,6 @@ All local details above are a dated handoff. Recheck the actual machine before a
 - Shared image dimension/pixel checks are implemented in `ImageUploadPolicy` and are used by reviewed issue, draft, avatar and personal-help upload paths. This does not replace MIME validation or byte-size limits.
 - Draft publishing already has rollback restoration and ambiguous-commit recovery. Draft media upload/rendered replacement/deletion uses revision checks and reference-aware cleanup; storage-root or UUID-directory unavailability now creates durable pending recovery tasks, cross-draft UUID symlinks are rejected, and dot-only filenames are refused. `tests/php/draft-media-recovery-integration.php` covers the key filesystem boundaries; broader end-to-end CRUD verification remains. Personal-help messages and attachments intentionally use separate commits: each attachment has its own transaction, compensation, and recovery journal, while the UI explicitly reports partial attachment failure. This is not an all-or-nothing message-plus-all-media transaction. `NotificationService` isolates notification/Push failures as best-effort side effects and logs them; there is no durable outbox/retry guarantee. Other review areas remain the full POST authorization matrix, dynamic JS API references, browser/mobile Safari/PWA journeys, and the owner's local backup restore/schema comparison. No real database, private media tree, or owner backup may be modified during these reviews without explicit approval and a verified rollback plan.
 
-
 ## 7. Non-negotiable content preservation
 
 The owner's highest-priority requirement is that technical knowledge must not be lost.
@@ -91,19 +91,21 @@ The owner's highest-priority requirement is that technical knowledge must not be
 - Do not prune, bulk-delete, or migrate media without a verified inventory, backup, explicit retention policy, and rollback plan.
 - Graphify is source-only and must not read or mutate member uploads, logs, backups, or database contents.
 
-## 8. Engineering workflow
+## 8. Engineering workflow and current owner priority
 
-For each feature, trace the complete path:
+The owner currently wants **feature development first**. The full-system audit, broad Graphify review, and final hardening/documentation sweep are deferred until the planned product features are complete. This is not permission to skip focused checks or safety controls for an individual feature.
+
+For each feature, trace the relevant path:
 
 `HTTP method + route → route parameters → controller → authorization/CSRF/rate limit → service → model/SQL → migration/table/FK → view/layout → JS/CSS/API → storage/logging/notifications → tests`.
 
 Then:
-1. inspect the current branch and exact source;
+1. inspect the current branch, local working tree, and exact source;
 2. reproduce or prove the defect before editing;
-3. make the smallest coherent fix;
-4. add regression tests, including failure/rollback cases;
-5. run PHP/JS lint, focused tests, Graphify, and relevant database integration;
+3. make the smallest coherent change; avoid unrelated refactoring;
+4. add focused regression tests, including failure/rollback cases where relevant;
+5. run PHP/JS lint and focused tests relevant to the changed feature. Run broader database/security checks when the change affects those boundaries. Use Graphify when architectural dependencies change or when the owner requests a Graphify review; do not run a full Graphify audit for every small feature;
 6. review the complete diff and data-preservation impact;
-7. update this file and the relevant architecture/feature documentation with verified facts only.
+7. update `UPDATES.md`, `docs/CURRENT_STATE.md` when the overall status changes, and the relevant feature/architecture/migration documentation. Update `README.md` only when top-level setup, navigation, or entry-point information changes.
 
 Never claim a task is complete merely because code was added or CI passed. Separate **implemented**, **tested**, **runtime-verified**, and **deployed** status.
