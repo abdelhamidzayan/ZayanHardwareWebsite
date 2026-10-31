@@ -89,6 +89,15 @@ try {
                       ORDER BY TABLE_NAME',
             'keys' => ['table_name'],
         ],
+        'views' => [
+            'sql' => 'SELECT TABLE_NAME AS view_name, VIEW_DEFINITION AS view_definition,
+                             CHECK_OPTION AS check_option, IS_UPDATABLE AS is_updatable,
+                             DEFINER AS definer, SECURITY_TYPE AS security_type
+                      FROM information_schema.VIEWS
+                      WHERE TABLE_SCHEMA = ?
+                      ORDER BY TABLE_NAME',
+            'keys' => ['view_name'],
+        ],
         'columns' => [
             'sql' => 'SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name,
                              ORDINAL_POSITION AS ordinal_position, COLUMN_TYPE AS column_type,
@@ -145,6 +154,27 @@ try {
                       WHERE TRIGGER_SCHEMA = ?
                       ORDER BY TRIGGER_NAME',
             'keys' => ['trigger_name'],
+        ],
+        'routines' => [
+            'sql' => 'SELECT ROUTINE_TYPE AS routine_type, ROUTINE_NAME AS routine_name,
+                             DATA_TYPE AS data_type, DTD_IDENTIFIER AS dtd_identifier,
+                             ROUTINE_DEFINITION AS routine_definition, SQL_DATA_ACCESS AS sql_data_access,
+                             SECURITY_TYPE AS security_type, SQL_MODE AS sql_mode, DEFINER AS definer
+                      FROM information_schema.ROUTINES
+                      WHERE ROUTINE_SCHEMA = ?
+                      ORDER BY ROUTINE_TYPE, ROUTINE_NAME',
+            'keys' => ['routine_type', 'routine_name'],
+        ],
+        'events' => [
+            'sql' => 'SELECT EVENT_NAME AS event_name, DEFINER AS definer, TIME_ZONE AS time_zone,
+                             EVENT_TYPE AS event_type, EXECUTE_AT AS execute_at,
+                             INTERVAL_VALUE AS interval_value, INTERVAL_FIELD AS interval_field,
+                             SQL_MODE AS sql_mode, STATUS AS status,
+                             ON_COMPLETION AS on_completion, EVENT_DEFINITION AS event_definition
+                      FROM information_schema.EVENTS
+                      WHERE EVENT_SCHEMA = ?
+                      ORDER BY EVENT_NAME',
+            'keys' => ['event_name'],
         ],
     ];
 
