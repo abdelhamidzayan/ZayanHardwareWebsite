@@ -180,6 +180,33 @@ try {
     expectContentWrite(!is_file($moveOne), 'The first moved file must be compensated after the second move fails.');
     expectContentWrite(is_file($moveTwo), 'The second source file must remain available when its move fails.');
 
+    $duplicateOne = makeUploadFile($sourceRoot, 'duplicate-first.pdf');
+    $duplicateTwo = makeUploadFile($sourceRoot, 'duplicate-second.pdf');
+    $duplicateTitle = 'Content write duplicate token ' . bin2hex(random_bytes(4));
+    $duplicateObserved = false;
+    try {
+        $service->createIssue(
+            $ownerId,
+            'technical_post',
+            $duplicateTitle,
+            null,
+            null,
+            'Duplicate media tokens must be rejected atomically.',
+            '',
+            [
+                ['tmp' => $duplicateOne, 'size' => filesize($duplicateOne), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'same-token'],
+                ['tmp' => $duplicateTwo, 'size' => filesize($duplicateTwo), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'same-token'],
+            ]
+        );
+    } catch (DomainException $error) {
+        $duplicateObserved = $error->getMessage() === 'upload_metadata_invalid';
+    }
+    expectContentWrite($duplicateObserved, 'Duplicate upload tokens must be rejected by the write service.');
+    $issueCount->execute([$duplicateTitle]);
+    expectContentWrite((int) $issueCount->fetchColumn() === 0, 'Duplicate token rejection must roll back the issue.');
+    expectContentWrite(is_file($duplicateTwo), 'The second duplicate-token source file must not move.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 1, 'The first duplicate-token file must be compensated.');
+
     $parentId = Issue::addReply($issueId, $ownerId, 'Atomic reply parent fixture');
     $replySource = makeUploadFile($sourceRoot, 'reply-fail.pdf');
     $replyService = new ContentWriteService(
