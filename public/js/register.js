@@ -137,7 +137,9 @@
     const field = key === 'contact'
       ? form.querySelector('[data-phone-fields], [data-email-fields]')?.closest('.field')
       : form.querySelector('#' + key)?.closest('.field') || form.querySelector('[name="' + key + '"]')?.closest('.field');
-    const input = field?.querySelector('input, select');
+    const input = key === 'contact'
+      ? (contactType.value === 'email' ? emailLocal : phoneInput)
+      : field?.querySelector('input, select');
     if (input) input.setAttribute('aria-invalid', message ? 'true' : 'false');
   };
 
@@ -175,6 +177,7 @@
       ? 'يمكنك لصق البريد الإلكتروني كاملًا في الخانة الأولى.'
       : 'مثال: 01033771537 في مصر يُحفظ +201033771537.';
     contactSwitch.setAttribute('aria-label', emailMode ? 'التبديل إلى رقم الهاتف' : 'التبديل إلى البريد الإلكتروني');
+    contactSwitch.setAttribute('aria-pressed', String(emailMode));
     contactSwitch.title = emailMode ? 'التبديل إلى رقم الهاتف' : 'التبديل إلى البريد الإلكتروني';
     contactIcon.innerHTML = emailMode
       ? '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>'
@@ -221,10 +224,14 @@
     if (event.key === 'Escape') closeCountryList();
   });
 
-  contactSwitch.addEventListener('click', () => {
-    showContactMode(contactType.value === 'phone' ? 'email' : 'phone');
+  contactSwitch.addEventListener('click', (event) => {
+    event.preventDefault();
+    const nextMode = contactType.value === 'phone' ? 'email' : 'phone';
+    showContactMode(nextMode);
+    setFieldError('contact', '');
+    closeCountryList();
     saveDraft();
-    (contactType.value === 'phone' ? phoneInput : emailLocal).focus();
+    (nextMode === 'phone' ? phoneInput : emailLocal).focus();
   });
 
   emailLocal.addEventListener('input', () => {
@@ -297,6 +304,13 @@
       setFieldError('terms_acceptance', 'يجب الموافقة على قواعد المنصة وسياسة الخصوصية.');
       valid = false;
     } else setFieldError('terms_acceptance', '');
+
+    if (!valid) {
+      const firstInvalid = form.querySelector('[aria-invalid="true"]')
+        || (!termsAcceptance?.checked ? termsAcceptance : null);
+      firstInvalid?.focus();
+      firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     return valid;
   };
 
