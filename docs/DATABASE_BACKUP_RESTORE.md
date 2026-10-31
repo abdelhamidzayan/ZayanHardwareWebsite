@@ -54,7 +54,20 @@ Replace `DB_USER` with the configured database username and adjust host/port to 
 
 The source database remains untouched. This procedure restores a copy into the separate target only.
 
-## 3. Compare schema objects and row counts
+## 3. Verify the separate private-media backup
+
+A SQL dump does not contain files under `storage/private/`. Locate the media backup separately; do not assume it is included in the `.sql.gz` file.
+
+- Record the media archive's path, format, timestamp, and checksum without exposing its contents.
+- Verify the archive using the tool for its actual format (for example, `gzip -t` for gzip or `unzip -t` for ZIP).
+- List and inspect archive entries before extraction. Reject absolute paths, `..` traversal, unexpected symlinks/hard links, and entries outside the expected private-storage layout.
+- Extract only into a **new isolated restore directory** outside the live `storage/private/` tree. Never extract over the live upload tree.
+- Compare representative DB-referenced paths (issue attachments, original/rendered image paths, issue audio, draft media, and personal-help attachments) with the isolated restored files. Verify file size and checksum where available.
+- Do not delete, overwrite, or "clean up" live files during this check.
+
+If no separate private-media backup can be located, record this as a Phase 1 blocker. Do not describe a database-only dump as a complete application-data backup.
+
+## 4. Compare schema objects and row counts
 
 The repository includes a read-only comparator:
 
@@ -79,7 +92,7 @@ Expected result: all sections report `MATCH` and the command exits with status 0
 
 **Important limitation:** matching row counts and schema objects do not prove every individual row value is byte-for-byte identical. For a high-assurance recovery drill, also inspect critical business records and attachment references using approved read-only queries, and separately verify the corresponding private media files from their own protected backup.
 
-## 4. GitHub CI backup/restore check
+## 5. GitHub CI backup/restore check
 
 The database workflow now performs an isolated backup → gzip/checksum verification → restore into a newly created disposable schema → schema/row-count comparison on each supported matrix engine:
 
@@ -100,7 +113,7 @@ Record the following separately:
 | Restore into a new separate database | Pending owner-machine verification |
 | Schema object comparison | Pending owner-machine verification |
 | Row-count comparison | Pending owner-machine verification |
-| Critical row/attachment-reference spot checks | Pending owner-machine verification |
+| Critical row/attachment-reference spot checks | Pending owner-machine verification |\n| Private-media backup inventory and isolated sample restore | Pending owner-machine verification |
 | CI disposable backup/restore matrix | Added to workflow; awaits executed CI result |
 
 Never mark the owner's backup as restore-verified until the target restore and comparisons actually pass.
