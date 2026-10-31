@@ -119,7 +119,9 @@ try {
         'PRIVATE_PASSWORD_SECRET',
     ] as $secret) {
         if (str_contains($contents, $secret)) {
-            throw new RuntimeException('A synthetic secret appeared in a log file.');
+            // Values are synthetic test fixtures; identify only the fixture,
+            // never dump the log record or any production log data.
+            throw new RuntimeException('Synthetic redaction fixture leaked: ' . $secret);
         }
     }
 
