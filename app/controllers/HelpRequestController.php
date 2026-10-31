@@ -158,26 +158,42 @@ final class HelpRequestController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->redirect('/help-requests');
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
+
         try {
-            HelpRequest::respond($id, (int) $user['id'], $accept);
-            HelpRequest::markRead($id, (int) $user['id']);
+            // Resolve notification context before changing the request state.
             $request = HelpRequest::findForParticipant($id, (int) $user['id']);
-            if ($request) {
-                NotificationService::notify(
-                    (int) $request['requester_id'], (int) $user['id'], null, null,
-                    $accept ? 'personal_help_accepted' : 'personal_help_declined',
-                    $accept ? 'تم قبول طلب المساعدة' : 'تعذر قبول طلب المساعدة',
-                    $request['subject'], '/help-requests/' . $id, 'personal-help-response:' . $id
-                );
+            if (!$request) throw new \DomainException('request_not_pending');
+
+            HelpRequest::respond($id, (int) $user['id'], $accept);
+            try {
+                HelpRequest::markRead($id, (int) $user['id']);
+            } catch (\Throwable $readError) {
+                App::logException('WARNING', 'help_request.read_marker_failed', $readError, [
+                    'request_id' => $id,
+                    'user_id' => (int) $user['id'],
+                ]);
             }
+
+            NotificationService::notify(
+                (int) $request['requester_id'], (int) $user['id'], null, null,
+                $accept ? 'personal_help_accepted' : 'personal_help_declined',
+                $accept ? 'تم قبول طلب المساعدة' : 'تعذر قبول طلب المساعدة',
+                $request['subject'], '/help-requests/' . $id, 'personal-help-response:' . $id
+            );
             $this->flash($accept ? 'success' : 'info', $accept ? 'تم قبول الطلب وفتح المحادثة الخاصة.' : 'تم الاعتذار عن طلب المساعدة.');
         } catch (\DomainException) {
             $this->flash('error', 'الطلب لم يعد متاحًا للرد.');
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'help_request.respond_failed', $error, [
+                'request_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', 'تعذر تأكيد حالة الطلب. افتح الطلب وتحقق من حالته قبل إعادة المحاولة.');
         }
         return $this->redirect('/help-requests/' . $id);
     }
 
-    public function send(int $id): Response
+       public function send(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->redirect('/help-requests/' . $id);
         $user = AuthService::user();
@@ -250,25 +266,32 @@ final class HelpRequestController extends Controller
         $user = AuthService::user();
         if (!$user) return $this->redirect('/login');
         try {
-            HelpRequest::close($id, (int) $user['id']);
+            // The recipient and title are read before the state transition commits.
             $request = HelpRequest::findForParticipant($id, (int) $user['id']);
-            if ($request) {
-                $recipient = (int) $request['requester_id'] === (int) $user['id']
-                    ? (int) $request['helper_id'] : (int) $request['requester_id'];
-                NotificationService::notify(
-                    $recipient, (int) $user['id'], null, null, 'personal_help_closed',
-                    'تم إغلاق طلب المساعدة', $request['subject'],
-                    '/help-requests/' . $id, 'personal-help-closed:' . $id
-                );
-            }
+            if (!$request) throw new \DomainException('request_not_closable');
+            $recipient = (int) $request['requester_id'] === (int) $user['id']
+                ? (int) $request['helper_id'] : (int) $request['requester_id'];
+
+            HelpRequest::close($id, (int) $user['id']);
+            NotificationService::notify(
+                $recipient, (int) $user['id'], null, null, 'personal_help_closed',
+                'تم إغلاق طلب المساعدة', $request['subject'],
+                '/help-requests/' . $id, 'personal-help-closed:' . $id
+            );
             $this->flash('success', 'تم إغلاق طلب المساعدة. ستظل الرسائل محفوظة للطرفين.');
         } catch (\DomainException) {
             $this->flash('error', 'لا يمكن إغلاق هذا الطلب حاليًا.');
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'help_request.close_failed', $error, [
+                'request_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', 'تعذر تأكيد إغلاق الطلب. افتحه وتحقق من حالته قبل إعادة المحاولة.');
         }
         return $this->redirect('/help-requests/' . $id);
     }
 
-    public function proposePublication(int $id): Response
+       public function proposePublication(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->redirect('/help-requests/' . $id);
         $user = AuthService::user();
@@ -285,25 +308,31 @@ final class HelpRequestController extends Controller
             return $this->fail('/help-requests/' . $id, 'اكتب ملخصًا فنيًا واضحًا للمشكلة والتشخيص والحل قبل إرسال اقتراح النشر.');
         }
         try {
+            $request = HelpRequest::findForParticipant($id, (int) $user['id']);
+            if (!$request) throw new \DomainException('publication_request_unavailable');
+
             $publicationId = HelpRequest::proposePublication(
                 $id, (int) $user['id'], $title, $problem, $diagnosis, $solution, $showIdentity
             );
-            $request = HelpRequest::findForParticipant($id, (int) $user['id']);
-            if ($request) {
-                NotificationService::notify(
-                    (int) $request['requester_id'], (int) $user['id'], null, null,
-                    'personal_help_publication_consent', 'طلب موافقة على نشر مساعدة فنية',
-                    $title, '/help-requests/' . $id, 'personal-help-publication:' . $publicationId
-                );
-            }
+            NotificationService::notify(
+                (int) $request['requester_id'], (int) $user['id'], null, null,
+                'personal_help_publication_consent', 'طلب موافقة على نشر مساعدة فنية',
+                $title, '/help-requests/' . $id, 'personal-help-publication:' . $publicationId
+            );
             $this->flash('success', 'تم إرسال اقتراح النشر. لن يظهر أي شيء للعامة قبل موافقة الطرف الآخر.');
         } catch (\DomainException) {
             $this->flash('error', 'لا يمكن اقتراح نشر هذه المساعدة أو سبق إرسال اقتراح بشأنها.');
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'help_request.publication_proposal_failed', $error, [
+                'request_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', 'تعذر تأكيد إرسال اقتراح النشر. راجع الطلب قبل إعادة المحاولة.');
         }
         return $this->redirect('/help-requests/' . $id);
     }
 
-    public function respondPublication(int $id): Response
+       public function respondPublication(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->redirect('/help-requests');
         $user = AuthService::user();
