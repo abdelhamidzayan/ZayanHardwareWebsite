@@ -30,8 +30,6 @@ jobs:
         run: php tests/php/router-public-routes.php
       - name: Verify CSRF coverage for every POST route
         run: php tests/php/post-route-csrf-policy.php
-      - name: Verify CSRF coverage for every POST route
-        run: php tests/php/post-route-csrf-policy.php
       - name: Verify read-only database schema comparator CLI help
         run: php bin/compare-database-schema.php --help
 
