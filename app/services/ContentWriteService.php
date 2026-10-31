@@ -114,6 +114,62 @@ final class ContentWriteService
         }
     }
 
+    /**
+     * @return array{id:int,body:string}
+     */
+    public function createDiagnosticUpdate(
+        int $issueId,
+        int $userId,
+        string $body,
+        array $uploads
+    ): array {
+        $this->begin();
+        $movedFiles = [];
+        $commitStarted = false;
+        $updateId = null;
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT status FROM issues
+                 WHERE id = ? AND user_id = ?
+                   AND status IN ('open','in_progress','awaiting_confirmation')
+                   AND deleted_at IS NULL FOR UPDATE"
+            );
+            $stmt->execute([$issueId, $userId]);
+            $status = $stmt->fetchColumn();
+            if ($status === false) {
+                throw new \\DomainException('not_owner_or_closed');
+            }
+
+            $this->pdo->prepare(
+                'INSERT INTO issue_diagnostic_updates (issue_id, user_id, body) VALUES (?, ?, ?)'
+            )->execute([$issueId, $userId, $body]);
+            $updateId = (int) $this->pdo->lastInsertId();
+
+            if ($status === 'open') {
+                $this->pdo->prepare(
+                    "UPDATE issues SET status = 'in_progress', updated_at = UTC_TIMESTAMP() WHERE id = ?"
+                )->execute([$issueId]);
+            } else {
+                $this->pdo->prepare(
+                    'UPDATE issues SET updated_at = UTC_TIMESTAMP() WHERE id = ?'
+                )->execute([$issueId]);
+            }
+
+            $map = $this->storeAttachments($issueId, $userId, $uploads, $body, $movedFiles);
+            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $map);
+            Issue::updateDiagnosticUpdateContent($updateId, $userId, $resolvedBody);
+
+            $commitStarted = true;
+            $this->pdo->commit();
+
+            return ['id' => $updateId, 'body' => $resolvedBody];
+        } catch (Throwable $error) {
+            $this->rollbackAndCompensate($error, $issueId, $movedFiles, $commitStarted);
+            throw $error;
+        }
+    }
+
     private function begin(): void
     {
         if ($this->pdo->inTransaction()) {
