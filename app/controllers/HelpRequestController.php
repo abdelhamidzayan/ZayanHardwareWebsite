@@ -94,7 +94,6 @@ final class HelpRequestController extends Controller
                 'invalid_attachment_type' => 'المسموح صور JPG/PNG/WEBP/GIF أو ملفات PDF فقط.',
                 'invalid_attachment_dimensions' => 'أبعاد إحدى الصور كبيرة جدًا. الحد الأقصى 8000 بكسل لكل بُعد و20 مليون بكسل إجماليًا.',
                 'invalid_attachment_structure' => 'بيانات المرفقات غير سليمة. اختار الملفات مرة أخرى.',
-                'invalid_attachment_dimensions' => 'أبعاد إحدى الصور كبيرة جدًا. الحد الأقصى 8000 بكسل لكل بُعد و20 مليون بكسل إجماليًا.',
                 default => 'تعذر قراءة المرفقات أو أن بيانات الرفع غير متوافقة.',
             };
             return $this->fail($returnTo, $message);
@@ -173,6 +172,8 @@ final class HelpRequestController extends Controller
                 'too_many_attachments' => 'الحد الأقصى 8 مرفقات في الرسالة.',
                 'invalid_attachment_size' => 'أحد المرفقات أكبر من 8 ميجابايت أو غير صالح.',
                 'invalid_attachment_type' => 'المسموح صور JPG/PNG/WEBP/GIF أو ملفات PDF فقط.',
+                'invalid_attachment_dimensions' => 'أبعاد إحدى الصور كبيرة جدًا. الحد الأقصى 8000 بكسل لكل بُعد و20 مليون بكسل إجماليًا.',
+                'invalid_attachment_structure' => 'بيانات المرفقات غير سليمة. اختار الملفات مرة أخرى.',
                 default => 'تعذر قراءة المرفقات.',
             };
             return $this->fail('/help-requests/' . $id, $message);
