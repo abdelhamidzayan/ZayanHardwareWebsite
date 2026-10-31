@@ -67,6 +67,7 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 - Feed/discussion pages, drafts, private attachments, inboxes/messages, account actions, and administration remain authenticated.
 - The avatar route validates the raw positive integer before using it as a database identifier.
 - `tests/php/router-public-routes.php` checks public/private route behavior and the route parameter contract.
+- POST authorization review follows delegated controller helpers as well as individual route handlers. For example, HelpRequestController::accept()/decline() delegate to respond(), which performs CSRF validation, session authentication, participant lookup and a pending-state mutation before sending notifications. A method-name scan alone can therefore misclassify delegated checks.
 
 ### Fresh database and first administrator
 
