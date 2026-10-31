@@ -12,7 +12,9 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 4. **[Update log](UPDATES.md)** — chronological record of shipped/implemented project changes and their verification state.
 5. **[Architecture and dependency map](docs/architecture-code-map.md)** — how requests flow through routes, controllers, services, models, database, views, and frontend.
 6. **[AI start prompt](docs/AI_START_PROMPT.md)** — short reusable prompt for opening a new AI conversation.
-7. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
+7. [Three-phase completion plan](docs/COMPLETION_PLAN.md) — phase scope, acceptance criteria, and current sequence.
+8. [Database backup and restore runbook](docs/DATABASE_BACKUP_RESTORE.md) — safe separate-database restore and read-only schema/row-count comparison.
+9. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
 
 The documentation is a map, not a substitute for source inspection. Always verify the active branch, commit, local changes, runtime, and database before changing code. GitHub branches, local checkouts, CI results, and deployments are separate states.
 
