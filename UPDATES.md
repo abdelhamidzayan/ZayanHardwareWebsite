@@ -1,5 +1,17 @@
 # Zayan Hardware — Update Log
 
+## 2026-10-31 — Skill-test input and answer-exposure hardening
+
+- **Type:** Security / Tests / CI
+- **Summary:** Recovered the unmerged skill-test validation work and rebased it cleanly on the consolidated `main` baseline.
+- **Implementation:** Admin-authored JSON is capped at 256 KiB and normalized to a whitelist; questions/options/correct-answer keys are bounded and cross-validated. Public skill-test DTOs expose only question/options/index. Stored question structures are validated before use; inactive skill domains cannot display or accept attempts. Unknown, oversized, and non-string answers are normalized to empty before scoring and persistence.
+- **Tests:** Added `tests/php/skill-test-input-integration.php` to the disposable MySQL/MariaDB integration workflow. It checks answer redaction, malformed question lists, oversized unknown answers, bounded attempt history, and inactive-domain rejection.
+- **Merge:** PR #19 merged into `main` as `bf871bba8de078588a0d17778ed4520199188f96`.
+- **Verification:** Exact head `d58282608187d5cbd5af59c66c332b2a7394b20e`: [database matrix 41239306049](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41239306049), [PHP syntax 41239306080](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41239306080), and [Graphify 41239306068](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41239306068) all passed.
+- **Safety:** No migration, owner database, existing attempt, or skill rating was changed. Test fixtures run only in `zayan_fresh_install_test`.
+- **Status:** Merged and CI-verified; broader application-wide input/output security review remains open.
+
+
 ## 2026-10-31 — Consolidate the development baseline on main
 
 - **Type:** Integration / Security / Database / Documentation
