@@ -59,6 +59,22 @@ Exit criteria:
 - Graphify output is deterministic and reviewed; unresolved edges/warnings are explained.
 - Architecture and feature maps match the actual source.
 
+### Phase 2 implementation checkpoint
+
+Implemented on `phase2/security-graphify-20261031`; the exact latest CI head must pass after the most recent account lifecycle updates:
+
+- Generic public login errors for invalid credentials and suspended accounts; blocked-account attempts count against the same IP/identifier rate limits.
+- Per-account `auth_version` migration 019. Administrator password resets, account status changes/reactivation, role changes, member deletion requests, and final identity anonymization increment the version, invalidating every previously issued session.
+- Login/session verification is bound to the version checked with the password. Conditional password rehash updates prevent an in-flight old-password login from overwriting a newer administrator-reset hash.
+- Regression tests cover stale sessions, password-reset/login races, suspension/reactivation with an old cookie, generic login error messages, and a static policy over every account lifecycle mutation.
+- Automated CSRF policy test covers all 49 declared POST routes, including explicit `accept/decline → respond` delegation, and a strict public POST allow-list of `/login` and `/register`.
+- Admin site update is protected by CSRF, per-user rate limiting, an active-admin database recheck, fixed command arguments, audit logging, and the shared account lifecycle advisory lock held through command completion. Its external script and sudoers rule still require local inspection.
+- A frontend sink review covered all 13 JavaScript files and the key issue/help/profile/auth/admin templates. The only `innerHTML` sinks are fixed SVG fragments and fixed platform-specific PWA guide copy; dynamic template text uses the shared HTML escape helper, and composer JSON is emitted with `JSON_HEX_*`.
+- Graphify artifact was inspected; five dynamic API nodes were manually mapped to Push endpoints, username availability, and generic Service Worker navigation/static requests. The duplicated 002 migration prefix remains a documented sequential order, not an alternate migration.
+- See [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md), [security hardening](security-hardening.md), and [JavaScript API route map](javascript-api-route-map.md).
+
+Exact-head CI verification: commit `889dd99c74824674789a138bfc7dd3b9dd30444e` passed all three workflows: [PHP syntax/security](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933680), [Graphify](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933760), and [database migration integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933686). The remaining Phase 2 gate includes the full object ownership/participant and model-boundary review, broader SQL/input validation, complete XSS/output review, private file/upload lifecycle and containment, storage recovery/notification retry behavior, and local verification of the external updater/sudoers. No Phase 2 completion is claimed yet.
+
 ## Phase 3 — UI, PWA, cross-device acceptance, and final readiness
 
 **Goal:** Verify the product experience and issue a truthful release-readiness report.
@@ -82,10 +98,10 @@ Exit criteria:
 | Phase | Status | Gate |
 |---|---|---|
 | Phase 1 — Foundation and operations | **CI passed; local acceptance pending** | Current branch: `phase1/foundation-reliability-20261031`; PR #17 remains draft |
-| Phase 2 — Security and Graphify | Planned | Starts after Phase 1 gate |
+| Phase 2 — Security and Graphify | **In progress; exact-head CI passed** | Current branch: `phase2/security-graphify-20261031`; commit `889dd99`; PR #18 draft |
 | Phase 3 — UI, PWA, final acceptance | Planned | Starts after Phase 2 gate |
 
-## Current branch and verification note
+## Local runtime acceptance note (2026-10-31)\n\nThe owner verified that Apache runs as `daemon`, but `storage/logs` is `root:root` mode `0775` and `daemon` cannot write to the directory. Existing log files are `daemon:daemon` mode `0660`; `permission-test.log` is `0664`. The daemon sudoers rule permits only the fixed external updater script as user `a`. That script requires `main` and a clean worktree, while the owner checkout is on `local/audit-update-20261031` with a modified `.htaccess` and untracked files. Do not run it or clean/reset/checkout the local worktree. Resolve the log-directory ACL/permission policy with a narrowly scoped change after checking the logger/rotation implementation. Owner database restore and private-media restore remain pending.\n\n## Current branch and verification note
 
 - This plan is being implemented on `phase1/foundation-reliability-20261031`, based on the merge commit of PR #16 (`098442813eb5a55e96d5fff27ce127f9b5f08591`).
 - PR #16 merged into `audit/content-retention-consistency`, not `main`.

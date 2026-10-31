@@ -56,20 +56,39 @@ final class AuthController extends Controller
             App::security('auth.login.failed', [
                 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
             ]);
-            $this->flash('error', 'بيانات الدخول غير صحيحة.');
+            $this->flash('error', 'بيانات الدخول غير صحيحة أو الحساب غير متاح.');
             return $this->redirect('/login');
         }
         if ($result['error'] === 'blocked') {
             App::security('auth.login.blocked_account', [
                 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
             ]);
-            $this->flash('error', 'هذا الحساب موقوف. تواصل مع الإدارة.');
+            // Keep suspended-account state private; do not reveal whether the identifier exists.
+            $this->flash('error', 'بيانات الدخول غير صحيحة أو الحساب غير متاح.');
             return $this->redirect('/login');
         }
 
         $user = $result['user'];
-        User::markLoggedIn((int) $user['id'], $user['new_hash'] ?? null);
-        AuthService::login((int) $user['id']);
+        $verifiedAuthVersion = (int) ($user['auth_version'] ?? 0);
+        if ($verifiedAuthVersion < 1 || !AuthService::login((int) $user['id'], $verifiedAuthVersion)) {
+            App::security('auth.login.account_changed_during_attempt', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
+            $this->flash('error', 'بيانات الدخول غير صحيحة أو الحساب غير متاح.');
+            return $this->redirect('/login');
+        }
+        if (!User::markLoggedIn(
+            (int) $user['id'],
+            $user['new_hash'] ?? null,
+            $verifiedAuthVersion
+        )) {
+            AuthService::logout();
+            App::security('auth.login.account_changed_during_attempt', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
+            $this->flash('error', 'بيانات الدخول غير صحيحة أو الحساب غير متاح.');
+            return $this->redirect('/login');
+        }
         App::security('auth.login.succeeded', ['user_id' => (int) $user['id'], 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
 
         $this->flash('success', 'تم تسجيل الدخول بنجاح.');
@@ -123,8 +142,11 @@ final class AuthController extends Controller
         $userId = (int) ($result['userId'] ?? 0);
         if ($userId > 0) {
             App::audit('account.registered', ['user_id' => $userId]);
+            if (!AuthService::login($userId)) {
+                $this->flash('error', 'تم إنشاء الحساب، لكن تعذر بدء الجلسة. سجل الدخول مرة أخرى.');
+                return $this->redirect('/login');
+            }
             User::markLoggedIn($userId);
-            AuthService::login($userId);
             $this->flash('success', 'تم إنشاء حسابك وتسجيل دخولك بنجاح.');
             return $this->redirect('/feed');
         }

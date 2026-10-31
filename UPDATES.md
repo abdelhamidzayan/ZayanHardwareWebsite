@@ -1,5 +1,31 @@
 # Zayan Hardware — Update Log
 
+## 2026-10-31 — Phase 2 exact-head CI passed; local Apache/updater checks recorded
+
+- **Type:** Verification / Security / Infrastructure / Documentation
+- **Summary:** Verified the three Phase 2 workflows on exact commit `889dd99c74824674789a138bfc7dd3b9dd30444e`; recorded local Apache log-directory and updater-policy findings.
+- **Code areas:** Documentation only in this checkpoint; no application code or local machine files changed.
+- **Database:** No migration applied to the owner's local database. Migration 019 remains part of the branch's tested fresh-install/integration workflow only.
+- **Safety:** All three exact-head workflows passed: [PHP syntax/security](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933680), [Graphify](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933760), and [database migration integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933686). Locally, Apache runs as `daemon`, but `storage/logs` is `root:root 0775` and daemon cannot write to the directory; existing log files are `daemon:daemon 0660`. The daemon sudoers rule is limited to the fixed updater script as user `a`. The script must not be run against the current dirty non-main checkout.
+- **Verification:** Exact-head CI passed. Local log-directory write failure and updater policy were verified by owner-run read-only commands. No permissions, sudoers, database, files, or local Git state were changed.
+- **Documentation:** [Current state](docs/CURRENT_STATE.md) · [Completion plan](docs/COMPLETION_PLAN.md) · [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md).
+- **Status:** Phase 2 CI-verified at the recorded commit; Phase 2 security review and local acceptance remain open.
+
+---
+
+## 2026-10-31 — Phase 2 starts: session revocation and POST CSRF matrix
+
+- **Type:** Security / Authentication / Tests / Documentation / Database
+- **Summary:** Hardened login information disclosure, made account/password/role lifecycle transitions revoke previous sessions, closed the in-flight stale-password rehash race, protected the admin updater, and added automated CSRF/authorization regression gates.
+- **Code areas:** `AuthService`, `AuthController`, `User`, `AdminUserController`, `AccountController`, `AccountRetentionService`, `AdminUpdateController`, `RateLimiter`, migration `019_session_version_invalidation.sql`, session/login/account-policy/admin-update/POST-CSRF tests, Graphify JavaScript route map, and PHP/database workflows.
+- **Database:** Migration 019 adds `users.auth_version` (default 1). It is included in the fresh-install sequence and disposable database workflow. It has **not** been applied to the owner's local database.
+- **Safety:** Public login errors do not disclose suspended-account status. Password reset, suspension/ban/reactivation, role change, deletion request, and identity anonymization increment the auth version. Old sessions remain invalid after reactivation; an in-flight old-password login cannot overwrite a newer password hash. Existing sessions without the version must sign in again after the migration is deployed.
+- **Verification:** Earlier Phase 2 CI runs passed the PHP/Graphify/database baseline through migration 019, but later commits added admin-update hardening, generic login error checks, and account state/role session invalidation. The latest exact-head workflows are pending. Do not mark the newest changes tested until all current-head jobs pass.
+- **Documentation:** [Completion plan](docs/COMPLETION_PLAN.md) · [Current state](docs/CURRENT_STATE.md) · [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md) · [Security hardening](docs/security-hardening.md) · [JavaScript route map](docs/javascript-api-route-map.md).
+- **Status:** Implemented on `phase2/security-graphify-20261031`; tests pending; not merged to `main` or deployed.
+
+---
+
 ## 2026-10-31 — Phase 1 CI gate passed on MySQL/MariaDB matrix
 
 - **Type:** Tests / Database / Logging / Infrastructure
@@ -78,6 +104,8 @@ Use this format for future updates:
 - **Verification:** Documentation links and paths were checked against the repository tree on this branch. No application tests were required because application code was not changed.
 - **Documentation:** [AI context](AI_CONTEXT.md) · [Current state](docs/CURRENT_STATE.md) · [AI start prompt](docs/AI_START_PROMPT.md) · [Architecture map](docs/architecture-code-map.md).
 - **Status:** Documentation files added/updated on branch `docs/ai-handoff-and-feature-log-20261031`. This is not a merge to `main`, not a deployment, and not an application-code release.
+
+- 2026-10-31: Verified Apache log directory ACL locally. Removed `other` access from the log directory access/default ACL and `permission-test.log`; two create-file tests as `daemon` succeeded and new files inherited `other::---`. No ownership or broad mode changes.
 
 
 ## 2026-10-31 — Object-level authorization regression expansion

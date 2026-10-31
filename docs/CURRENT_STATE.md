@@ -7,7 +7,7 @@
 The owner approved a **three-phase completion plan**. Complete the remaining stabilization work in controlled phases, report each phase gate, and avoid repeating a full review after every change.
 
 - **Phase 1 — Database, data integrity, and operational reliability:** CI gate passed; owner-machine acceptance checks remain open.
-- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** starts after Phase 1.
+- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** in progress on `phase2/security-graphify-20261031`.
 - **Phase 3 — UI, PWA, cross-device acceptance, and final readiness:** starts after Phase 2.
 
 The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PLAN.md).
@@ -83,7 +83,45 @@ On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed o
 
 The owner database restore, private-media archive/sample restore, and real Apache (`daemon`) permissions/log-write checks remain unverified because they require the owner's local Kali/XAMPP environment. No live database or private media tree was modified by CI.
 
-## 8. Working rules for all three phases
+## 8. Phase 2 — current security work
+
+**Branch:** `phase2/security-graphify-20261031`  
+**Latest verified commit:** `889dd99c74824674789a138bfc7dd3b9dd30444e`
+
+Implemented and CI-verified on that exact commit:
+
+- Suspended-account login failures return the same public error as invalid credentials; blocked-account attempts consume the same IP/identifier failure buckets.
+- Migration 019 adds `users.auth_version`; password reset, account status/reactivation, role changes, deletion requests, and final identity anonymization revoke older sessions.
+- Login/session version binding and conditional password rehash prevent stale sessions and an in-flight old-password login from restoring an obsolete hash.
+- Regression coverage includes stale sessions, password-reset/login races, suspension/reactivation with an old cookie, generic login errors, and account lifecycle mutation policy.
+- Automated CSRF policy scans all 49 declared POST routes and enforces the public POST allow-list (`/login`, `/register`). This is not proof that all object-level authorization is correct.
+- Admin updater hardening includes CSRF, per-user rate limiting, active-admin revalidation, fixed command arguments, audit events, and a shared lifecycle lock.
+- Graphify generated 706 nodes and 1,646 edges; the review recorded 174 SQL queries, 21 migrations, 15 API call sites, and manual mapping of five dynamic API references.
+- The frontend sink review covered 13 JavaScript files and key issue/help/profile/auth/admin templates. Dynamic text is escaped; reviewed `innerHTML` sinks use fixed SVG fragments or fixed PWA guide copy.
+
+**Exact-head CI:** all three workflows completed successfully on `889dd99c74824674789a138bfc7dd3b9dd30444e`:
+- [PHP syntax/security tests](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933680) — passed.
+- [Graphify dependency graph](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933760) — passed.
+- [Database migration integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933686) — passed.
+
+**Still open:** full object-level authorization matrix for all routes; broader SQL/input validation review; complete XSS/output-encoding review; upload/private-file lifecycle and containment review; storage-recovery/notification retry behavior; and local updater/sudoers runtime inspection. The external updater script is not the same as the in-app updater controller.
+
+No Phase 2 completion is claimed. PR #18 remains a draft; no merge to `main`, production database migration, or deployment is claimed.
+
+## 9. Local runtime findings (2026-10-31)
+
+The owner checked the Kali/XAMPP host:
+
+- Apache workers run as `daemon`.
+- `storage/logs` is `root:root` mode `0775` with an access ACL granting `daemon` `rwx` and a default ACL for new entries. An initial `test -w` check returned false, but a later real create-file test executed as `daemon` succeeded and confirmed ACL inheritance. No chmod/chown change is required.
+- The observed default ACL currently includes `default:other::r-x`; the newly created test file inherited `other::r--`. This means newly created log files may be readable by local users outside the Apache account. Existing application/access/security/audit log files are `daemon:daemon` and normally have no `other` access; `permission-test.log` is an exception (`other::r--`). Tighten the directory's `other` and default-`other` ACL to `---`, and restrict `permission-test.log`, before treating local log confidentiality as closed.
+- The `daemon` sudo policy permits only `/usr/bin/bash /home/a/bin/zayan-hardware-update.sh` as user `a`; this is a narrow command rule, not unrestricted sudo.
+- The external update script is mode `0700`, owned by `a:a`. It requires branch `main`, a clean tracked worktree, and allows only a small untracked-file exception. The current local checkout is instead `local/audit-update-20261031`, has a modified `.htaccess`, and has untracked files. **Do not run the updater or clean/reset/checkout this worktree.**
+- Local HEAD `46960cf9efb33b2b0affa503d5e832725bdba4b4` differs from the Phase 2 CI-verified GitHub candidate. Preserve the local modifications and untracked files.
+
+**Verified local result:** the working `daemon` ACL is retained; unnecessary `other` read/traverse access was removed from the log directory's access/default ACL and `permission-test.log`. Two real create-file tests executed as `daemon` succeeded, and both new files inherited `other::---`. Apache write access remains functional. No broad chmod, recursive ownership change, or updater execution was used. Owner-database restore and private-media restore remain separate pending acceptance checks.
+
+## 9. Working rules for all three phases
 
 1. Follow the relevant scope and pass criteria in [COMPLETION_PLAN.md](COMPLETION_PLAN.md); do not broaden each phase into an unbounded audit.
 2. Inspect branch, commit, and `git status` before editing. Preserve modified and untracked local files.

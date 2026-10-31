@@ -48,7 +48,7 @@ final class AdminUserController extends Controller
         $pdo->beginTransaction();
         try {
             AdminRosterService::assertActorActive($pdo, (int) $admin['id']);
-            $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND account_status <> 'deleted'");
+            $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, auth_version = auth_version + 1 WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found');
 
@@ -109,8 +109,11 @@ final class AdminUserController extends Controller
                 (string) $target['account_status'],
                 $status
             );
-            $stmt = $pdo->prepare("UPDATE users SET account_status = ? WHERE id = ? AND account_status <> 'deleted'");
-            $stmt->execute([$status, $id]);
+            $stmt = $pdo->prepare(
+                "UPDATE users SET account_status = ?, auth_version = auth_version + 1
+                 WHERE id = ? AND account_status <> 'deleted' AND account_status <> ?"
+            );
+            $stmt->execute([$status, $id, $status]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found_or_unchanged');
 
             if ($status === 'active') {
@@ -181,7 +184,13 @@ final class AdminUserController extends Controller
                 $role
             );
 
-            $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $id]);
+            $roleUpdate = $pdo->prepare(
+                'UPDATE users SET role = ?, auth_version = auth_version + 1 WHERE id = ? AND role <> ?'
+            );
+            $roleUpdate->execute([$role, $id, $role]);
+            if ($oldRole !== $role && $roleUpdate->rowCount() !== 1) {
+                throw new \DomainException('user_not_found');
+            }
             $pdo->prepare(
                 'INSERT INTO security_audit_logs (actor_user_id, target_user_id, action, details_json, ip_hash)
                  VALUES (?, ?, ?, ?, ?)'
