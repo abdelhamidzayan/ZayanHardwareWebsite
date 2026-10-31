@@ -75,11 +75,3 @@ The configured script itself (`/home/a/bin/zayan-hardware-update.sh`) and the ma
 The repository contains an account-retention service designed to anonymize account identity while preserving technical history, but **there is no approved CLI entry point, scheduler, or automatic worker** in the release candidate. The earlier `bin/anonymize-deleted-accounts.php` command was intentionally removed. A 30-day deletion deadline therefore does not mean the account has been anonymized; pending requests remain `deletion_pending` until a separately reviewed and approved execution mechanism exists.
 
 The intended service behavior is to retain the stable user ID and all technical posts, replies, diagnostic updates, repair results, schematics, attachments, edit history, reputation, help-library content, private-help messages, notifications, and drafts. It must not physically delete technical rows or files. Do not add a cron job or invoke the service through an ad-hoc runner. See `docs/account-retention.md`.
-
-
-
-The account-retention worker now completes the 30-day request by **anonymizing the account identity**, not by deleting the user row. The user ID stays unchanged so every foreign key and attribution link remains valid. Login is disabled, the username is replaced with a generated anonymous handle, the display name becomes `عضو محذوف`, email/phone and profile biography/workshop data are cleared, custom avatar binaries are removed, and push subscription credentials are neutralized.
-
-**No database rows are deleted by the worker.** In particular, all published technical posts, replies, diagnostic updates, repair results, schematics, attachments, edit history, reputation records, published help-library content, private-help messages, notifications, and drafts remain in place. Published help-library author snapshots are changed to the anonymous display name, while the technical text remains untouched. Terms acceptance and security audit records remain, but stored IP hashes and free-form admin reset notes are cleared.
-
-The worker defaults to dry-run. Use `php bin/anonymize-deleted-accounts.php` to inspect due requests and add `--execute` only when the output has been reviewed. See `docs/account-retention.md` for the exact policy and scheduler setup. It has not been run against a production database.
