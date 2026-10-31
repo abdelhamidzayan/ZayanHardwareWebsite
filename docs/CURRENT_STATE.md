@@ -113,13 +113,13 @@ No Phase 2 completion is claimed. PR #18 remains a draft; no merge to `main`, pr
 The owner checked the Kali/XAMPP host:
 
 - Apache workers run as `daemon`.
-- `storage/logs` is `root:root` mode `0775`; `sudo -u daemon test -w storage/logs` failed. Apache therefore cannot create new log files or rotate logs in that directory.
-- Existing application/access/security/audit log files are `daemon:daemon` mode `0660`, so existing files are writable by their owner. `permission-test.log` is more permissive (`0664`) and should be reviewed for consistency.
+- `storage/logs` is `root:root` mode `0775` with an access ACL granting `daemon` `rwx` and a default ACL for new entries. An initial `test -w` check returned false, but a later real create-file test executed as `daemon` succeeded and confirmed ACL inheritance. No chmod/chown change is required.
+- The observed default ACL currently includes `default:other::r-x`; the newly created test file inherited `other::r--`. This means newly created log files may be readable by local users outside the Apache account. Existing application/access/security/audit log files are `daemon:daemon` and normally have no `other` access; `permission-test.log` is an exception (`other::r--`). Tighten the directory's `other` and default-`other` ACL to `---`, and restrict `permission-test.log`, before treating local log confidentiality as closed.
 - The `daemon` sudo policy permits only `/usr/bin/bash /home/a/bin/zayan-hardware-update.sh` as user `a`; this is a narrow command rule, not unrestricted sudo.
 - The external update script is mode `0700`, owned by `a:a`. It requires branch `main`, a clean tracked worktree, and allows only a small untracked-file exception. The current local checkout is instead `local/audit-update-20261031`, has a modified `.htaccess`, and has untracked files. **Do not run the updater or clean/reset/checkout this worktree.**
 - Local HEAD `46960cf9efb33b2b0affa503d5e832725bdba4b4` differs from the Phase 2 CI-verified GitHub candidate. Preserve the local modifications and untracked files.
 
-**Safe next local action:** inspect current ACLs and the application logging/rotation implementation, then grant the Apache service account write access to this log directory only if that matches the deployment policy. Do not use broad `chmod 777`, recursive ownership changes, or run the updater as a workaround. Owner-database restore and private-media restore remain separate pending acceptance checks.
+**Safe next local action:** retain the working `daemon` ACL, but remove unnecessary `other` read/traverse access from the log directory's access/default ACL and from `permission-test.log`; then repeat a create-file test and verify the inherited `other::---`. Do not use broad `chmod 777`, recursive ownership changes, or run the updater as a workaround. Owner-database restore and private-media restore remain separate pending acceptance checks.
 
 ## 9. Working rules for all three phases
 
