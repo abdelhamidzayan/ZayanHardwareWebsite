@@ -75,6 +75,7 @@ jobs:
             database/migrations/014_rate_limit_buckets.sql
             database/migrations/015_deleted_accounts_without_contact.sql
             database/migrations/016_protect_technical_history.sql
+            database/migrations/017_block_physical_content_delete.sql
           )
 
           for migration in "${migrations[@]}"; do
@@ -111,8 +112,12 @@ jobs:
               VALUES (1, 'ci-fresh-install', REPEAT('a', 64));
             INSERT INTO issues (user_id, content_type, title, device_model, category, description, measurements, status)
               VALUES (1, 'technical_post', 'Fresh install smoke test', NULL, NULL, 'Disposable content fixture', NULL, 'open');
+            INSERT INTO issues (user_id, content_type, title, device_model, category, description, measurements, status)
+              VALUES (1, 'technical_post', 'Standalone delete guard fixture', NULL, NULL, 'Disposable row with no dependent content', NULL, 'open');
             INSERT INTO issue_replies (issue_id, user_id, body)
               VALUES (1, 1, 'Disposable reply fixture');
+            INSERT INTO issue_replies (issue_id, user_id, body)
+              VALUES (2, 1, 'Standalone delete guard reply');
             INSERT INTO issue_reply_edit_history (issue_reply_id, editor_id, previous_body)
               VALUES (1, 1, 'Earlier disposable reply');
             INSERT INTO issue_diagnostic_updates (issue_id, user_id, body)
@@ -155,6 +160,37 @@ jobs:
             test "${delete_rule}" = "RESTRICT" || { echo "Expected RESTRICT for ${constraint}, got ${delete_rule}"; exit 1; }
           done
 
+          expected_triggers=(
+            trg_users_block_physical_delete trg_technician_profiles_block_physical_delete
+            trg_issues_block_physical_delete trg_issue_attachments_block_physical_delete
+            trg_issue_replies_block_physical_delete trg_issue_edit_history_block_physical_delete
+            trg_issue_reply_edit_history_block_physical_delete trg_issue_results_block_physical_delete
+            trg_issue_diagnostic_updates_block_physical_delete trg_diagnostic_update_history_block_physical_delete
+            trg_reputation_events_block_physical_delete trg_terms_acceptances_block_physical_delete
+            trg_account_deletion_requests_block_physical_delete trg_security_audit_logs_block_physical_delete
+            trg_admin_password_resets_block_physical_delete trg_skill_test_attempts_block_physical_delete
+            trg_help_requests_block_physical_delete trg_help_request_messages_block_physical_delete
+            trg_help_request_attachments_block_physical_delete trg_help_request_publications_block_physical_delete
+            trg_help_public_posts_block_physical_delete trg_device_model_suggestions_block_physical_delete
+            trg_technician_profile_specialization_history_block_physical_delete
+          )
+          for trigger in "${expected_triggers[@]}"; do
+            trigger_exists="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = '${DB_NAME}' AND TRIGGER_NAME = '${trigger}';")"
+            test "${trigger_exists}" -eq 1 || { echo "Missing physical-delete guard: ${trigger}"; exit 1; }
+          done
+
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issues WHERE id = 2;" 2>/dev/null; then
+            echo "ERROR: standalone physical issue deletion unexpectedly succeeded"
+            exit 1
+          fi
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issue_replies WHERE id = 2;" 2>/dev/null; then
+            echo "ERROR: standalone physical reply deletion unexpectedly succeeded"
+            exit 1
+          fi
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issue_attachments WHERE id = 1;" 2>/dev/null; then
+            echo "ERROR: physical technical attachment deletion unexpectedly succeeded"
+            exit 1
+          fi
           if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issues WHERE id = 1;" 2>/dev/null; then
             echo "ERROR: physical issue deletion unexpectedly succeeded"
             exit 1
