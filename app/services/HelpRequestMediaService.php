@@ -10,8 +10,18 @@ final class HelpRequestMediaService
 {
     public static function validate(mixed $files): array
     {
-        if ($files === null || !is_array($files) || !isset($files['name']) || !is_array($files['name'])) return [];
-        if (count($files['name']) > 8) throw new \DomainException('too_many_attachments');
+        if ($files === null) return [];
+        if (!is_array($files) || !isset($files['name'], $files['error'], $files['tmp_name'], $files['size'])
+            || !is_array($files['name']) || !is_array($files['error'])
+            || !is_array($files['tmp_name']) || !is_array($files['size'])) {
+            throw new \DomainException('invalid_attachment_structure');
+        }
+        $fileCount = count($files['name']);
+        if (count($files['error']) !== $fileCount || count($files['tmp_name']) !== $fileCount
+            || count($files['size']) !== $fileCount) {
+            throw new \DomainException('invalid_attachment_structure');
+        }
+        if ($fileCount > 8) throw new \DomainException('too_many_attachments');
         $allowed = [
             'image/jpeg' => 'jpg', 'image/png' => 'png',
             'image/webp' => 'webp', 'image/gif' => 'gif',
@@ -29,6 +39,13 @@ final class HelpRequestMediaService
             }
             $mime = $finfo->file($tmp) ?: '';
             if (!isset($allowed[$mime])) throw new \DomainException('invalid_attachment_type');
+            if (str_starts_with($mime, 'image/')) {
+                try {
+                    ImageUploadPolicy::inspect($tmp);
+                } catch (\DomainException $error) {
+                    throw new \DomainException('invalid_attachment_dimensions', 0, $error);
+                }
+            }
             $uploads[] = ['tmp' => $tmp, 'size' => $size, 'mime' => $mime, 'ext' => $allowed[$mime]];
         }
         return $uploads;
