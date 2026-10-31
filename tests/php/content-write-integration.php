@@ -176,6 +176,41 @@ try {
     expectContentWrite(!is_file($movedButReportedFailure), 'The source file was moved before the adapter returned false.');
     expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 1, 'A partially successful move must be compensated instead of leaving an orphan.');
 
+    // A move adapter can also throw after creating the destination. The
+    // service must still track and compensate that file before propagating.
+    $movedThenThrew = makeUploadFile($sourceRoot, 'move-threw-after-move.pdf');
+    $moveThrewTitle = 'Content write move threw after move ' . bin2hex(random_bytes(4));
+    $moveThrewService = new ContentWriteService(
+        $pdo,
+        static function (string $from, string $to): bool {
+            if (!rename($from, $to)) throw new RuntimeException('synthetic move failed before destination');
+            throw new RuntimeException('synthetic move failed after destination');
+        },
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        null,
+        $storageRoot
+    );
+    $moveThrewObserved = false;
+    try {
+        $moveThrewService->createIssue(
+            $ownerId,
+            'technical_post',
+            $moveThrewTitle,
+            null,
+            null,
+            'A move adapter exception after creating the destination must not leave an orphan.',
+            '',
+            [['tmp' => $movedThenThrew, 'size' => filesize($movedThenThrew), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $moveThrewObserved = $error->getMessage() === 'synthetic move failed after destination';
+    }
+    expectContentWrite($moveThrewObserved, 'A move adapter exception after move must be propagated.');
+    $issueCount->execute([$moveThrewTitle]);
+    expectContentWrite((int) $issueCount->fetchColumn() === 0, 'Throwing move adapter must roll back the issue row.');
+    expectContentWrite(!is_file($movedThenThrew), 'The source was moved before the adapter threw.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 1, 'A destination created before an adapter exception must be compensated.');
+
     $moveOne = makeUploadFile($sourceRoot, 'move-first.pdf');
     $moveTwo = makeUploadFile($sourceRoot, 'move-second.pdf');
     $moveCalls = 0;
