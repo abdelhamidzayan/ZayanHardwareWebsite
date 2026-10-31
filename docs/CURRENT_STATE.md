@@ -45,7 +45,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | Private-media backup and sample restore | A separate archive/path and isolated restore of referenced private files have not been verified | Pending owner-machine verification |
 | Pending storage recovery reconciliation | Durable records exist; a read-only/manual triage runbook is now documented; no general automatic worker exists | Procedure documented; reconciliation pending |
 | Read-only schema comparator | Added `bin/compare-database-schema.php` for object and optional row-count comparison between two separate databases | Implemented; syntax/runtime check pending |
-| Current-head Actions verification | PR #16 head jobs completed with zero steps because included Actions minutes were exhausted | Not verified |
+| Phase 1 branch CI verification | No CI run has been triggered for this branch; the last PR #16 zero-step jobs are historical only | Not verified; quota recheck required |
 
 ## 5. Existing technical documentation
 
