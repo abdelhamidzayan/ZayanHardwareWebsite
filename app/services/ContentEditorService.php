@@ -12,10 +12,17 @@ final class ContentEditorService
     public static function validateUploads(mixed $files, mixed $tokens): array
     {
         if ($files === null) return [];
-        if (!is_array($files) || !isset($files['name']) || !is_array($files['name'])) {
+        if (!is_array($files) || !isset($files['name'], $files['error'], $files['tmp_name'], $files['size'])
+            || !is_array($files['name']) || !is_array($files['error'])
+            || !is_array($files['tmp_name']) || !is_array($files['size'])) {
             throw new \DomainException('invalid_upload_structure');
         }
-        if (count($files['name']) > 8) throw new \DomainException('too_many_uploads');
+        $fileCount = count($files['name']);
+        if (count($files['error']) !== $fileCount || count($files['tmp_name']) !== $fileCount
+            || count($files['size']) !== $fileCount) {
+            throw new \DomainException('invalid_upload_structure');
+        }
+        if ($fileCount > 8) throw new \DomainException('too_many_uploads');
 
         $tokenList = is_array($tokens) ? $tokens : [];
         $allowed = [
@@ -38,6 +45,13 @@ final class ContentEditorService
             }
             $mime = $finfo->file($tmp) ?: '';
             if (!isset($allowed[$mime])) throw new \DomainException('invalid_upload_type');
+            if (str_starts_with($mime, 'image/')) {
+                try {
+                    ImageUploadPolicy::inspect($tmp);
+                } catch (\DomainException $error) {
+                    throw new \DomainException('invalid_image_dimensions', 0, $error);
+                }
+            }
 
             $token = $tokenList[$index] ?? ('upload-' . $index);
             if (!is_string($token) || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $token)) {
