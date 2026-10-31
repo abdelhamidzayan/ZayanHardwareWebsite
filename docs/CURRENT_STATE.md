@@ -119,7 +119,7 @@ The owner checked the Kali/XAMPP host:
 - The external update script is mode `0700`, owned by `a:a`. It requires branch `main`, a clean tracked worktree, and allows only a small untracked-file exception. The current local checkout is instead `local/audit-update-20261031`, has a modified `.htaccess`, and has untracked files. **Do not run the updater or clean/reset/checkout this worktree.**
 - Local HEAD `46960cf9efb33b2b0affa503d5e832725bdba4b4` differs from the Phase 2 CI-verified GitHub candidate. Preserve the local modifications and untracked files.
 
-**Safe next local action:** retain the working `daemon` ACL, but remove unnecessary `other` read/traverse access from the log directory's access/default ACL and from `permission-test.log`; then repeat a create-file test and verify the inherited `other::---`. Do not use broad `chmod 777`, recursive ownership changes, or run the updater as a workaround. Owner-database restore and private-media restore remain separate pending acceptance checks.
+**Verified local result:** the working `daemon` ACL is retained; unnecessary `other` read/traverse access was removed from the log directory's access/default ACL and `permission-test.log`. Two real create-file tests executed as `daemon` succeeded, and both new files inherited `other::---`. Apache write access remains functional. No broad chmod, recursive ownership change, or updater execution was used. Owner-database restore and private-media restore remain separate pending acceptance checks.
 
 ## 9. Working rules for all three phases
 
