@@ -16,7 +16,7 @@ The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PL
 
 - PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) merged into `main` on 2026-10-31. Merge commit: `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`.
 - PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) merged into `main` on 2026-10-31. Merge commit: `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
-- **Authoritative development branch:** `main`, currently at `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
+- **Authoritative development branch:** `main`. The Phase 2 code-integration merge commit is `dadddde53f394a0fe353b575ec13dbeb85749f6e`; subsequent commits on `main` are documentation updates. Resolve the live `main` head before new work.
 - The merged work includes the accumulated product features, Phase 1 reliability work, and the Phase 2 session/CSRF/object-authorization baseline. It has not been deployed.
 - Historical Phase 1/Phase 2 branches are retained for traceability until branch cleanup is verified. Do not create new feature work from those historical branches; branch new work from `main`.
 - The owner's local Kali checkout remains on `local/audit-update-20261031` at `46960cf9efb33b2b0affa503d5e832725bdba4b4`, with modified and untracked files. It is not synchronized with `main`. Preserve those files; do not run the updater, reset, clean, or pull until a safe local reconciliation plan is prepared.
