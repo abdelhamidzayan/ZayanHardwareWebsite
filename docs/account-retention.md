@@ -38,42 +38,25 @@ The public author label becomes **عضو محذوف**. The profile page is no lo
 
 ## What happens after 30 days
 
-The scheduled worker changes the existing user row in place:
-- Keeps the same \`users.id\`; changes \`account_status\` to \`deleted\`.
-- Clears both email and phone. Migration 015 permits this only after the account is marked \`deleted\`.
-- Replaces the username with a generated anonymous handle and the display name with \`عضو محذوف\`.
-- Clears biography and workshop name. Technical device specializations, board/fast classification, experience levels, verification status, skill ratings, and assessment history remain unchanged.
-- Replaces the password with an unknown random password, resets the role to \`member\`, and disables personal-help requests.
-- Clears the custom avatar reference and removes generated private avatar image files from that user's avatar directory.
-- Neutralizes Web Push endpoint/key material so the deleted account cannot receive push notifications.
-- Keeps terms acceptance and security-audit rows, but clears stored IP hashes and free-form admin password-reset notes, including the copied note in \`security_audit_logs.details_json\`.
-- Marks the pending deletion request as completed and writes an audit event.
+**Current behavior:** a deletion request immediately disables the account and schedules a 30-day deadline. However, the release candidate contains no approved CLI entry point, scheduler, or automatic worker. When the deadline passes, the account remains `deletion_pending`; the deadline does not mean anonymization has occurred.
 
-No \`issues\`, \`issue_replies\`, \`issue_attachments\`, \`issue_diagnostic_updates\`, \`issue_results\`, edit-history, reputation, help-library, help-message, or draft rows are deleted or rewritten. Technical file directories are not traversed or cleaned.
+The repository retains an `AccountRetentionService` with a proposed identity-anonymization workflow, but the earlier `bin/anonymize-deleted-accounts.php` command was intentionally removed. Do not invoke the service through ad-hoc PHP, recreate that command, or schedule a cron job without a separate security review, staging acceptance, verified backup/restore, and explicit owner approval.
+
+If a future worker is approved, it must:
+- Keep the same `users.id` and all attribution/foreign-key relationships.
+- Replace identity fields with an anonymous handle and display name.
+- Preserve technical specializations, experience, verification status, skill ratings, and assessment history.
+- Neutralize push credentials and handle custom-avatar cleanup safely.
+- Keep terms acceptance and security-audit rows while applying the approved personal-metadata minimization policy.
+- Mark the pending request completed and write an audit event.
+
+No `issues`, `issue_replies`, `issue_attachments`, `issue_diagnostic_updates`, `issue_results`, edit-history, reputation, help-library, help-message, or draft rows may be deleted or rewritten. Technical file directories must never be traversed or cleaned by account anonymization.
 
 ## Safety controls
 
-The worker is CLI-only and defaults to **dry-run**. It refuses to anonymize the last active administrator; appoint another active administrator first. A shared roster advisory lock serializes deletion requests, retention, and admin role/status changes to prevent concurrent changes from invalidating that check. The worker also uses a separate lock to prevent two workers from processing at once, locks each due request inside a transaction, verifies that the account is still \`deletion_pending\`, and rolls database changes back if a step fails.
+The service contains safeguards intended for a future controlled worker: it refuses to anonymize the last active administrator, coordinates with the admin roster advisory lock, uses a separate worker lock, locks each due request inside a transaction, rechecks that the account is still `deletion_pending`, and rolls back database changes on failure. These safeguards do **not** make the service executable by themselves.
 
-Run a preview first:
-
-\`\`\`bash
-php bin/anonymize-deleted-accounts.php --limit=100
-\`\`\`
-
-Review the IDs and schedule, take a database backup, then run explicitly:
-
-\`\`\`bash
-php bin/anonymize-deleted-accounts.php --execute --limit=100
-\`\`\`
-
-A daily scheduler can run after the first manual preview:
-
-\`\`\`cron
-40 2 * * * cd /absolute/path/to/ZayanHardwareWebsite && mkdir -p storage/logs && /usr/bin/php bin/anonymize-deleted-accounts.php --execute --limit=100 >> storage/logs/account-retention-worker.log 2>&1
-\`\`\`
-
-Use the actual project path and PHP binary on the server. The worker has not been run against production data. CI currently checks PHP syntax; production-scale and live-database behavior still require a staging test before enabling cron.
+**Operational state:** no CLI entry point and no cron job are approved or present in the release candidate. Do not run the service manually, add a scheduler, or mark requests completed. A future execution mechanism requires separate review, production-scale and staging tests, a verified backup/restore, and explicit owner approval.
 
 ## Grace period note
 
