@@ -34,9 +34,25 @@ foreach ($checks as $relativePath => $markers) {
     }
 }
 
+$coordinationLock = "zayan_hardware_admin_deletion_request";
+$lockPaths = [
+    'app/controllers/AdminUserController.php',
+    'app/controllers/AccountController.php',
+    'app/services/AccountRetentionService.php',
+    'app/controllers/AdminUpdateController.php',
+];
+foreach ($lockPaths as $relativePath) {
+    $source = file_get_contents($root . '/' . $relativePath);
+    if (!is_string($source)
+        || !str_contains($source, "GET_LOCK('" . $coordinationLock . "', 5)")
+        || !str_contains($source, "RELEASE_LOCK('" . $coordinationLock . "')")) {
+        $failures[] = $relativePath . ' does not use the shared admin account/update coordination lock';
+    }
+}
+
 if ($failures !== []) {
     fwrite(STDERR, "Account session-revocation policy failed:\n- " . implode("\n- ", $failures) . "\n");
     exit(1);
 }
 
-echo "Account session-revocation policy passed for status, role, password reset, deletion request and anonymization.\n";
+echo "Account session-revocation and admin update coordination policy passed.\n";
