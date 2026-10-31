@@ -108,6 +108,8 @@ final class AuthController extends Controller
         $currentUser = AuthService::user();
         App::audit('auth.logout', ['user_id' => (int) ($currentUser['id'] ?? 0)]);
         AuthService::logout();
+        // A completed registration must never be restored as a new registration draft.
+        $_SESSION['clear_registration_draft'] = true;
         $this->flash('info', 'تم تسجيل الخروج.');
 
         return $this->redirect('/');
@@ -141,6 +143,8 @@ final class AuthController extends Controller
         // Registration creates an active account, so establish the session immediately.
         $userId = (int) ($result['userId'] ?? 0);
         if ($userId > 0) {
+            // Keep a one-time signal until the next guest registration page clears the draft.
+            $_SESSION['clear_registration_draft'] = true;
             App::audit('account.registered', ['user_id' => $userId]);
             if (!AuthService::login($userId)) {
                 $this->flash('error', 'تم إنشاء الحساب، لكن تعذر بدء الجلسة. سجل الدخول مرة أخرى.');
@@ -182,6 +186,9 @@ final class AuthController extends Controller
 
     private function registerForm(array $errors = [], int $status = 200): Response
     {
+        $clearRegistrationDraft = !empty($_SESSION['clear_registration_draft']);
+        if ($clearRegistrationDraft) unset($_SESSION['clear_registration_draft']);
+
         $old = array_diff_key($this->request->body, ['password' => 1, '_token' => 1]);
         foreach ($old as $key => $value) {
             if ($key === 'device_focus' && is_array($value)) {
@@ -208,6 +215,7 @@ final class AuthController extends Controller
             'errors' => $errors,
             'old' => $old,
             'activeStep' => $activeStep,
+            'clearRegistrationDraft' => $clearRegistrationDraft,
             'scripts' => ['register.js'],
         ], $status, 'guest');
     }

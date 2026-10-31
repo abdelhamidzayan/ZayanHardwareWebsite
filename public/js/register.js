@@ -43,6 +43,13 @@
   let usernameTouched = false;
   let autoSuggestedUsername = '';
   const draftStorageKey = 'zayan-hardware:register-draft:v1';
+  if (form.dataset.clearDraft === 'true') {
+    try {
+      sessionStorage.removeItem(draftStorageKey);
+    } catch (_) {
+      // Storage may be unavailable; the form still starts from server-provided defaults.
+    }
+  }
   const draftMaxAge = 2 * 60 * 60 * 1000;
   let restoringDraft = false;
 
