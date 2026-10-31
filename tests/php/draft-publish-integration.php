@@ -96,12 +96,14 @@ function makeDraftPublishFixture(PDO $pdo, int $userId, string $privateRoot, str
     $media = $pdo->prepare(
         'INSERT INTO post_draft_media
             (draft_id, media_uuid, media_kind, storage_path, mime_type, file_size, sha256, sort_order)
-         VALUES (?, ?, \\'video\\', ?, \\'video/mp4\\', ?, ?, 0)'
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
     );
     $media->execute([
         $draftId,
         $mediaUuid,
+        'video',
         'drafts/' . $draftId . '/' . $filename,
+        'video/mp4',
         strlen($bytes),
         hash('sha256', $bytes),
     ]);
@@ -142,8 +144,6 @@ try {
     $rollbackDraft = $pdo->prepare('SELECT id FROM post_drafts WHERE id = ? AND user_id = ?');
     $rollbackDraft->execute([$rollbackFixture['draft_id'], $userId]);
     expectDraftPublish($rollbackDraft->fetchColumn() !== false, 'Confirmed rollback must preserve the draft row.');
-    $rollbackIssue = $pdo->prepare('SELECT COUNT(*) FROM issues WHERE title = ?');
-    $rollbackIssue->execute(['Draft publish rollback ' . '']); // The unique title is asserted through missing draft publication below.
     $rollbackIssueId = $pdo->prepare('SELECT COUNT(*) FROM issue_attachments WHERE original_file_path LIKE ?');
     $rollbackIssueId->execute(['issues/%/' . $rollbackFixture['filename']]);
     expectDraftPublish((int) $rollbackIssueId->fetchColumn() === 0, 'Rolled-back draft media must not be referenced by a published issue.');
