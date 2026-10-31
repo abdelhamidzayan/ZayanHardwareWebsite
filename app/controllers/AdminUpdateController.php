@@ -58,7 +58,7 @@ final class AdminUpdateController extends Controller
         try {
             AdminRosterService::assertActorActive($pdo, $adminId);
             $pdo->commit();
-        } catch (\\Throwable $error) {
+        } catch (\Throwable $error) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             if ($error instanceof \\DomainException && $error->getMessage() === 'admin_not_active') {
                 App::security('admin.site_update.actor_rejected', ['user_id' => $adminId]);
@@ -114,7 +114,12 @@ final class AdminUpdateController extends Controller
                 proc_close($process);
             }
 
-            \App\Core\App::logException('ERROR', 'admin.site_update_failed', $exception);
+            App::logException('ERROR', 'admin.site_update_failed', $exception, ['user_id' => $adminId]);
+            App::audit('admin.site_update.completed', [
+                'user_id' => $adminId,
+                'exit_code' => null,
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+            ]);
             return $this->fail('تعذر تشغيل عملية التحديث. راجع سجل التطبيق لمزيد من التفاصيل.');
         }
 
