@@ -1,3 +1,13 @@
+## 2026-10-31 — Single-file fresh database schema and GitHub cleanup
+
+- **Type:** Database / CI / Repository hygiene / Documentation
+- **Fresh install:** Added `database/fresh_install.sql`, a single SQL entry point consolidating the complete schema represented by migrations 000–019. The duplicate terms-table migration is omitted; first-admin auto-promotion is removed from the new-install path and remains an explicit guarded owner CLI operation after registration.
+- **CI:** Updated the database integration workflow to execute the consolidated SQL file on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, then run the existing schema-object, foreign-key, retention-trigger, bootstrap, and feature integration checks. Exact-head results are pending.
+- **Documentation:** Updated `database/FRESH_INSTALL.md`, README, current state, and completion plan. The numbered migrations remain as historical incremental migration records and must not be replayed on top of the new consolidated schema.
+- **GitHub hygiene:** Confirmed zero open PRs and zero open issues. Added a one-time path-scoped Actions workflow targeting only the 26 reviewed superseded branch refs; it preserves `main`. Branch deletion is pending workflow completion and live-ref verification.
+- **Safety:** No live database, media tree, or deployment was changed. The consolidated SQL is for a newly created empty database only.
+- **Status:** Implemented on `main`; CI and branch-cleanup workflow verification pending.
+  
 # Zayan Hardware — Update Log
 
 ## 2026-10-31 — Skill-test input and answer-exposure hardening
