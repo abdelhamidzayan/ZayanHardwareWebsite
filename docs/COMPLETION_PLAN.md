@@ -33,7 +33,7 @@ Exit criteria:
 - The local owner backup has a recorded restore result and schema/data comparison, or is explicitly marked blocked pending the owner running the documented local command sequence.
 - No data-loss or destructive-operation risk remains unaddressed.
 
-**Status:** In progress. The existing workflow already defines the 000–018 three-engine matrix and many integration tests, but the latest recorded run at the PR #16 head executed zero steps. No current-head test pass is claimed.
+**Implementation checkpoint (2026-10-31):** A read-only comparator is now present at `bin/compare-database-schema.php`; the database workflow now includes an isolated backup/restore/checksum/metadata-and-row-count check; the logging redaction test now covers raw Authorization/Cookie headers, Bearer/query tokens, all four log channels, JSON records, and retention. A local owner backup/restore runbook was added at `docs/DATABASE_BACKUP_RESTORE.md`. These changes are implemented in the Phase 1 branch, but the tests have not yet executed on this branch. The owner-machine restore and Apache/browser runtime checks remain pending.\n\n**Status:** In progress. The existing workflow defines the 000–018 three-engine matrix and many integration tests, with a new backup/restore gate. The last recorded PR #16 CI run executed zero steps; recheck Actions quota before starting a new run. No current Phase 1 test pass is claimed.
 
 ## Phase 2 — Security, lifecycle, and dependency integrity
 
