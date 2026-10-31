@@ -123,13 +123,15 @@ jobs:
             INSERT INTO users (username, display_name, email, phone, password_hash)
               VALUES ('fixture_deleted', 'Fixture Deleted', NULL, '+201000000099', 'not-a-real-hash');
             UPDATE users SET email = NULL, phone = NULL, account_status = 'deleted' WHERE id = 2;
+            INSERT INTO users (username, display_name, email, password_hash)
+              VALUES ('fixture_second', 'Fixture Second', 'second@fresh.test', 'not-a-real-hash');
           "
 
           DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME="${DB_NAME}" DB_USER=root DB_PASS=root php bin/bootstrap-first-admin.php --username=fixture_owner --confirm-database="${DB_NAME}" --confirm-first-admin
           first_admin_role="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT role FROM users WHERE id = 1;")"
           test "${first_admin_role}" = "admin"
 
-          if DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME="${DB_NAME}" DB_USER=root DB_PASS=root php bin/bootstrap-first-admin.php --username=fixture_deleted --confirm-database="${DB_NAME}" --confirm-first-admin; then
+          if DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME="${DB_NAME}" DB_USER=root DB_PASS=root php bin/bootstrap-first-admin.php --username=fixture_second --confirm-database="${DB_NAME}" --confirm-first-admin; then
             echo "ERROR: first-admin bootstrap allowed a second administrator bootstrap"
             exit 1
           fi
