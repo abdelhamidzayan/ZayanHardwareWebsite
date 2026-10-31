@@ -136,22 +136,28 @@ Never claim a task is complete merely because code was added or CI passed. Separ
 ## 10. Phase 2 execution handoff — 2026-10-31
 
 - Active branch: `phase2/security-graphify-20261031`, based on Phase 1 candidate `a4074260328582bb2a25cd49e984626893fd5c14`. Always resolve the current branch head before further edits.
-- Phase 2 is in progress. No Phase 2 tests have yet been confirmed passing and no Phase 2 PR has been opened at this checkpoint.
+- Phase 2 is in progress. PR #18 is a draft targeting the Phase 1 branch, not `main`. Earlier Phase 2 CI passed a baseline, but the newest account lifecycle and documentation changes still require exact-head CI verification.
 - Security changes implemented so far:
   - Suspended-account login failure now returns the same external error as invalid credentials; internal security logging retains the distinct blocked-account event.
   - Blocked-account attempts consume the same IP and identifier rate-limit buckets as invalid credentials.
   - Migration `019_session_version_invalidation.sql` adds `users.auth_version INT UNSIGNED NOT NULL DEFAULT 1`.
   - `AdminUserController::resetPassword()` increments `auth_version` in the same SQL update as the password hash.
+  - `AdminUserController::setStatus()` and `setRole()` increment the version on actual transitions; `AccountController::requestDeletion()` increments it when moving to `deletion_pending`; `AccountRetentionService` increments it again during final anonymization.
   - `AuthService` binds sessions to the current auth version and rejects/clears stale sessions on the next request.
   - `AuthController` passes the auth version returned by credential verification to session creation and login completion.
   - `User::markLoggedIn()` only writes a password rehash when the account remains active and the auth version still equals the version checked by the login. This prevents a slow/in-flight login with an old password from overwriting the newer administrator-reset hash.
-  - `tests/php/auth-session-version-integration.php` covers stale-session rejection, stale old-password login rejection, and refusal to overwrite the new password hash.
+  - `tests/php/auth-session-version-integration.php` covers stale-session rejection, stale old-password login rejection, refusal to overwrite a new password hash, and suspension/reactivation with an old cookie.
+  - `tests/php/account-session-revocation-policy.php` checks that status, role, deletion-request and anonymization write paths all increment the session version.
+  - `tests/php/login-information-disclosure.php` ensures blocked and invalid credentials return the same public error while retaining distinct internal events.
+  - `tests/php/admin-update-hardening.php` verifies CSRF, rate limiting, active-admin revalidation, fixed argv command and audit markers for the site updater.
   - `tests/php/rate-limiter-integration.php` verifies blocked-account attempts consume the configured failure bucket.
 - POST route coverage:
   - `tests/php/post-route-csrf-policy.php` parses every current `post()` / `postPublic()` declaration (49 declarations at the time of writing), verifies direct CSRF checks or explicit same-controller delegation, and restricts public POST routes to `/login` and `/register`.
   - `docs/SECURITY_POST_ROUTE_MATRIX.md` records the current route inventory and known object-authorization boundaries.
+- Graphify artifact inspection: 706 nodes, 1,646 edges, 174 SQL queries, 21 migrations and 15 API call sites (10 auto-linked, 5 dynamic). The five dynamic sites were manually reconciled in `docs/javascript-api-route-map.md`: Push subscribe/unsubscribe/public-key, username availability, and two generic Service Worker request handlers. The duplicate `002_` migration prefix is intentional sequential history; `database/FRESH_INSTALL.md` gives the execution order.
+- Admin update action now enforces CSRF, per-user rate limit, active-admin database recheck, fixed script/working-directory constants, no request-controlled command arguments, and audit events. The referenced script `/home/a/bin/zayan-hardware-update.sh` and the host sudoers policy are external to Git; review them on the local machine before enabling production execution.
   - The test is wired into `.github/workflows/php-lint.yml`; the session-version test and migration 019 are wired into `.github/workflows/database-migrations.yml`.
 - Fresh-install docs now include migration 019. Do not apply that migration to the owner's local database until the existing schema/history, backup, and rollout procedure are inspected.
 - Important compatibility note: existing PHP sessions do not contain `auth_version` and will require users to sign in again after the migration and new code are deployed together. Deploy schema before enabling code that requires the column.
-- Remaining Phase 2 work: execute CI on the exact draft PR head; inspect failures; complete the POST ownership/role/participant and model-boundary matrix; review the admin site-update execution boundary, registration/password-reset/session flows, upload and private-file paths, XSS/SQL access, account retention and audit behavior; regenerate/download/review the Graphify artifact; reconcile dynamic JavaScript API references; update architecture/security maps after confirmed findings.
+- Remaining Phase 2 work: execute CI on the exact draft PR head; inspect failures; complete POST ownership/role/participant and model-boundary review; review upload/private-file paths, XSS/output encoding and SQL access; finish account retention/audit review; inspect the external updater/sudoers locally; and update architecture/security maps after confirmed findings.
 - Do not merge to `main` or deploy without owner approval. Open the Phase 2 draft PR against `phase1/foundation-reliability-20261031`, not `main`.
