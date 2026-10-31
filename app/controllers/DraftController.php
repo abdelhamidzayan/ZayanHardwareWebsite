@@ -9,6 +9,7 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\PostDraft;
 use App\Services\AuthService;
+use App\Services\ImageUploadPolicy;
 use App\Services\RateLimiter;
 
 final class DraftController extends Controller
@@ -162,9 +163,10 @@ final class DraftController extends Controller
                     $kind = 'image';
                     $extension = match ($mime) { 'image/jpeg' => 'jpg', 'image/png' => 'png', default => 'webp' };
                     $maxBytes = 12 * 1024 * 1024;
-                    $imageInfo = @getimagesize($tmp);
-                    if (!is_array($imageInfo) || (int) $imageInfo[0] > 12000 || (int) $imageInfo[1] > 12000) {
-                        throw new \DomainException('image_dimensions_invalid');
+                    try {
+                        ImageUploadPolicy::inspect($tmp);
+                    } catch (\DomainException $error) {
+                        throw new \DomainException('image_dimensions_invalid', 0, $error);
                     }
                 } elseif (in_array($mime, ['video/mp4', 'video/webm', 'video/quicktime'], true)) {
                     $kind = 'video';
@@ -285,9 +287,13 @@ final class DraftController extends Controller
         $size = (int) ($file['size'] ?? 0);
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
         if ($size < 1 || $size > 12 * 1024 * 1024
-            || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)
-            || !is_array(@getimagesize($tmp))) {
+            || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
             return Response::json(['error' => 'rendered_file_invalid', 'message' => 'نسخة الصورة المعدلة غير صالحة أو أكبر من 12 ميجابايت.'], 422);
+        }
+        try {
+            ImageUploadPolicy::inspect($tmp);
+        } catch (\DomainException) {
+            return Response::json(['error' => 'rendered_image_dimensions_invalid', 'message' => 'أبعاد الصورة المعدلة أكبر من الحد المسموح.'], 422);
         }
 
         $directory = App::root('storage/private/drafts/' . $draftId);
