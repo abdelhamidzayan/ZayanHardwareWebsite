@@ -8,15 +8,15 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 
 1. **[Contributor rules](AGENTS.md)** — mandatory safety, architecture, documentation, and Git rules.
 2. **[AI_CONTEXT.md](AI_CONTEXT.md)** — durable project handoff, verified historical context, and important implementation constraints.
-3. **[Current project state](docs/CURRENT_STATE.md)** — current development direction, known verification caveats, and next-step workflow.
-4. **[Update log](UPDATES.md)** — chronological record of shipped/implemented project changes and their verification state.
+3. **[Current project state](docs/CURRENT_STATE.md)** — authoritative `main` baseline, known verification caveats, and next-step workflow.
+4. **[Update log](UPDATES.md)** — chronological record of implemented changes and their verification state.
 5. **[Architecture and dependency map](docs/architecture-code-map.md)** — how requests flow through routes, controllers, services, models, database, views, and frontend.
 6. **[AI start prompt](docs/AI_START_PROMPT.md)** — short reusable prompt for opening a new AI conversation.
-7. [Three-phase completion plan](docs/COMPLETION_PLAN.md) — phase scope, acceptance criteria, and current sequence.
+7. [Three-phase completion plan](docs/COMPLETION_PLAN.md) — phase scope, acceptance criteria, and remaining release gates.
 8. [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md) — CSRF, guest access, and authorization review for every POST endpoint.
-8. [Database backup and restore runbook](docs/DATABASE_BACKUP_RESTORE.md) — safe separate-database restore and read-only schema/row-count comparison.
-9. [Storage recovery triage](docs/STORAGE_RECOVERY_RUNBOOK.md) — safe handling of pending filesystem recovery records.
-10. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
+9. [Database backup and restore runbook](docs/DATABASE_BACKUP_RESTORE.md) — safe separate-database restore and read-only schema/row-count comparison.
+10. [Storage recovery triage](docs/STORAGE_RECOVERY_RUNBOOK.md) — safe handling of pending filesystem recovery records.
+11. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
 
 The documentation is a map, not a substitute for source inspection. Always verify the active branch, commit, local changes, runtime, and database before changing code. GitHub branches, local checkouts, CI results, and deployments are separate states.
 
