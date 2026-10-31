@@ -50,7 +50,8 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 
 - [Architecture and dependency map](architecture-code-map.md)
 - [Fresh database installation order](../database/FRESH_INSTALL.md)
-- [Database backup, restore, and comparison runbook](DATABASE_BACKUP_RESTORE.md)\n- [Storage recovery triage](STORAGE_RECOVERY_RUNBOOK.md)
+- [Database backup, restore, and comparison runbook](DATABASE_BACKUP_RESTORE.md)
+- [Storage recovery triage](STORAGE_RECOVERY_RUNBOOK.md)
 - [Content system implementation](content-system-implementation.md)
 - [Content migrations](content-system-migrations.md)
 - [Security hardening](security-hardening.md)
