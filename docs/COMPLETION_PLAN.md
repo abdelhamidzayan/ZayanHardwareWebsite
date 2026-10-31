@@ -59,6 +59,19 @@ Exit criteria:
 - Graphify output is deterministic and reviewed; unresolved edges/warnings are explained.
 - Architecture and feature maps match the actual source.
 
+### Phase 2 implementation checkpoint
+
+Implemented on `phase2/security-graphify-20261031`, pending execution of the Phase 2 CI suite:
+
+- Generic public login errors for invalid credentials and suspended accounts; blocked-account attempts count against the same IP/identifier rate limits.
+- Per-account `auth_version` migration 019. Administrator password resets increment the version and invalidate prior sessions.
+- Login/session verification bound to the version checked with the password. Conditional password rehash updates prevent an in-flight login using an old password from overwriting an administrator-reset hash.
+- Regression test for stale-session invalidation and the concurrent password-reset/login race.
+- Automated CSRF policy test for every declared POST route (49 current declarations), including the explicit `accept/decline → respond` delegation, and a strict public POST allow-list of `/login` and `/register`.
+- [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md).
+
+No Phase 2 tests are claimed as passing until the draft PR workflows execute on the current branch head. The full authorization matrix and Graphify review remain in progress; further findings may require additional fixes.
+
 ## Phase 3 — UI, PWA, cross-device acceptance, and final readiness
 
 **Goal:** Verify the product experience and issue a truthful release-readiness report.
@@ -82,7 +95,7 @@ Exit criteria:
 | Phase | Status | Gate |
 |---|---|---|
 | Phase 1 — Foundation and operations | **CI passed; local acceptance pending** | Current branch: `phase1/foundation-reliability-20261031`; PR #17 remains draft |
-| Phase 2 — Security and Graphify | Planned | Starts after Phase 1 gate |
+| Phase 2 — Security and Graphify | **In progress; CI pending** | Current branch: `phase2/security-graphify-20261031`; draft PR pending |
 | Phase 3 — UI, PWA, final acceptance | Planned | Starts after Phase 2 gate |
 
 ## Current branch and verification note
