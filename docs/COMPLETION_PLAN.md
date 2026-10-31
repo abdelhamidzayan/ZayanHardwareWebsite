@@ -98,7 +98,7 @@ Exit criteria:
 | Phase | Status | Gate |
 |---|---|---|
 | Phase 1 — Foundation and operations | **Automated CI passed; merged into `main`; owner acceptance pending** | PR #17 merged; owner database backup restore and private-media sample restore remain unverified |
-| Phase 2 — Security and Graphify | **Automated baseline passed; merged into `main`; manual audit follow-up open** | PR #18 merged; exact tested head `c23dde25`; route-by-route authorization, SQL/input, XSS, file-edge and recovery reviews remain |
+| Phase 2 — Security and Graphify | **Automated baseline passed; merged into `main`; manual audit follow-up open** | PR #18 and focused skill-test follow-up PR #19 merged; exact tested heads `c23dde25` and `d582826`; route-by-route authorization, application-wide SQL/input, XSS, file-edge and recovery reviews remain |
 | Phase 3 — UI, PWA, final acceptance | **Not started** | Browser/mobile/PWA acceptance and final readiness report remain |
 
 ## Local runtime acceptance note (2026-10-31)
@@ -113,7 +113,9 @@ The project-directory backup inventory found no full database backup or private-
 
 - PR #17 merged into `main` as `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`.
 - PR #18 merged into `main` as `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
+- PR #19 merged into `main` as `bf871bba8de078588a0d17778ed4520199188f96` (skill-test input/answer-exposure hardening).
 - The authoritative development branch is `main`; current baseline includes the accumulated feature stack plus Phase 1 and Phase 2 automated baselines.
 - Phase 1 latest workflow head `4bf013f81fc71bc32f8b221fefc1c778d00419d8`: PHP run 41238247509, Graphify run 41238247478, and database matrix 41238247686 all passed.
 - Phase 2 exact tested head `c23dde25f2bee53068c85e775ca56fa93f52e0a9`: PHP run 41238382181, Graphify run 41238382162, and database matrix 41238382193 all passed.
+- Skill-test follow-up exact tested head `d58282608187d5cbd5af59c66c332b2a7394b20e`: PHP run 41239306080, Graphify run 41239306068, and database matrix 41239306049 all passed.
 - No live database migration, media restore, or deployment is claimed.
