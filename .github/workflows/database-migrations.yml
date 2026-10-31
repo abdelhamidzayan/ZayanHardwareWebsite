@@ -1,4 +1,4 @@
-name: Database migration integration
+name: Database fresh-install integration
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: zayan-db-fresh-install-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
