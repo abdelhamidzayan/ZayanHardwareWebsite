@@ -209,17 +209,22 @@ final class Issue extends Model
             'newest' => 'r.created_at DESC',
             default => 'CASE WHEN r.id = (SELECT accepted_reply_id FROM issues WHERE id = ?) THEN 0 ELSE 1 END, helpful_count DESC, r.created_at DESC',
         };
-        $sql = 'SELECT r.id, r.issue_id, r.user_id, r.parent_reply_id, r.body, r.created_at, r.updated_at,
+        $sql = 'SELECT r.id, r.issue_id, r.user_id, r.parent_reply_id, r.body, r.created_at, r.updated_at, r.deleted_at,
                        u.username, u.display_name, u.role,
                        u.avatar_key, u.avatar_path,
                        parent_user.display_name AS parent_author_name, parent.user_id AS parent_author_id,
+                       parent.deleted_at AS parent_deleted_at,
                        COALESCE((SELECT SUM(re.points) FROM reputation_events re WHERE re.user_id = u.id), 0) AS reputation_points,
                        (SELECT COUNT(*) FROM reply_votes v WHERE v.reply_id = r.id) AS helpful_count
                 FROM issue_replies r
                 JOIN users u ON u.id = r.user_id
                 LEFT JOIN issue_replies parent ON parent.id = r.parent_reply_id
                 LEFT JOIN users parent_user ON parent_user.id = parent.user_id
-                WHERE r.issue_id = ? AND r.deleted_at IS NULL
+                WHERE r.issue_id = ?
+                  AND (r.deleted_at IS NULL OR EXISTS (
+                      SELECT 1 FROM issue_replies child
+                      WHERE child.parent_reply_id = r.id AND child.deleted_at IS NULL
+                  ))
                 ORDER BY ' . $order . ' ';
         $stmt = self::db()->prepare($sql);
         if ($sort === 'relevant') {
@@ -428,8 +433,8 @@ final class Issue extends Model
             if (!$row) throw new \DomainException('reply_not_deletable');
 
             $issueId = (int) $row['issue_id'];
-            $pdo->prepare('UPDATE issue_replies SET parent_reply_id = NULL WHERE parent_reply_id = ? AND deleted_at IS NULL')
-                ->execute([$replyId]);
+            // Keep parent_reply_id intact. The reply becomes a tombstone in the
+            // discussion tree while its active children remain attached to it.
             $pdo->prepare('UPDATE issue_replies SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$replyId]);
             if ((int) ($row['accepted_reply_id'] ?? 0) === $replyId) {
