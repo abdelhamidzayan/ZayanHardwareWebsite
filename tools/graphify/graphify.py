@@ -586,7 +586,7 @@ class Graph:
                 by_sequence[node["sequence"]].append(node["path"])
         for sequence, paths in sorted(by_sequence.items()):
             if len(paths) > 1:
-                self.warnings.append(f"Duplicate migration prefix {sequence}: {', '.join(sorted(paths))}. Confirm target schema history; do not blindly run both as an ordered pair.")
+                self.warnings.append(f"Duplicate migration prefix {sequence}: {', '.join(sorted(paths))}. This is a review warning, not an ordering decision. Check database/FRESH_INSTALL.md and the migration integration test; never infer applied state from filenames or replay against an existing database.")
 
     def as_dict(self) -> dict[str, Any]:
         edges = sorted(self.edges.values(), key=lambda item: (item["kind"], item["source"], item["target"]))
