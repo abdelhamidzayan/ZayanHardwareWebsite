@@ -6,13 +6,19 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 
 **Working on this repository? Read these first:**
 
-1. **[AI_CONTEXT.md](AI_CONTEXT.md)** — durable project handoff, current verified branch/CI state, preservation rules, and the required workflow for future AI sessions.
-2. **[Architecture and dependency map](docs/architecture-code-map.md)** — how requests flow through routes, controllers, services, models, database, views, and frontend.
-3. **[Graphify guide](docs/graphify.md)** — how to generate and review the machine-readable code relationship graph.
-4. **[Contributor rules](AGENTS.md)** — mandatory safety, architecture, and Git rules.
-5. [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
+1. **[Contributor rules](AGENTS.md)** — mandatory safety, architecture, documentation, and Git rules.
+2. **[AI_CONTEXT.md](AI_CONTEXT.md)** — durable project handoff, verified historical context, and important implementation constraints.
+3. **[Current project state](docs/CURRENT_STATE.md)** — current development direction, known verification caveats, and next-step workflow.
+4. **[Update log](UPDATES.md)** — chronological record of shipped/implemented project changes and their verification state.
+5. **[Architecture and dependency map](docs/architecture-code-map.md)** — how requests flow through routes, controllers, services, models, database, views, and frontend.
+6. **[AI start prompt](docs/AI_START_PROMPT.md)** — short reusable prompt for opening a new AI conversation.
+7. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
 
-The architecture map is the first technical reference. Always verify the active branch, commit, runtime, and database before changing code. Documentation and CI do not prove that an unmerged branch is deployed.
+The documentation is a map, not a substitute for source inspection. Always verify the active branch, commit, local changes, runtime, and database before changing code. GitHub branches, local checkouts, CI results, and deployments are separate states.
+
+## GitHub Actions and CI budget
+
+GitHub Actions is part of the project's quality gate. Keep workflow files and their test matrix version-controlled; do not delete or permanently disable CI to work around exhausted minutes. When the included quota is exhausted, stop reruns and new dispatches until the reset date or explicit authorization for paid usage. Verify the Actions spending budget first; use a **$0 budget** where supported to prevent accidental overage. A run with no executed steps is neither a passing nor a failing application test. The full rules live in [AGENTS.md](AGENTS.md#github-actions-and-usage-budget).
 
 ## Run locally
 1. Copy `.env.example` to `.env` and edit it.

@@ -7,7 +7,7 @@ use App\Services\AuthService;
 
 final class Router
 {
-    /** @var array<int, array{0:string,1:string,2:array|callable}> */
+    /** @var array<int, array{0:string,1:string,2:array|callable,3:bool}> */
     private array $routes = [];
 
     public function get(string $path, array|callable $handler): void
@@ -20,10 +20,22 @@ final class Router
         $this->add('POST', $path, $handler);
     }
 
+    /** Register a GET route that is intentionally accessible without an account. */
+    public function getPublic(string $path, array|callable $handler): void
+    {
+        $this->add('GET', $path, $handler, true);
+    }
+
+    /** Register a POST route that is intentionally accessible without an account. */
+    public function postPublic(string $path, array|callable $handler): void
+    {
+        $this->add('POST', $path, $handler, true);
+    }
+
     public function dispatch(Request $request): Response
     {
-        // Guests may only use the authentication screens and public help/policy pages.
-        // Enforce this before route matching so direct URLs and POST endpoints are protected too.
+        // Public access is declared with the route itself, so route definitions and
+        // the guest policy cannot silently drift apart.
         if (AuthService::user() === null && !$this->isGuestRouteAllowed($request)) {
             return Response::redirect(Request::basePath() . '/login', 303);
         }
@@ -62,31 +74,27 @@ final class Router
 
     private function isGuestRouteAllowed(Request $request): bool
     {
-        $allowedRoutes = [
-            'GET /',
-            'GET /login',
-            'POST /login',
-            'GET /register',
-            'POST /register',
-            'GET /register/usernames',
-            'GET /help',
-            'GET /policies',
-        ];
+        foreach ($this->routes as [$method, $regex, $handler, $guestAllowed]) {
+            if ($guestAllowed && $method === $request->method
+                && preg_match($regex, $request->path) === 1) {
+                return true;
+            }
+        }
 
-        return in_array($request->method . ' ' . $request->path, $allowedRoutes, true);
+        return false;
     }
 
-    private function add(string $method, string $path, array|callable $handler): void
+    private function add(string $method, string $path, array|callable $handler, bool $guestAllowed = false): void
     {
         // {id} matches digits only; any other {name} matches one path segment.
         $regex = preg_replace_callback('#\{(\w+)\}|[^{]+#', static function (array $m): string {
             if (!isset($m[1])) {
                 return preg_quote($m[0], '#');
             }
-            return '(?P<' . $m[1] . '>' . ($m[1] === 'id' ? '\d+' : '[^/]+') . ')';
+            return '(?P<' . $m[1] . '>' . ($m[1] === 'id' ? '\\d+' : '[^/]+') . ')';
         }, $path);
 
-        $this->routes[] = [$method, '#^' . $regex . '$#', $handler];
+        $this->routes[] = [$method, '#^' . $regex . '$#', $handler, $guestAllowed];
     }
 
     private function invoke(array|callable $handler, Request $request, array $params): Response

@@ -82,7 +82,8 @@ final class AdminUpdateController extends Controller
                 proc_close($process);
             }
 
-            return $this->fail('حدث خطأ أثناء تشغيل التحديث: ' . $exception->getMessage());
+            \App\Core\App::logException('ERROR', 'admin.site_update_failed', $exception);
+            return $this->fail('تعذر تشغيل عملية التحديث. راجع سجل التطبيق لمزيد من التفاصيل.');
         }
 
         $output = trim($output);

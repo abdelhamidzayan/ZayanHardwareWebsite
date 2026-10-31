@@ -3,7 +3,11 @@ name: Database migration integration
 on:
   pull_request:
   push:
-    branches: [main, feature/profiles-help-media, fix/audit-priority-issues]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   migrations:
@@ -49,6 +53,245 @@ jobs:
           done
           echo "Database did not become ready"
           exit 1
+
+      - name: Verify complete fresh install from an empty schema
+        run: |
+          set -euo pipefail
+          DB_NAME=zayan_fresh_install_test
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+          migrations=(
+            database/migrations/000_core_identity_schema.sql
+            database/migrations/001_issue_discussion.sql
+            database/migrations/002_final_registration_permissions.sql
+            database/migrations/002_registration_wizard.sql
+            database/migrations/003_featured_home_issues.sql
+            database/migrations/004_content_types.sql
+            database/migrations/005_diagnostic_updates_and_repair_confirmation.sql
+            database/migrations/006_notifications_and_push_subscriptions.sql
+            database/migrations/007_threaded_replies_and_edit_history.sql
+            database/migrations/008_inline_media_tokens.sql
+            database/migrations/009_soft_delete_posts.sql
+            database/migrations/010_diagnostic_update_history.sql
+            database/migrations/011_profiles_personal_help_and_publication.sql
+            database/migrations/012_post_composer_drafts_and_device_catalog.sql
+            database/migrations/013_terms_acceptance_audit.sql
+            database/migrations/014_rate_limit_buckets.sql
+            database/migrations/015_deleted_accounts_without_contact.sql
+            database/migrations/016_protect_technical_history.sql
+            database/migrations/017_block_physical_content_delete.sql
+            database/migrations/018_storage_recovery_tasks.sql
+          )
+
+          for migration in "${migrations[@]}"; do
+            echo "Applying ${migration}"
+            mysql --default-character-set=utf8mb4 -h 127.0.0.1 -uroot -proot "${DB_NAME}" < "${migration}"
+          done
+
+          expected_tables=(
+            users technician_profiles technician_profile_specialization_history storage_recovery_tasks
+            issues issue_attachments issue_replies reply_votes issue_edit_history issue_results reputation_events
+            terms_acceptances user_device_specializations skill_domains user_skill_domains user_skill_ratings
+            skill_tests skill_test_attempts admin_password_resets account_deletion_requests security_audit_logs
+            featured_home_issues issue_diagnostic_updates notifications push_subscriptions
+            issue_reply_edit_history issue_diagnostic_update_edit_history
+            help_requests help_request_messages help_request_attachments help_request_publications help_public_posts
+            device_manufacturers device_models device_model_suggestions post_drafts post_draft_media rate_limit_buckets
+          )
+          for table in "${expected_tables[@]}"; do
+            exists="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${DB_NAME}' AND table_name = '${table}';")"
+            test "${exists}" -eq 1 || { echo "Missing fresh-install table: ${table}"; exit 1; }
+          done
+
+          legacy_columns="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '${DB_NAME}' AND table_name = 'technician_profiles' AND column_name IN ('phone','specialization','experience');")"
+          test "${legacy_columns}" -eq 0
+          final_profile_columns="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '${DB_NAME}' AND table_name = 'technician_profiles' AND column_name IN ('device_focus','tech_level','board_experience','level_verified','workshop_name','biography');")"
+          test "${final_profile_columns}" -eq 6
+
+          mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "
+            INSERT INTO users (username, display_name, email, password_hash)
+              VALUES ('fixture_owner', 'Fixture Owner', 'owner@fresh.test', 'not-a-real-hash');
+            INSERT INTO technician_profiles (user_id, device_focus, tech_level, board_experience, level_verified, workshop_name, biography)
+              VALUES (1, 'iphone', 'board', '5-10', 0, 'Test workshop', 'Disposable fresh-install fixture');
+            INSERT INTO terms_acceptances (user_id, terms_version, ip_hash)
+              VALUES (1, 'ci-fresh-install', REPEAT('a', 64));
+            INSERT INTO issues (user_id, content_type, title, device_model, category, description, measurements, status)
+              VALUES (1, 'technical_post', 'Fresh install smoke test', NULL, NULL, 'Disposable content fixture', NULL, 'open');
+            INSERT INTO issues (user_id, content_type, title, device_model, category, description, measurements, status)
+              VALUES (1, 'technical_post', 'Standalone delete guard fixture', NULL, NULL, 'Disposable row with no dependent content', NULL, 'open');
+            INSERT INTO issue_replies (issue_id, user_id, body)
+              VALUES (1, 1, 'Disposable reply fixture');
+            INSERT INTO issue_replies (issue_id, user_id, body)
+              VALUES (2, 1, 'Standalone delete guard reply');
+            INSERT INTO issue_reply_edit_history (issue_reply_id, editor_id, previous_body)
+              VALUES (1, 1, 'Earlier disposable reply');
+            INSERT INTO issue_diagnostic_updates (issue_id, user_id, body)
+              VALUES (1, 1, 'Disposable diagnosis fixture');
+            INSERT INTO issue_diagnostic_update_edit_history (diagnostic_update_id, editor_id, previous_body)
+              VALUES (1, 1, 'Earlier disposable diagnosis');
+            INSERT INTO issue_attachments (issue_id, uploaded_by, file_path, mime_type, file_size, is_inline)
+              VALUES (1, 1, 'issues/1/fixture.jpg', 'image/jpeg', 128, 0);
+            INSERT INTO users (username, display_name, email, phone, password_hash)
+              VALUES ('fixture_deleted', 'Fixture Deleted', NULL, '+201000000099', 'not-a-real-hash');
+            UPDATE users SET email = NULL, phone = NULL, account_status = 'deleted' WHERE id = 2;
+            INSERT INTO users (username, display_name, email, password_hash)
+              VALUES ('fixture_second', 'Fixture Second', 'second@fresh.test', 'not-a-real-hash');
+          "
+
+          DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME="${DB_NAME}" DB_USER=root DB_PASS=root php bin/bootstrap-first-admin.php --username=fixture_owner --confirm-database="${DB_NAME}" --confirm-first-admin
+          first_admin_role="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT role FROM users WHERE id = 1;")"
+          test "${first_admin_role}" = "admin"
+
+          if DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME="${DB_NAME}" DB_USER=root DB_PASS=root php bin/bootstrap-first-admin.php --username=fixture_second --confirm-database="${DB_NAME}" --confirm-first-admin; then
+            echo "ERROR: first-admin bootstrap allowed a second administrator bootstrap"
+            exit 1
+          fi
+
+          deleted_contactless="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM users WHERE id = 2 AND email IS NULL AND phone IS NULL AND account_status = 'deleted';")"
+          test "${deleted_contactless}" -eq 1
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "UPDATE users SET account_status = 'active' WHERE id = 2;" 2>/dev/null; then
+            echo "ERROR: contactless active account unexpectedly passed chk_users_contact"
+            exit 1
+          fi
+
+          fk_count="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.key_column_usage WHERE table_schema = '${DB_NAME}' AND referenced_table_name IS NOT NULL;")"
+          test "${fk_count}" -ge 50
+
+          retention_constraints=(
+            fk_016_issue_replies_issue
+            fk_016_issue_replies_parent
+            fk_016_issue_attachments_issue
+            fk_016_issue_history_issue
+            fk_016_issue_results_issue
+            fk_016_issue_diagnostic_updates_issue
+            fk_016_help_requests_requester
+            fk_016_help_messages_request
+            fk_016_help_public_posts_request
+            fk_016_post_drafts_user
+          )
+          for constraint in "${retention_constraints[@]}"; do
+            delete_rule="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${DB_NAME}' AND CONSTRAINT_NAME = '${constraint}';")"
+            test "${delete_rule}" = "RESTRICT" || { echo "Expected RESTRICT for ${constraint}, got ${delete_rule}"; exit 1; }
+          done
+
+          expected_triggers=(
+            trg_users_block_physical_delete trg_technician_profiles_block_physical_delete
+            trg_issues_block_physical_delete trg_issue_attachments_block_physical_delete
+            trg_issue_replies_block_physical_delete trg_issue_edit_history_block_physical_delete
+            trg_issue_reply_edit_history_block_physical_delete trg_issue_results_block_physical_delete
+            trg_issue_diagnostic_updates_block_physical_delete trg_diagnostic_update_history_block_physical_delete
+            trg_reputation_events_block_physical_delete trg_terms_acceptances_block_physical_delete
+            trg_account_deletion_requests_block_physical_delete trg_security_audit_logs_block_physical_delete
+            trg_admin_password_resets_block_physical_delete trg_skill_test_attempts_block_physical_delete
+            trg_help_requests_block_physical_delete trg_help_request_messages_block_physical_delete
+            trg_help_request_attachments_block_physical_delete trg_help_request_publications_block_physical_delete
+            trg_help_public_posts_block_physical_delete trg_device_model_suggestions_block_physical_delete
+            trg_profile_specialization_history_no_delete
+            trg_user_skill_ratings_block_delete
+            trg_skill_tests_block_physical_delete
+            trg_skill_domains_block_physical_delete
+            trg_device_manufacturers_block_delete
+            trg_device_models_block_physical_delete
+            trg_storage_recovery_tasks_no_delete
+          )
+          for trigger in "${expected_triggers[@]}"; do
+            trigger_exists="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = '${DB_NAME}' AND TRIGGER_NAME = '${trigger}';")"
+            test "${trigger_exists}" -eq 1 || { echo "Missing physical-delete guard: ${trigger}"; exit 1; }
+          done
+
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issues WHERE id = 2;" 2>/dev/null; then
+            echo "ERROR: standalone physical issue deletion unexpectedly succeeded"
+            exit 1
+          fi
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issue_replies WHERE id = 2;" 2>/dev/null; then
+            echo "ERROR: standalone physical reply deletion unexpectedly succeeded"
+            exit 1
+          fi
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issue_attachments WHERE id = 1;" 2>/dev/null; then
+            echo "ERROR: physical technical attachment deletion unexpectedly succeeded"
+            exit 1
+          fi
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM issues WHERE id = 1;" 2>/dev/null; then
+            echo "ERROR: physical issue deletion unexpectedly succeeded"
+            exit 1
+          fi
+          if mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "DELETE FROM users WHERE id = 1;" 2>/dev/null; then
+            echo "ERROR: physical account deletion unexpectedly succeeded"
+            exit 1
+          fi
+          echo "Full fresh-install schema and content smoke test passed on ${{ matrix.database.label }} (FKs: ${fk_count})"
+
+      - name: Verify last active administrator protection
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/admin-roster-integration.php
+
+      - name: Verify model-level device catalog moderation and audit
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/device-catalog-integration.php
+
+      - name: Exercise atomic issue and reply media writes
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/content-write-integration.php
+
+      - name: Exercise draft publishing commit outcomes and media preservation
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/draft-publish-integration.php
+
+      - name: Exercise draft media recovery and symlink containment
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/draft-media-recovery-integration.php
+
+      - name: Exercise personal-help attachment transactions and recovery
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/help-request-media-integration.php
+
+      - name: Verify model-level issue review and vote authorization
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/issue-authorization-integration.php
+
+      - name: Exercise reply tombstone and thread preservation
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/reply-tombstone-integration.php
 
       - name: Verify sequential registration migrations and legacy data preservation
         run: |

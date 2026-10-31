@@ -24,9 +24,9 @@ use App\Controllers\SkillTestController;
 use App\Core\Router;
 
 return static function (Router $router): void {
-    $router->get('/', [HomeController::class, 'index']);
-    $router->get('/help', [PageController::class, 'help']);
-    $router->get('/policies', [PageController::class, 'policies']);
+    $router->getPublic('/', [HomeController::class, 'index']);
+    $router->getPublic('/help', [PageController::class, 'help']);
+    $router->getPublic('/policies', [PageController::class, 'policies']);
     $router->get('/settings', [PageController::class, 'settings']);
     $router->post('/settings/help-availability', [PageController::class, 'saveHelpAvailability']);
     $router->get('/feed', [FeedController::class, 'index']);
@@ -76,11 +76,11 @@ return static function (Router $router): void {
     $router->post('/push/subscribe', [PushController::class, 'subscribe']);
     $router->post('/push/unsubscribe', [PushController::class, 'unsubscribe']);
 
-    $router->get('/login', [AuthController::class, 'showLogin']);
-    $router->post('/login', [AuthController::class, 'login']);
-    $router->get('/register', [AuthController::class, 'showRegister']);
-    $router->post('/register', [AuthController::class, 'register']);
-    $router->get('/register/usernames', [AuthController::class, 'usernames']);
+    $router->getPublic('/login', [AuthController::class, 'showLogin']);
+    $router->postPublic('/login', [AuthController::class, 'login']);
+    $router->getPublic('/register', [AuthController::class, 'showRegister']);
+    $router->postPublic('/register', [AuthController::class, 'register']);
+    $router->getPublic('/register/usernames', [AuthController::class, 'usernames']);
     $router->post('/logout', [AuthController::class, 'logout']);
     $router->post('/account/deletion-request', [AccountController::class, 'requestDeletion']);
     $router->get('/skills/tests', [SkillTestController::class, 'index']);
@@ -98,9 +98,9 @@ return static function (Router $router): void {
     $router->post('/admin/users/{id}/status', [AdminUserController::class, 'setStatus']);
     $router->post('/admin/users/{id}/role', [AdminUserController::class, 'setRole']);
 
-    $router->get('/profile/{username}', [ProfileController::class, 'show']);
+    $router->getPublic('/profile/{username}', [ProfileController::class, 'show']);
     $router->post('/profile/avatar', [AvatarController::class, 'update']);
-    $router->get('/avatar/{userId}', [AvatarController::class, 'show']);
+    $router->getPublic('/avatar/{userId}', [AvatarController::class, 'show']);
     $router->get('/help-requests', [HelpRequestController::class, 'index']);
     $router->get('/help-requests/attachments/{id}', [HelpRequestController::class, 'attachment']);
     $router->get('/help-requests/{id}', [HelpRequestController::class, 'show']);
@@ -111,8 +111,8 @@ return static function (Router $router): void {
     $router->post('/help-requests/{id}/close', [HelpRequestController::class, 'close']);
     $router->post('/help-requests/{id}/publication', [HelpRequestController::class, 'proposePublication']);
     $router->post('/help-publications/{id}/respond', [HelpRequestController::class, 'respondPublication']);
-    $router->get('/help-library', [HelpRequestController::class, 'library']);
-    $router->get('/help-library/{id}', [HelpRequestController::class, 'publicPost']);
+    $router->getPublic('/help-library', [HelpRequestController::class, 'library']);
+    $router->getPublic('/help-library/{id}', [HelpRequestController::class, 'publicPost']);
 
     // Navigation targets that are not built yet.
     foreach (['/search', '/market'] as $path) {

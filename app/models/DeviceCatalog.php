@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Model;
+use App\Services\AdminRosterService;
 
 final class DeviceCatalog extends Model
 {
@@ -19,22 +20,23 @@ final class DeviceCatalog extends Model
     public static function searchModels(int $manufacturerId, string $query, int $limit = 15): array
     {
         $query = trim($query);
-        if ($manufacturerId < 1 || mb_strlen($query) < 1) return [];
+        if ($manufacturerId < 1 || $query === '' || mb_strlen($query) > 80) return [];
         $limit = max(1, min(25, $limit));
         $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query);
         $like = '%' . $escaped . '%';
         $prefix = $escaped . '%';
-        $sql = "SELECT id, manufacturer_id, commercial_name, model_code, aliases
-                FROM device_models
-                WHERE manufacturer_id = ? AND is_active = 1
-                  AND (commercial_name LIKE ? ESCAPE '!'
-                       OR COALESCE(model_code, '') LIKE ? ESCAPE '!'
-                       OR COALESCE(aliases, '') LIKE ? ESCAPE '!')
+        $sql = "SELECT dm.id, dm.manufacturer_id, dm.commercial_name, dm.model_code, dm.aliases
+                FROM device_models dm
+                INNER JOIN device_manufacturers m ON m.id = dm.manufacturer_id AND m.is_active = 1
+                WHERE dm.manufacturer_id = ? AND dm.is_active = 1
+                  AND (dm.commercial_name LIKE ? ESCAPE '!'
+                       OR COALESCE(dm.model_code, '') LIKE ? ESCAPE '!'
+                       OR COALESCE(dm.aliases, '') LIKE ? ESCAPE '!')
                 ORDER BY
-                  CASE WHEN UPPER(model_code) = UPPER(?) THEN 0
-                       WHEN UPPER(commercial_name) = UPPER(?) THEN 1
-                       WHEN model_code LIKE ? ESCAPE '!' THEN 2 ELSE 3 END,
-                  commercial_name
+                  CASE WHEN UPPER(dm.model_code) = UPPER(?) THEN 0
+                       WHEN UPPER(dm.commercial_name) = UPPER(?) THEN 1
+                       WHEN dm.model_code LIKE ? ESCAPE '!' THEN 2 ELSE 3 END,
+                  dm.commercial_name
                 LIMIT " . $limit;
         $stmt = self::db()->prepare($sql);
         $stmt->execute([$manufacturerId, $like, $like, $like, $query, $query, $prefix]);
@@ -120,12 +122,24 @@ final class DeviceCatalog extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
+            // Keep authorization at the model boundary as well as the controller.
+            AdminRosterService::assertActorActive($pdo, $adminId);
+
             $stmt = $pdo->prepare('SELECT * FROM device_model_suggestions WHERE id = ? FOR UPDATE');
             $stmt->execute([$suggestionId]);
             $suggestion = $stmt->fetch();
             if (!$suggestion || $suggestion['status'] !== 'pending') {
                 throw new \DomainException('suggestion_not_pending');
             }
+            $manufacturer = $pdo->prepare(
+                'SELECT id, is_active FROM device_manufacturers WHERE id = ? FOR UPDATE'
+            );
+            $manufacturer->execute([(int) $suggestion['manufacturer_id']]);
+            $manufacturerRow = $manufacturer->fetch(\PDO::FETCH_ASSOC);
+            if (!$manufacturerRow || ($approve && (int) $manufacturerRow['is_active'] !== 1)) {
+                throw new \DomainException('manufacturer_unavailable');
+            }
+
             $modelId = null;
             if ($approve) {
                 $duplicate = $pdo->prepare(
@@ -158,10 +172,24 @@ final class DeviceCatalog extends Model
                 ]);
                 $modelId = (int) $pdo->lastInsertId();
             }
+            $newStatus = $approve ? 'approved' : 'rejected';
             $pdo->prepare(
                 'UPDATE device_model_suggestions SET status = ?, reviewed_by = ?, reviewed_at = UTC_TIMESTAMP(),
                     approved_model_id = ? WHERE id = ?'
-            )->execute([$approve ? 'approved' : 'rejected', $adminId, $modelId, $suggestionId]);
+            )->execute([$newStatus, $adminId, $modelId, $suggestionId]);
+
+            $pdo->prepare(
+                'INSERT INTO security_audit_logs (actor_user_id, action, details_json)
+                 VALUES (?, ?, ?)'
+            )->execute([
+                $adminId,
+                'device_model_suggestion.' . $newStatus,
+                json_encode([
+                    'suggestion_id' => $suggestionId,
+                    'model_id' => $modelId,
+                    'manufacturer_id' => (int) $suggestion['manufacturer_id'],
+                ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            ]);
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();

@@ -6,12 +6,21 @@ namespace App\Services;
 use App\Core\App;
 use App\Models\Database;
 use App\Models\PostDraft;
+use PDO;
+use Throwable;
 
 final class DraftPublishingService
 {
-    public static function publish(string $draftId, int $userId, int $expectedRevision): int
-    {
+    public static function publish(
+        string $draftId,
+        int $userId,
+        int $expectedRevision,
+        ?callable $commitTransaction = null
+    ): int {
         $pdo = Database::connection();
+        $commit = $commitTransaction !== null
+            ? \Closure::fromCallable($commitTransaction)
+            : static function (PDO $connection): void { $connection->commit(); };
         $draft = PostDraft::findForUser($draftId, $userId);
         if (!$draft) throw new \DomainException('draft_not_found');
         if ((int) $draft['revision'] !== $expectedRevision) throw new \DomainException('draft_revision_conflict');
@@ -57,6 +66,8 @@ final class DraftPublishingService
         $pdo->beginTransaction();
         $moved = [];
         $createdDirectory = null;
+        $issueId = null;
+        $commitStarted = false;
         try {
             $lock = $pdo->prepare('SELECT revision FROM post_drafts WHERE id = ? AND user_id = ? FOR UPDATE');
             $lock->execute([$draftId, $userId]);
@@ -220,25 +231,189 @@ final class DraftPublishingService
             }
 
             $pdo->prepare('DELETE FROM post_drafts WHERE id = ? AND user_id = ?')->execute([$draftId, $userId]);
-            $pdo->commit();
+            $commitStarted = true;
+            ($commit)($pdo);
             return $issueId;
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-
-            $restoreFailures = self::restoreMovedFiles($moved);
-            if ($restoreFailures !== []) {
-                App::log('CRITICAL', 'Draft publishing rollback could not restore every media file; retained files were not deleted.', [
-                    'restore_failures' => $restoreFailures,
-                    'issue_directory' => $createdDirectory,
-                ], 'audit');
-            } elseif ($createdDirectory !== null && is_dir($createdDirectory) && !@rmdir($createdDirectory)) {
-                App::log('WARNING', 'Draft publishing rollback left a non-empty issue media directory.', [
-                    'issue_directory' => $createdDirectory,
-                ], 'audit');
+        } catch (Throwable $error) {
+            $rollbackConfirmed = !$commitStarted;
+            if ($pdo->inTransaction()) {
+                try {
+                    $pdo->rollBack();
+                    $rollbackConfirmed = true;
+                } catch (Throwable $rollbackError) {
+                    $rollbackConfirmed = false;
+                    App::logException('CRITICAL', 'draft.publish_rollback_failed', $rollbackError, [
+                        'draft_id' => $draftId,
+                        'issue_id' => $issueId,
+                        'user_id' => $userId,
+                    ]);
+                }
             }
 
-            throw $e;
+            if ($rollbackConfirmed) {
+                $restoreFailures = self::restoreMovedFiles($moved);
+                if ($restoreFailures !== []) {
+                    foreach ($moved as $move) {
+                        self::recordRecoveryForAbsolutePath($move['from'], 'draft', null, 'draft_publish_restore_failed');
+                        self::recordRecoveryForAbsolutePath($move['to'], 'issue', $issueId, 'draft_publish_orphan_after_rollback');
+                    }
+                    App::log('CRITICAL', 'Draft publishing rollback could not restore every media file; files were retained for reconciliation.', [
+                        'draft_id' => $draftId,
+                        'issue_id' => $issueId,
+                        'restore_failures' => $restoreFailures,
+                    ], 'audit');
+                    throw new \DomainException('draft_publish_restore_incomplete', 0, $error);
+                }
+                self::removeEmptyIssueDirectory($createdDirectory);
+                throw $error;
+            }
+
+            $state = $issueId !== null ? self::inspectPublishState($draftId, $userId, $issueId) : 'unknown';
+            if ($state === 'committed') {
+                $missing = [];
+                foreach ($moved as $move) {
+                    if (!is_file($move['to']) && is_file($move['from'])) {
+                        @copy($move['from'], $move['to']);
+                    }
+                    if (!is_file($move['to'])) $missing[] = $move;
+                }
+                if ($missing === []) {
+                    // Commit succeeded despite its lost acknowledgement.
+                    // Return the ID so the UI cannot invite duplicate publishing.
+                    return $issueId;
+                }
+                foreach ($missing as $move) {
+                    self::recordRecoveryForAbsolutePath($move['to'], 'issue', $issueId, 'published_media_missing');
+                    self::recordRecoveryForAbsolutePath($move['from'], 'draft', null, 'published_media_restore_source');
+                }
+                App::log('CRITICAL', 'Draft publish committed but issue media could not all be verified.', [
+                    'draft_id' => $draftId,
+                    'issue_id' => $issueId,
+                    'missing_count' => count($missing),
+                ], 'audit');
+                throw new \DomainException('draft_publish_committed_media_incomplete', 0, $error);
+            }
+
+            // A snapshot showing the draft but not the issue is not sufficient
+            // to prove rollback after a lost COMMIT acknowledgement; the server
+            // may still be completing that commit. Treat it as unknown below.
+
+            // If the commit outcome cannot be resolved, retain the issue-side
+            // files and copy them back to the draft side. Reconciliation can
+            // later remove whichever copy is not referenced by the DB.
+            foreach ($moved as $move) {
+                if (is_file($move['to']) && !is_file($move['from'])) {
+                    $sourceDirectory = dirname($move['from']);
+                    if (!is_dir($sourceDirectory)) @mkdir($sourceDirectory, 0750, true);
+                    if (!@copy($move['to'], $move['from'])) {
+                        App::log('CRITICAL', 'Draft publish ambiguous outcome could not copy media back to draft storage.', [
+                            'draft_id' => $draftId,
+                            'issue_id' => $issueId,
+                        ], 'audit');
+                    }
+                }
+                self::recordRecoveryForAbsolutePath($move['to'], 'issue', $issueId, 'draft_publish_commit_outcome_unknown');
+                self::recordRecoveryForAbsolutePath($move['from'], 'draft', null, 'draft_publish_commit_outcome_unknown');
+            }
+            App::logException('CRITICAL', 'draft.publish_commit_outcome_unknown', $error, [
+                'draft_id' => $draftId,
+                'issue_id' => $issueId,
+                'user_id' => $userId,
+                'commit_started' => $commitStarted,
+            ]);
+            throw new \DomainException('draft_publish_outcome_unknown', 0, $error);
         }
+    }
+
+    private static function inspectPublishState(string $draftId, int $userId, int $issueId): string
+    {
+        try {
+            $pdo = Database::newConnection();
+            $issue = $pdo->prepare('SELECT id FROM issues WHERE id = ? AND user_id = ? LIMIT 1');
+            $issue->execute([$issueId, $userId]);
+            $issueExists = $issue->fetchColumn() !== false;
+
+            $draft = $pdo->prepare('SELECT id FROM post_drafts WHERE id = ? AND user_id = ? LIMIT 1');
+            $draft->execute([$draftId, $userId]);
+            $draftExists = $draft->fetchColumn() !== false;
+
+            if ($issueExists && !$draftExists) return 'committed';
+        } catch (Throwable $error) {
+            App::logException('CRITICAL', 'draft.publish_state_inspection_failed', $error, [
+                'draft_id' => $draftId,
+                'issue_id' => $issueId,
+                'user_id' => $userId,
+            ]);
+        }
+        return 'unknown';
+    }
+
+    private static function recordRecoveryForAbsolutePath(
+        string $absolutePath,
+        string $aggregateType,
+        ?int $aggregateId,
+        string $reason
+    ): void {
+        $root = rtrim(App::root('storage/private'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        if (!str_starts_with($absolutePath, $root)) {
+            App::log('CRITICAL', 'draft.publish_recovery_path_outside_storage', [
+                'aggregate_type' => $aggregateType,
+                'aggregate_id' => $aggregateId,
+                'reason_code' => $reason,
+            ], 'audit');
+            return;
+        }
+
+        $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($absolutePath, strlen($root)));
+        $validDraft = preg_match('#^drafts/[a-f0-9-]{36}/[a-z0-9._-]{1,120}$#i', $relative) === 1;
+        $validIssue = preg_match('#^issues/[1-9][0-9]*/[a-z0-9._-]{1,120}$#i', $relative) === 1;
+        if (($aggregateType === 'draft' && !$validDraft) || ($aggregateType === 'issue' && !$validIssue)) {
+            App::log('CRITICAL', 'draft.publish_recovery_path_rejected', [
+                'aggregate_type' => $aggregateType,
+                'aggregate_id' => $aggregateId,
+                'reason_code' => $reason,
+            ], 'audit');
+            return;
+        }
+
+        try {
+            $lastErrorCode = str_contains($reason, 'commit_outcome_unknown') ? 'commit_unknown' : 'restore_failed';
+            Database::newConnection()->prepare(
+                "INSERT INTO storage_recovery_tasks
+                    (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code,
+                     status, attempts, last_attempt_at, last_error_code)
+                 VALUES (?, ?, ?, ?, ?, 'pending', 1, UTC_TIMESTAMP(), ?)
+                 ON DUPLICATE KEY UPDATE
+                    aggregate_type = VALUES(aggregate_type),
+                    aggregate_id = VALUES(aggregate_id),
+                    reason_code = VALUES(reason_code),
+                    status = 'pending',
+                    attempts = attempts + 1,
+                    last_attempt_at = UTC_TIMESTAMP(),
+                    last_error_code = VALUES(last_error_code),
+                    completed_at = NULL"
+            )->execute([
+                $aggregateType,
+                $aggregateId,
+                $relative,
+                hash('sha256', $relative),
+                $reason,
+                $lastErrorCode,
+            ]);
+        } catch (Throwable $error) {
+            App::logException('CRITICAL', 'draft.publish_recovery_task_write_failed', $error, [
+                'aggregate_type' => $aggregateType,
+                'aggregate_id' => $aggregateId,
+                'reason_code' => $reason,
+            ]);
+        }
+    }
+
+    private static function removeEmptyIssueDirectory(?string $directory): void
+    {
+        if ($directory === null || !is_dir($directory)) return;
+        $entries = array_values(array_diff(scandir($directory) ?: [], ['.', '..']));
+        if ($entries === []) @rmdir($directory);
     }
 
     /**

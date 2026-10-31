@@ -22,11 +22,15 @@ final class AvatarService
         if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
             throw new \DomainException('avatar_invalid_type');
         }
-        $image = @getimagesize($tmp);
-        if (!is_array($image) || $image[0] < 160 || $image[1] < 160 || $image[0] > 4000 || $image[1] > 4000) {
+        try {
+            $image = ImageUploadPolicy::inspect($tmp, 4000, 16_000_000);
+        } catch (\DomainException $error) {
+            throw new \DomainException('avatar_invalid_dimensions', 0, $error);
+        }
+        if ($image['width'] < 160 || $image['height'] < 160) {
             throw new \DomainException('avatar_invalid_dimensions');
         }
-        $ratio = $image[0] / max(1, $image[1]);
+        $ratio = $image['width'] / max(1, $image['height']);
         if ($ratio < 0.97 || $ratio > 1.03) {
             throw new \DomainException('avatar_must_be_cropped');
         }

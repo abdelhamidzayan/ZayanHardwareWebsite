@@ -1,6 +1,6 @@
 # Zayan Hardware — AI Context and Handoff
 
-> **Start here in every new AI conversation.** This file is the durable project handoff. For the actual source architecture, open [Architecture and dependency map](docs/architecture-code-map.md). For the automated source graph, read [Graphify](docs/graphify.md).
+> **Start here in every new AI conversation.** Read [Contributor Rules](AGENTS.md), [Current Project State](docs/CURRENT_STATE.md), and [Update Log](UPDATES.md) first. This file is the durable project handoff. For the actual source architecture, open [Architecture and dependency map](docs/architecture-code-map.md). For the automated source graph, read [Graphify](docs/graphify.md). The short reusable prompt is [here](docs/AI_START_PROMPT.md).
 
 ## 1. Project identity and scope
 
@@ -13,13 +13,15 @@
 
 ## 2. Mandatory reading order
 
-1. `AGENTS.md` — non-negotiable safety and contribution rules.
-2. [Architecture and dependency map](docs/architecture-code-map.md) — request lifecycle, route/controller/service/model/view relationships.
-3. [Graphify guide](docs/graphify.md) — generate/check the machine-readable source graph and understand its limitations.
-4. [Security hardening](docs/security-hardening.md) — rate limits, private media, account retention.
-5. [Post composer and drafts](docs/post-composer-and-drafts.md) and [profiles/personal help](docs/profiles-personal-help.md) when working on those features.
-6. [Account retention policy](docs/account-retention.md) and [content-system migrations](docs/content-system-migrations.md) before touching account lifecycle or schema.
-7. Read the actual source at the active branch before changing anything. Documentation is a map, not a substitute for source inspection.
+1. [Contributor rules](AGENTS.md) — non-negotiable safety, architecture, documentation, and Git rules.
+2. [Current project state](docs/CURRENT_STATE.md) — current direction and known verification caveats.
+3. [Update log](UPDATES.md) — chronological feature/change history and exact verification claims.
+4. [Architecture and dependency map](docs/architecture-code-map.md) — request lifecycle, route/controller/service/model/view relationships.
+5. [Graphify guide](docs/graphify.md) — use when architectural dependencies are relevant or a Graphify review is requested.
+6. [Security hardening](docs/security-hardening.md) — rate limits, private media, account retention.
+7. [Post composer and drafts](docs/post-composer-and-drafts.md) and [profiles/personal help](docs/profiles-personal-help.md) when working on those features.
+8. [Account retention policy](docs/account-retention.md) and [content-system migrations](docs/content-system-migrations.md) before touching account lifecycle or schema.
+9. Read the actual source at the active branch before changing anything. Documentation is a map, not a substitute for source inspection.
 
 ## 3. Source-of-truth boundaries
 
@@ -33,24 +35,19 @@ Never conflate these states:
 
 Always report the exact branch and commit being discussed. A passing CI job does not prove local browser/PWA behavior or production deployment. A migration file existing in Git does not prove it ran on a database.
 
-## 4. Current verified GitHub snapshot — 2026-10-31
+## 4. GitHub branch and CI snapshot — 2026-10-31
 
-- Active audit/fix branch: `fix/audit-priority-issues`.
-- Application-code and CI verification baseline: `46960cf9efb33b2b0affa503d5e832725bdba4b4`. README/AI handoff documentation commits were added after this baseline on the same PR branch; always resolve the live branch HEAD before starting new work.
-- PR #14 is a **Draft**; it is not merged and must not be described as deployed.
-- On that exact head, GitHub Actions completed successfully:
-  - Graphify dependency graph: run [41138280152](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280152).
-  - PHP syntax check: run [41138280122](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280122).
-  - Database migration integration: run [41138280074](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280074).
-- Graphify artifact: `zayan-hardware-graphify`, artifact ID `13017416033`, expires 2026-11-13. It contains `.graphify/graph.json`, `.graphify/architecture.mmd`, and the summary.
-- Latest observed Graphify summary: status `ok`; 130 source files scanned; 84 routes; 161 SQL queries analyzed; 15 API calls (10 linked, 5 unresolved); 648 nodes; 1,440 edges; 38 table nodes; 61 foreign-key edges.
-- Graphify's only emitted warning was the duplicate `002_` migration prefix:
-  - `002_final_registration_permissions.sql`
-  - `002_registration_wizard.sql`
-  Never run or reorder these blindly. Inspect the target database's migration history and schema first.
-- Graphify is static analysis, not a runtime call trace. Five dynamic/unresolved JavaScript API calls remain for manual review. A missing edge is not proof that no dependency exists.
-- The documentation-only commits after `46960cf` do not change application behavior; the CI results above are for the code baseline, not a new runtime deployment.
-- PR #13 also contains an earlier Graphify audit implementation and a separate curated AI documentation set on another branch. Do not mix its older source baseline with PR #14 without comparing branches and resolving overlap deliberately.
+- Active audit branch: `audit/system-rebuild-20261031`.
+- Pull request: [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16), titled “Audit rebuild: fresh install, retention guards and route consistency”.
+- PR #16 is **Draft, open, and unmerged**. Its base is `audit/content-retention-consistency`; it is not a direct merge to `main`, and nothing on this branch should be described as deployed.
+- The audit branch receives frequent commits. Do not trust any SHA copied from an older handoff; resolve the live head from PR #16 before every new session or change.
+- Last confirmed green CI baseline: `55522a3cc204e961aaf9947773b15ff10321ad02`, with PHP/CLI/security/JavaScript run [41180453075](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453075), Graphify run [41180453042](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453042), and fresh-install matrix run [41180453039](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453039).
+- That green baseline predates the latest commits on PR #16. It verified migrations 000–017 and the earlier test set; it does **not** verify migration 018 or the latest content-write service/test changes.
+- The current migration workflow is configured to install migrations 000–018 and run `tests/php/content-write-integration.php`, `tests/php/device-catalog-integration.php`, and the other database suites on the disposable `zayan_fresh_install_test` database for MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. The PHP lint workflow includes all tracked PHP files; Graphify checks graph generation/determinism. The latest code additions remain **CI-unverified** until those jobs pass on their exact commit.
+- To avoid duplicate Actions consumption, each workflow now triggers on `push` only for `main` and on `pull_request` for branch review, with a concurrency group per PR/ref and `cancel-in-progress: true`. This is a trigger optimization, not removal or disabling of workflows.
+- The owner reported GitHub Actions usage at **2,000 / 2,000 included minutes**, with the account notice showing reset on **2026-11-01**. The owner has not confirmed that a $0 Actions spending budget is configured. Do not manually rerun/dispatch workflows before the displayed reset or explicit owner authorization. Keep workflow YAML files intact; follow [the Actions usage policy](AGENTS.md#github-actions-and-usage-budget).
+- A green historical workflow run proves only the tests and commit it actually executed. It does not prove current branch state, local XAMPP/Kali behavior, PWA/Safari behavior, or deployment.
+- Graphify is static analysis, not a runtime call trace. Resolve its outstanding dynamic JavaScript API links manually and review every warning; never treat a missing graph edge as proof that no dependency exists.
 
 ## 5. Owner's local environment — latest reported state
 
@@ -70,13 +67,19 @@ Always report the exact branch and commit being discussed. A passing CI job does
 
 All local details above are a dated handoff. Recheck the actual machine before acting.
 
-## 6. Confirmed content-retention behavior and remaining review
+## 6. Technical-content preservation and current write path
 
-- `Issue::deleteIssue()` uses `deleted_at` (soft delete), not a physical row delete.
-- `Issue::deleteReply()` and `Issue::deleteDiagnosticUpdate()` also use `deleted_at`; reply edit history is stored separately. One relationship-preservation concern remains: `deleteReply()` sets child replies' `parent_reply_id` to NULL before soft-deleting the parent. Child text survives, but its thread relationship is lost; review the UI and intended tombstone behavior before changing it.
-- `ContentEditorService::pruneUnusedInlineMedia()` is intentionally a no-op so attachments referenced by previous body revisions are retained.
-- The issue creation/edit/reply/diagnostic controller flows perform multiple database and filesystem steps. A database failure between steps can leave a partially completed operation (for example, a post/reply saved before inline-token resolution). This is a consistency/rollback review item, not evidence that existing posts were deleted. Add failure-injection tests before changing these flows.
-- `GET /attachments/{id}` and issue audio require authentication; verify the intended visibility policy whenever issue privacy rules change. Personal-help attachment delivery additionally checks conversation participation; draft media checks draft ownership.
+- `Issue::deleteIssue()`, `Issue::deleteReply()`, and `Issue::deleteDiagnosticUpdate()` use soft deletion. Physical deletion of protected technical rows is additionally blocked by migrations 016/017 and their foreign-key/trigger guards.
+- `Issue::deleteReply()` preserves each child's `parent_reply_id`; a deleted parent is rendered as a text-free tombstone when it still has active children. Do not detach child replies from their original thread.
+- `ContentEditorService::pruneUnusedInlineMedia()` is intentionally a no-op. Existing attachments may still be referenced by prior edit-history versions, so removing an inline token from the latest body is not permission to delete the attachment or its file.
+- `ContentWriteService` now coordinates issue creation/editing, reply creation/editing, and diagnostic-update creation/editing through a single DB transaction plus staged private-file moves. Notifications occur after the content transaction commits.
+- Sensitive administrative writes reviewed later in the audit now revalidate the active admin at the model/service boundary under a row lock and write state changes with security-audit events in one transaction: skill-test creation/status, device-model moderation, and featured-home-post selection. Device-model search is authenticated, rate-limited, limited to 80 query characters, and only searches active models under active manufacturers. The new device-catalog integration test and corresponding database CI step are implemented but not yet executed on the current head.
+- When auditing POST routes, follow delegated helpers (for example HelpRequestController::accept()/decline() → respond()) before concluding CSRF/auth/object ownership is missing. Method-local token searches alone can produce false positives.
+- Models used by the write service are transaction-aware, so they do not commit/rollback a transaction owned by `ContentWriteService`.
+- File compensation is reverse-ordered. A confirmed DB rollback permits removal of newly moved files; a failed cleanup is recorded in `storage_recovery_tasks` (migration 018). An ambiguous commit outcome preserves files and records a pending reconciliation task rather than risking deletion of a file a committed row may reference. There is no automatic recovery worker; pending tasks require an explicit, reviewed reconciliation process.
+- `tests/php/content-write-integration.php` covers successful writes, DB rollback, move adapters that return false or throw after creating the destination, later-file-move failure, reply and diagnostic attachment failures, edit-history rollback, failed filesystem compensation, and ambiguous commit handling. The three-engine fresh-install matrix also runs `tests/php/draft-media-recovery-integration.php`, which checks durable recovery tasks for unavailable roots/directories and cross-draft UUID-symlink containment. These newest tests are not yet CI-verified because the Actions quota was exhausted.
+- Shared image dimension/pixel checks are implemented in `ImageUploadPolicy` and are used by reviewed issue, draft, avatar and personal-help upload paths. This does not replace MIME validation or byte-size limits.
+- Draft publishing already has rollback restoration and ambiguous-commit recovery. Draft media upload/rendered replacement/deletion uses revision checks and reference-aware cleanup; storage-root or UUID-directory unavailability now creates durable pending recovery tasks, cross-draft UUID symlinks are rejected, and dot-only filenames are refused. `tests/php/draft-media-recovery-integration.php` covers the key filesystem boundaries; broader end-to-end CRUD verification remains. Personal-help messages and attachments intentionally use separate commits: each attachment has its own transaction, compensation, and recovery journal, while the UI explicitly reports partial attachment failure. This is not an all-or-nothing message-plus-all-media transaction. `NotificationService` isolates notification/Push failures as best-effort side effects and logs them; there is no durable outbox/retry guarantee. Other review areas remain the full POST authorization matrix, dynamic JS API references, browser/mobile Safari/PWA journeys, and the owner's local backup restore/schema comparison. No real database, private media tree, or owner backup may be modified during these reviews without explicit approval and a verified rollback plan.
 
 ## 7. Non-negotiable content preservation
 
@@ -88,19 +91,21 @@ The owner's highest-priority requirement is that technical knowledge must not be
 - Do not prune, bulk-delete, or migrate media without a verified inventory, backup, explicit retention policy, and rollback plan.
 - Graphify is source-only and must not read or mutate member uploads, logs, backups, or database contents.
 
-## 8. Engineering workflow
+## 8. Engineering workflow and current owner priority
 
-For each feature, trace the complete path:
+The owner currently wants **feature development first**. The full-system audit, broad Graphify review, and final hardening/documentation sweep are deferred until the planned product features are complete. This is not permission to skip focused checks or safety controls for an individual feature.
+
+For each feature, trace the relevant path:
 
 `HTTP method + route → route parameters → controller → authorization/CSRF/rate limit → service → model/SQL → migration/table/FK → view/layout → JS/CSS/API → storage/logging/notifications → tests`.
 
 Then:
-1. inspect the current branch and exact source;
+1. inspect the current branch, local working tree, and exact source;
 2. reproduce or prove the defect before editing;
-3. make the smallest coherent fix;
-4. add regression tests, including failure/rollback cases;
-5. run PHP/JS lint, focused tests, Graphify, and relevant database integration;
+3. make the smallest coherent change; avoid unrelated refactoring;
+4. add focused regression tests, including failure/rollback cases where relevant;
+5. run PHP/JS lint and focused tests relevant to the changed feature. Run broader database/security checks when the change affects those boundaries. Use Graphify when architectural dependencies change or when the owner requests a Graphify review; do not run a full Graphify audit for every small feature;
 6. review the complete diff and data-preservation impact;
-7. update this file and the relevant architecture/feature documentation with verified facts only.
+7. update `UPDATES.md`, `docs/CURRENT_STATE.md` when the overall status changes, and the relevant feature/architecture/migration documentation. Update `README.md` only when top-level setup, navigation, or entry-point information changes.
 
 Never claim a task is complete merely because code was added or CI passed. Separate **implemented**, **tested**, **runtime-verified**, and **deployed** status.

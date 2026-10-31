@@ -48,11 +48,14 @@ final class WebPushService
                         PushSubscription::deleteById((int) $row['id']);
                     }
                 } catch (\Throwable $e) {
-                    App::log('warning', 'Push delivery failed: ' . $e->getMessage());
+                    App::logException('WARNING', 'push.delivery_failed', $e, [
+                        'user_id' => $userId,
+                        'subscription_id' => (int) $row['id'],
+                    ]);
                 }
             }
         } catch (\Throwable $e) {
-            App::log('warning', 'Web Push initialization failed: ' . $e->getMessage());
+            App::logException('WARNING', 'push.initialization_failed', $e, ['user_id' => $userId]);
         }
     }
 }

@@ -151,6 +151,44 @@ final class App
         self::log('INFO', $event, $context, 'audit');
     }
 
+    /**
+     * Build a safe exception context without copying arbitrary exception messages.
+     * PDO errors are represented by SQLSTATE and driver code only.
+     */
+    public static function exceptionContext(\Throwable $exception): array
+    {
+        $context = ['exception' => $exception::class];
+
+        if ($exception instanceof \PDOException) {
+            if (isset($exception->errorInfo[0])) {
+                $context['sql_state'] = (string) $exception->errorInfo[0];
+            }
+            if (isset($exception->errorInfo[1])) {
+                $context['driver_code'] = (int) $exception->errorInfo[1];
+            }
+        } elseif ($exception instanceof \ErrorException) {
+            $context['severity'] = $exception->getSeverity();
+        }
+
+        $code = $exception->getCode();
+        if ((is_int($code) || (is_string($code) && ctype_digit($code))) && (int) $code !== 0) {
+            $context['exception_code'] = (int) $code;
+        }
+
+        return $context;
+    }
+
+    /** Log exception type and safe diagnostic codes, never its arbitrary message. */
+    public static function logException(
+        string $level,
+        string $event,
+        \Throwable $exception,
+        array $context = [],
+        string $channel = 'app'
+    ): void {
+        self::log($level, $event, array_merge(self::exceptionContext($exception), $context), $channel);
+    }
+
     private static function sanitizeLogValue(mixed $value, string $key = '', int $depth = 0): mixed
     {
         if ($key !== '' && preg_match('/password|passwd|token|secret|authorization|cookie|csrf|api[_-]?key|private[_-]?key/i', $key)) {
@@ -187,10 +225,7 @@ final class App
         }
 
         if ($value instanceof \Throwable) {
-            return [
-                'class' => $value::class,
-                'message' => self::redact($value->getMessage()),
-            ];
+            return self::exceptionContext($value);
         }
 
         return '[' . get_debug_type($value) . ']';
@@ -259,25 +294,13 @@ final class App
         });
 
         set_exception_handler(static function (\Throwable $e): void {
-            $exceptionContext = [
-                'exception' => $e::class,
-                'file'      => $e->getFile(),
-                'line'      => $e->getLine(),
-            ];
-
-            if ($e instanceof \PDOException) {
-                // PDO messages can contain SQL fragments or user-supplied values.
-                // Keep diagnostic codes and location, but never persist the raw query error.
-                $exceptionContext['message'] = 'Database exception; raw details omitted';
-                if (isset($e->errorInfo[0])) {
-                    $exceptionContext['sql_state'] = (string) $e->errorInfo[0];
-                }
-                if (isset($e->errorInfo[1])) {
-                    $exceptionContext['driver_code'] = (int) $e->errorInfo[1];
-                }
-            } else {
-                $exceptionContext['message'] = $e->getMessage();
-            }
+            $exceptionContext = array_merge(
+                self::exceptionContext($e),
+                [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]
+            );
 
             self::log('ERROR', 'app.uncaught_exception', $exceptionContext);
 

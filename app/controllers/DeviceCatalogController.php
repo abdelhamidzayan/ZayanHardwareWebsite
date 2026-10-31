@@ -20,10 +20,16 @@ final class DeviceCatalogController extends Controller
 
     public function models(): Response
     {
-        if (!AuthService::user()) return Response::json(['error' => 'unauthenticated'], 401);
+        $user = AuthService::user();
+        if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
+        if (!RateLimiter::allowForUser('devices.models', (int) $user['id'], 120, 60, 300)) {
+            return Response::json(['error' => 'rate_limited', 'models' => []], 429);
+        }
+
         $manufacturerId = filter_var($this->request->query['manufacturer_id'] ?? null, FILTER_VALIDATE_INT);
         $query = $this->request->query['q'] ?? '';
-        if ($manufacturerId === false || $manufacturerId === null || !is_string($query) || mb_strlen(trim($query)) < 1) {
+        if ($manufacturerId === false || $manufacturerId === null || !is_string($query)
+            || mb_strlen(trim($query)) < 1 || mb_strlen(trim($query)) > 80) {
             return Response::json(['models' => []]);
         }
         return Response::json(['models' => DeviceCatalog::searchModels((int) $manufacturerId, trim($query))]);
@@ -109,9 +115,12 @@ final class DeviceCatalogController extends Controller
             DeviceCatalog::moderateSuggestion($id, (int) $user['id'], $decision === 'approve');
             $this->flash('success', $decision === 'approve' ? 'تم اعتماد الموديل وإضافته للاختيارات.' : 'تم رفض اقتراح الموديل.');
         } catch (\DomainException $error) {
-            $message = $error->getMessage() === 'model_already_exists'
-                ? 'الموديل موجود بالفعل. لم تتم إضافته مرة أخرى.'
-                : 'الاقتراح غير موجود أو تمت مراجعته بالفعل.';
+            $message = match ($error->getMessage()) {
+                'model_already_exists' => 'الموديل موجود بالفعل. لم تتم إضافته مرة أخرى.',
+                'manufacturer_unavailable' => 'الشركة المصنعة غير نشطة؛ لا يمكن اعتماد موديل جديد لها.',
+                'admin_not_active' => 'لم تعد تملك صلاحية تنفيذ المراجعة.',
+                default => 'الاقتراح غير موجود أو تمت مراجعته بالفعل.',
+            };
             $this->flash('error', $message);
         }
         return $this->redirect('/admin/device-model-suggestions');

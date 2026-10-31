@@ -9,11 +9,30 @@ final class HelpRequest extends Model
 {
     public static function create(int $requesterId, int $helperId, string $subject, string $body): int
     {
+        $created = self::createWithInitialMessage($requesterId, $helperId, $subject, $body);
+        return $created['request_id'];
+    }
+
+    /**
+     * Create the request and its first message as one transaction and return
+     * both identifiers so callers do not need a fragile post-commit lookup.
+     *
+     * @return array{request_id:int,message_id:int}
+     */
+    public static function createWithInitialMessage(
+        int $requesterId,
+        int $helperId,
+        string $subject,
+        string $body
+    ): array {
         if ($requesterId < 1 || $helperId < 1 || $requesterId === $helperId) {
             throw new \DomainException('invalid_participants');
         }
+
         $pdo = self::db();
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) $pdo->beginTransaction();
+
         try {
             $stmt = $pdo->prepare(
                 "SELECT id, account_status, accept_help_requests FROM users WHERE id = ? FOR UPDATE"
@@ -23,20 +42,26 @@ final class HelpRequest extends Model
             if (!$helper || $helper['account_status'] !== 'active' || (int) $helper['accept_help_requests'] !== 1) {
                 throw new \DomainException('help_not_accepted');
             }
+
             $pdo->prepare(
                 "INSERT INTO help_requests (requester_id, helper_id, subject, status) VALUES (?, ?, ?, 'pending')"
             )->execute([$requesterId, $helperId, $subject]);
             $requestId = (int) $pdo->lastInsertId();
+
             $pdo->prepare(
                 'INSERT INTO help_request_messages (request_id, sender_id, body) VALUES (?, ?, ?)'
             )->execute([$requestId, $requesterId, $body]);
-            $pdo->prepare('UPDATE help_requests SET last_message_at = CURRENT_TIMESTAMP, requester_last_seen_at = CURRENT_TIMESTAMP WHERE id = ?')
-                ->execute([$requestId]);
-            $pdo->commit();
-            return $requestId;
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            throw $e;
+            $messageId = (int) $pdo->lastInsertId();
+
+            $pdo->prepare(
+                'UPDATE help_requests SET last_message_at = CURRENT_TIMESTAMP, requester_last_seen_at = CURRENT_TIMESTAMP WHERE id = ?'
+            )->execute([$requestId]);
+
+            if ($ownsTransaction) $pdo->commit();
+            return ['request_id' => $requestId, 'message_id' => $messageId];
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
+            throw $error;
         }
     }
 

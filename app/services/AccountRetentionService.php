@@ -51,11 +51,9 @@ final class AccountRetentionService
                     if (self::anonymizeRequest($pdo, (int) $item['id'])) $processed++;
                     else $skipped++;
                 } catch (Throwable $e) {
-                    $errors[] = ['request_id' => (int) $item['id'], 'error' => $e->getMessage()];
-                    App::log('ERROR', 'account.retention.failed', [
+                    $errors[] = ['request_id' => (int) $item['id'], 'exception' => $e::class];
+                    App::logException('ERROR', 'account.retention.failed', $e, [
                         'request_id' => (int) $item['id'],
-                        'exception' => $e::class,
-                        'message' => $e->getMessage(),
                     ]);
                 }
             }
@@ -316,10 +314,8 @@ final class AccountRetentionService
             try {
                 self::removePrivateAvatarFiles($userId);
             } catch (Throwable $cleanupError) {
-                App::log('WARNING', 'account.retention.avatar_cleanup_failed', [
+                App::logException('WARNING', 'account.retention.avatar_cleanup_failed', $cleanupError, [
                     'user_id' => $userId,
-                    'exception' => $cleanupError::class,
-                    'message' => $cleanupError->getMessage(),
                 ]);
             }
 
@@ -332,10 +328,7 @@ final class AccountRetentionService
                 try {
                     $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
                 } catch (Throwable $lockReleaseError) {
-                    App::log('WARNING', 'account.retention.admin_lock_release_failed', [
-                        'exception' => $lockReleaseError::class,
-                        'message' => $lockReleaseError->getMessage(),
-                    ]);
+                    App::logException('WARNING', 'account.retention.admin_lock_release_failed', $lockReleaseError);
                 }
             }
         }

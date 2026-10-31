@@ -9,6 +9,7 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\PostDraft;
 use App\Services\AuthService;
+use App\Services\ImageUploadPolicy;
 use App\Services\RateLimiter;
 
 final class DraftController extends Controller
@@ -162,9 +163,10 @@ final class DraftController extends Controller
                     $kind = 'image';
                     $extension = match ($mime) { 'image/jpeg' => 'jpg', 'image/png' => 'png', default => 'webp' };
                     $maxBytes = 12 * 1024 * 1024;
-                    $imageInfo = @getimagesize($tmp);
-                    if (!is_array($imageInfo) || (int) $imageInfo[0] > 12000 || (int) $imageInfo[1] > 12000) {
-                        throw new \DomainException('image_dimensions_invalid');
+                    try {
+                        ImageUploadPolicy::inspect($tmp);
+                    } catch (\DomainException $error) {
+                        throw new \DomainException('image_dimensions_invalid', 0, $error);
                     }
                 } elseif (in_array($mime, ['video/mp4', 'video/webm', 'video/quicktime'], true)) {
                     $kind = 'video';
@@ -197,9 +199,10 @@ final class DraftController extends Controller
                 $destination = $privateRoot . DIRECTORY_SEPARATOR . $filename;
                 if (!move_uploaded_file($tmp, $destination)) throw new \DomainException('storage_failed');
 
+                $relativePath = 'drafts/' . $draftId . '/' . $filename;
                 $sha256 = hash_file('sha256', $destination);
                 if (!is_string($sha256)) {
-                    @unlink($destination);
+                    PostDraft::cleanupPrivateMedia($relativePath);
                     throw new \DomainException('storage_failed');
                 }
 
@@ -208,7 +211,7 @@ final class DraftController extends Controller
                         $draftId,
                         $uuid,
                         $kind,
-                        'drafts/' . $draftId . '/' . $filename,
+                        $relativePath,
                         $mime,
                         $size,
                         $sha256,
@@ -218,7 +221,26 @@ final class DraftController extends Controller
                         $currentRevision
                     );
                 } catch (\Throwable $e) {
-                    @unlink($destination);
+                    $cleanupState = PostDraft::cleanupUploadIfUnreferenced(
+                        $draftId,
+                        $uuid,
+                        (int) $user['id'],
+                        $relativePath,
+                        'storage_path'
+                    );
+                    if ($cleanupState === 'referenced') {
+                        $currentRevision++;
+                        $saved[] = [
+                            'media_uuid' => $uuid,
+                            'media_kind' => $kind,
+                            'mime_type' => $mime,
+                            'file_size' => $size,
+                            'sort_order' => count($existing) + count($saved),
+                            'url' => $this->mediaUrl($draftId, $uuid),
+                            'original_url' => $this->mediaUrl($draftId, $uuid),
+                        ];
+                        continue;
+                    }
                     throw $e;
                 }
 
@@ -285,9 +307,13 @@ final class DraftController extends Controller
         $size = (int) ($file['size'] ?? 0);
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
         if ($size < 1 || $size > 12 * 1024 * 1024
-            || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)
-            || !is_array(@getimagesize($tmp))) {
+            || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
             return Response::json(['error' => 'rendered_file_invalid', 'message' => 'نسخة الصورة المعدلة غير صالحة أو أكبر من 12 ميجابايت.'], 422);
+        }
+        try {
+            ImageUploadPolicy::inspect($tmp);
+        } catch (\DomainException) {
+            return Response::json(['error' => 'rendered_image_dimensions_invalid', 'message' => 'أبعاد الصورة المعدلة أكبر من الحد المسموح.'], 422);
         }
 
         $directory = App::root('storage/private/drafts/' . $draftId);
@@ -299,28 +325,48 @@ final class DraftController extends Controller
         $destination = $directory . DIRECTORY_SEPARATOR . $filename;
         if (!move_uploaded_file($tmp, $destination)) return Response::json(['error' => 'storage_failed'], 500);
         $relative = 'drafts/' . $draftId . '/' . $filename;
+        $relative = 'drafts/' . $draftId . '/' . $filename;
         $sha = hash_file('sha256', $destination);
         if (!is_string($sha)) {
-            @unlink($destination);
+            PostDraft::cleanupPrivateMedia($relative);
             return Response::json(['error' => 'save_failed'], 500);
         }
         try {
             $newRevision = PostDraft::setRenderedPath(
                 $draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha, $expectedRevision
             );
-        } catch (\DomainException $e) {
-            @unlink($destination);
-            if ($e->getMessage() === 'draft_revision_conflict') return $this->revisionConflict($draftId, (int) $user['id']);
-            throw $e;
+        } catch (\Throwable $error) {
+            $cleanupState = PostDraft::cleanupUploadIfUnreferenced(
+                $draftId,
+                $mediaUuid,
+                (int) $user['id'],
+                $relative,
+                'rendered_path'
+            );
+            if ($cleanupState === 'referenced') {
+                $newRevision = $expectedRevision + 1;
+            } elseif ($cleanupState === 'unknown') {
+                App::logException('ERROR', 'draft.rendered_upload_outcome_unknown', $error, [
+                    'draft_id' => $draftId,
+                    'media_uuid' => $mediaUuid,
+                    'user_id' => (int) $user['id'],
+                ]);
+                return Response::json([
+                    'error' => 'save_outcome_unknown',
+                    'message' => 'تعذر تأكيد نتيجة الحفظ. احتفظنا بالملف لحين المراجعة؛ حدّث المسودة قبل إعادة الرفع.',
+                ], 503);
+            } elseif ($error instanceof \DomainException && $error->getMessage() === 'draft_revision_conflict') {
+                return $this->revisionConflict($draftId, (int) $user['id']);
+            } else {
+                throw $error;
+            }
         }
         if ($newRevision === null) {
-            @unlink($destination);
+            PostDraft::cleanupPrivateMedia($relative);
             return Response::json(['error' => 'media_not_found'], 404);
         }
         if (!empty($media['rendered_path'])) {
-            $old = realpath(App::root('storage/private/' . ltrim((string) $media['rendered_path'], '/')));
-            $root = realpath(App::root('storage/private'));
-            if ($root !== false && $old !== false && str_starts_with($old, $root . DIRECTORY_SEPARATOR) && is_file($old)) @unlink($old);
+            PostDraft::cleanupPrivateMedia((string) $media['rendered_path']);
         }
 
         return Response::json([

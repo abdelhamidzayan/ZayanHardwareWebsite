@@ -50,6 +50,9 @@ try {
     echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . PHP_EOL;
     exit(!empty($result['errors']) ? 1 : 0);
 } catch (Throwable $e) {
-    fwrite(STDERR, 'Account retention failed: ' . $e->getMessage() . PHP_EOL);
+    $safeContext = App::exceptionContext($e);
+    fwrite(STDERR, 'Account retention failed: '
+        . json_encode($safeContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        . PHP_EOL);
     exit(1);
 }

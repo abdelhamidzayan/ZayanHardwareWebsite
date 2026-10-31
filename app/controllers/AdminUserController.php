@@ -8,6 +8,7 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\Database;
 use App\Services\AuthService;
+use App\Services\AdminRosterService;
 
 final class AdminUserController extends Controller
 {
@@ -46,6 +47,7 @@ final class AdminUserController extends Controller
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
+            AdminRosterService::assertActorActive($pdo, (int) $admin['id']);
             $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found');
@@ -94,6 +96,19 @@ final class AdminUserController extends Controller
             }
             $adminRosterLockAcquired = true;
             $pdo->beginTransaction();
+            $this->assertActiveAdmin($pdo, (int) $admin['id']);
+            $targetStmt = $pdo->prepare('SELECT role, account_status FROM users WHERE id = ? FOR UPDATE');
+            $targetStmt->execute([$id]);
+            $target = $targetStmt->fetch();
+            if (!$target || $target['account_status'] === 'deleted') {
+                throw new \DomainException('user_not_found_or_unchanged');
+            }
+            AdminRosterService::assertCanChangeStatus(
+                $pdo,
+                (string) $target['role'],
+                (string) $target['account_status'],
+                $status
+            );
             $stmt = $pdo->prepare("UPDATE users SET account_status = ? WHERE id = ? AND account_status <> 'deleted'");
             $stmt->execute([$status, $id]);
             if ($stmt->rowCount() < 1) throw new \DomainException('user_not_found_or_unchanged');
@@ -114,7 +129,11 @@ final class AdminUserController extends Controller
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            if ($e instanceof \DomainException) return $this->fail('/admin/users', 'الحساب غير موجود أو لم تتغير حالته.');
+            if ($e instanceof \DomainException) return $this->fail('/admin/users', match ($e->getMessage()) {
+                'last_admin' => 'لا يمكن تعطيل أو حظر آخر مدير نشط.',
+                'admin_not_active' => 'لم تعد تملك صلاحية تنفيذ إدارة الحسابات.',
+                default => 'الحساب غير موجود أو لم تتغير حالته.',
+            });
             throw $e;
         } finally {
             if ($adminRosterLockAcquired) {
@@ -148,15 +167,19 @@ final class AdminUserController extends Controller
             }
             $adminRosterLockAcquired = true;
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('SELECT role FROM users WHERE id = ? AND account_status <> \'deleted\' FOR UPDATE');
+            $this->assertActiveAdmin($pdo, (int) $admin['id']);
+            $stmt = $pdo->prepare('SELECT role, account_status FROM users WHERE id = ? AND account_status <> \'deleted\' FOR UPDATE');
             $stmt->execute([$id]);
-            $oldRole = $stmt->fetchColumn();
-            if ($oldRole === false) throw new \DomainException('user_not_found');
+            $target = $stmt->fetch();
+            if (!$target) throw new \DomainException('user_not_found');
+            $oldRole = (string) $target['role'];
 
-            if ($oldRole === 'admin' && $role !== 'admin') {
-                $admins = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND account_status = 'active'")->fetchColumn();
-                if ($admins <= 1) throw new \DomainException('last_admin');
-            }
+            AdminRosterService::assertCanChangeRole(
+                $pdo,
+                $oldRole,
+                (string) $target['account_status'],
+                $role
+            );
 
             $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $id]);
             $pdo->prepare(
