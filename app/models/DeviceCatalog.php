@@ -134,9 +134,9 @@ final class DeviceCatalog extends Model
                 'SELECT id, is_active FROM device_manufacturers WHERE id = ? FOR UPDATE'
             );
             $manufacturer->execute([(int) $suggestion['manufacturer_id']]);
-            $manufacturerRow = $manufacturer->fetch(\\PDO::FETCH_ASSOC);
+            $manufacturerRow = $manufacturer->fetch(\PDO::FETCH_ASSOC);
             if (!$manufacturerRow || (int) $manufacturerRow['is_active'] !== 1) {
-                throw new \\DomainException('manufacturer_unavailable');
+                throw new \DomainException('manufacturer_unavailable');
             }
 
             $modelId = null;
