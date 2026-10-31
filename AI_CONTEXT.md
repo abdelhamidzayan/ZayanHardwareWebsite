@@ -73,7 +73,7 @@ All local details above are a dated handoff. Recheck the actual machine before a
 ## 6. Confirmed content-retention behavior and remaining review
 
 - `Issue::deleteIssue()` uses `deleted_at` (soft delete), not a physical row delete.
-- `Issue::deleteReply()` and `Issue::deleteDiagnosticUpdate()` also use `deleted_at`; reply edit history is stored separately.
+- `Issue::deleteReply()` and `Issue::deleteDiagnosticUpdate()` also use `deleted_at`; reply edit history is stored separately. One relationship-preservation concern remains: `deleteReply()` sets child replies' `parent_reply_id` to NULL before soft-deleting the parent. Child text survives, but its thread relationship is lost; review the UI and intended tombstone behavior before changing it.
 - `ContentEditorService::pruneUnusedInlineMedia()` is intentionally a no-op so attachments referenced by previous body revisions are retained.
 - The issue creation/edit/reply/diagnostic controller flows perform multiple database and filesystem steps. A database failure between steps can leave a partially completed operation (for example, a post/reply saved before inline-token resolution). This is a consistency/rollback review item, not evidence that existing posts were deleted. Add failure-injection tests before changing these flows.
 - `GET /attachments/{id}` and issue audio require authentication; verify the intended visibility policy whenever issue privacy rules change. Personal-help attachment delivery additionally checks conversation participation; draft media checks draft ownership.
