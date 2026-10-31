@@ -38,33 +38,31 @@ Always report the exact branch and commit being discussed. A passing CI job does
 
 ## 4. GitHub branch and CI snapshot — 2026-10-31
 
-- PR [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16), “Audit rebuild: fresh install, retention guards and route consistency”, was merged on 2026-10-31 into `audit/content-retention-consistency`.
-- Merge commit: `098442813eb5a55e96d5fff27ce127f9b5f08591`. The merge did **not** target `main` and is not a deployment.
-- The current completion work is isolated on `phase1/foundation-reliability-20261031`; resolve its live head before future work.
-- The most recent successful CI baseline recorded before the latest migrations/content-write additions was `55522a3cc204e961aaf9947773b15ff10321ad02`. It verified migrations 000–017 and the then-current PHP/CLI, Graphify, and database integration checks.
-- The merged PR head added migration 018 and additional integration coverage for content writes, draft recovery, device catalog, upload policy, and other paths. The workflows are configured for a clean 000–018 install on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
-- Latest recorded runs for the merged PR head `be51064a6ed551d4e3a48861cd5bab7a64eb8ade` were PHP `41210049298`, Graphify `41210049297`, and database matrix `41210049340`. All completed without executing any workflow steps because the included Actions minutes were exhausted. They are neither passing test results nor application-test failures.
-- The owner-reported Actions quota was 2,000/2,000 minutes, with a displayed reset date of 2026-11-01. Recheck live usage and budget before opening a PR or triggering workflows; the owner has not confirmed a $0 spending budget.
-- Keep workflow YAML and matrices enabled. Do not rerun jobs that have no executed steps until usage resets or paid Actions usage is explicitly authorized.
-- `main`, the merged audit branch, the Phase 1 branch, the owner's local Kali/XAMPP checkout, local database, and any hosted deployment are separate states. Never report a branch merge as a deployment.
-- Graphify is static analysis, not a runtime execution trace. Dynamic JavaScript API sites and other unresolved edges require manual source review.
+- PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) merged into `main` as `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`. It integrated the accumulated product feature stack and Phase 1 reliability work.
+- PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) merged into `main` as `dadddde53f394a0fe353b575ec13dbeb85749f6e`. It integrated the Phase 2 session invalidation, POST CSRF policy, focused object-level authorization tests, admin updater hardening, and Graphify/security documentation.
+- `main` is now the single authoritative development branch. Start new feature work from the current `main`; do not continue development from the historical Phase 1/Phase 2 branches.
+- Phase 1 exact-head workflows passed on `4bf013f81fc71bc32f8b221fefc1c778d00419d8`: PHP [41238247509](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247509), Graphify [41238247478](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247478), database matrix [41238247686](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247686).
+- Phase 2 exact tested workflows passed on `c23dde25f2bee53068c85e775ca56fa93f52e0a9`: PHP [41238382181](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382181), Graphify [41238382162](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382162), database matrix [41238382193](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382193).
+- CI used disposable databases/storage. No owner database migration, real private-media restore, or hosted deployment is claimed.
+- Historical audit/feature branches are retained temporarily for traceability. Delete them only after verifying their tips are already contained in `main`; never delete a branch with unique commits.
+
 ## 5. Owner's local environment — latest reported state
 
 - Local project: `/opt/lampp/htdocs/zayan_hardware`.
-- Local branch at the last verified handoff: `local/audit-update-20261031`, based on `46960cf`.
-- Local uncommitted/untracked files were reported:
-  - modified `.htaccess` with `RewriteBase /zayan_hardware/`;
+- Local branch: `local/audit-update-20261031`, HEAD `46960cf9efb33b2b0affa503d5e832725bdba4b4`. This checkout is not synchronized with the merged GitHub `main`.
+- Preserve all local changes and untracked files:
+  - modified `.htaccess`;
   - `.htaccess.before-rewrite-fix`;
-  - untracked `update.sh`;
-  - untracked `zayan_hardware_audit.sql`.
-- Preserve these files. Inspect `git status` before every update. Do not reset, clean, overwrite, stage, or discard them without explicit approval.
-- A pre-update full database backup was verified at `/home/a/backups/zayan-hardware/zayan_hardware_full_verified_20261031_023151.sql.gz`; SHA-256: `ec270536ba8bc1c6c30e777734988186a6ed98e134eac04b107ca0680154e276`.
-- MariaDB system tables were repaired using `mysql_upgrade`; `mysql.proc` is now the expected 21 columns. Do not enable `event_scheduler`.
-- Migrations 014 and 015 were applied locally and verified. Do not rerun them; 015 is not idempotent. Migration 013 already existed. Do not rerun migrations 001–012, especially either 002 migration.
-- PHP syntax check passed for all project PHP files. Local Apache rewrite returned HTTP 200 at `http://localhost/zayan_hardware/public/`.
-- Storage ACLs were set narrowly for Apache user `daemon`; do not replace them with broad permissions or `chmod 777`.
-
-All local details above are a dated handoff. Recheck the actual machine before acting.
+  - `composer.lock`;
+  - `tests/python/__pycache__/` and `tools/graphify/__pycache__/`;
+  - `update.sh`;
+  - `zayan_hardware_audit.sql`.
+- Do not run the host updater, pull, reset, clean, switch branches, or overwrite any of these files until a separate safe reconciliation plan is prepared.
+- A previous handoff recorded a candidate database backup at `/home/a/backups/zayan-hardware/zayan_hardware_full_verified_20261031_023151.sql.gz` with SHA-256 `ec270536ba8bc1c6c30e777734988186a6ed98e134eac04b107ca0680154e276`. This is historical evidence only: its current existence/hash and successful restore have not been rechecked in this session. Never restore it over the source database.
+- The project-directory inventory found no database backup or private-media archive; external backup locations were not inspected. A separate private-media backup remains unverified.
+- Apache runs as `daemon`. The `storage/logs` access/default ACL was tightened to remove `other` access while retaining daemon write access. Two real create-file tests as `daemon` succeeded and new files inherited `other::---`.
+- The external updater script is mode `0700`, owned by `a:a`; sudoers permits only that fixed script as user `a`. It was not run.
+- Local database and media restore tests have not been performed. No live DB, media tree, or deployment was modified.
 
 ## 6. Technical-content preservation and current write path
 
@@ -92,72 +90,50 @@ The owner's highest-priority requirement is that technical knowledge must not be
 
 ## 8. Engineering workflow and current owner priority
 
-The owner currently wants **feature development first**. The full-system audit, broad Graphify review, and final hardening/documentation sweep are deferred until the planned product features are complete. This is not permission to skip focused checks or safety controls for an individual feature.
+The owner has consolidated the accumulated feature work and automated Phase 1/2 baselines into `main` and wants to resume feature development. **Create all new feature branches from the latest `main`** and keep changes focused.
 
 For each feature, trace the relevant path:
 
 `HTTP method + route → route parameters → controller → authorization/CSRF/rate limit → service → model/SQL → migration/table/FK → view/layout → JS/CSS/API → storage/logging/notifications → tests`.
 
 Then:
-1. inspect the current branch, local working tree, and exact source;
+1. inspect the current `main` head and local working tree;
 2. reproduce or prove the defect before editing;
 3. make the smallest coherent change; avoid unrelated refactoring;
 4. add focused regression tests, including failure/rollback cases where relevant;
-5. run PHP/JS lint and focused tests relevant to the changed feature. Run broader database/security checks when the change affects those boundaries. Use Graphify when architectural dependencies change or when the owner requests a Graphify review; do not run a full Graphify audit for every small feature;
+5. run PHP/JS lint and focused tests. Run broader database/security checks when the change affects those boundaries. Use Graphify when architecture changes or the owner requests it;
 6. review the complete diff and data-preservation impact;
-7. update `UPDATES.md`, `docs/CURRENT_STATE.md` when the overall status changes, and the relevant feature/architecture/migration documentation. Update `README.md` only when top-level setup, navigation, or entry-point information changes.
+7. update `UPDATES.md`, `docs/CURRENT_STATE.md` when the overall status changes, and relevant feature/architecture/migration docs.
 
-Never claim a task is complete merely because code was added or CI passed. Separate **implemented**, **tested**, **runtime-verified**, and **deployed** status.
+Never claim completion merely because code was added or CI passed. Separate **implemented**, **tested**, **runtime-verified**, and **deployed** status. The main consolidation is not deployment approval; before production rollout, complete the remaining security, backup/media, and browser/PWA acceptance gates.
 
+## 9. Phase 1 execution handoff — 2026-10-31 (historical, merged)
 
-## 9. Phase 1 execution handoff — 2026-10-31
+Phase 1's automated reliability baseline is merged into `main` through PR #17. The latest Phase 1 release-candidate workflows passed on `4bf013f81fc71bc32f8b221fefc1c778d00419d8`:
+- PHP run 41238247509.
+- Graphify run 41238247478.
+- Database matrix run 41238247686, covering MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
 
-- Owner-approved three-phase program: Phase 1 (database/data integrity/operational reliability), Phase 2 (security/account lifecycle/Graphify), Phase 3 (UI/PWA/cross-device/final acceptance). See [completion plan](docs/COMPLETION_PLAN.md).
-- Active Phase 1 branch: `phase1/foundation-reliability-20261031`.
-- Always resolve the live Phase 1 branch head before each task. Do not treat a commit SHA copied from an older handoff as the current head.
-- Implemented on this branch; the automated Phase 1 CI results are recorded below:
-  - `bin/compare-database-schema.php`: read-only schema comparison for tables, views, columns, indexes, foreign keys, CHECK constraints, triggers, stored routines, events, and optional row counts.
-  - `app/core/App.php`: complete Authorization and Cookie header redaction plus standalone Bearer, token-field, and session-ID redaction.
-  - `tests/php/logging-exception-redaction.php`: synthetic raw Authorization/Cookie/Bearer/query/session-ID/context secrets, app/access/security/audit JSON channels, and log-retention checks.
-  - `tests/php/logging-http-access.php`: actual local HTTP request/shutdown access logging, request method/path/status/request ID, and query-token exclusion.
-  - `tests/php/logging-http-access.php`: actual PHP built-in HTTP request/shutdown logging, request method/path/status/request ID, and query-token exclusion.
-  - `.github/workflows/database-migrations.yml`: disposable backup → gzip/checksum → restore into new database → schema and row-count comparison step, using the CI fixture only.
-  - `.github/workflows/php-lint.yml`: PHP syntax suite includes the new comparator CLI help check and expanded logging regression test.
-  - `docs/DATABASE_BACKUP_RESTORE.md`: safe owner-machine database restore, schema/row-count comparison, and separate private-media archive/sample-restore procedure.
-  - `docs/STORAGE_RECOVERY_RUNBOOK.md`: read-only triage of pending filesystem recovery tasks; no general cleanup worker exists.
-- Documentation refreshed: `README.md`, `UPDATES.md`, `docs/CURRENT_STATE.md`, `docs/COMPLETION_PLAN.md`, `docs/DATABASE_BACKUP_RESTORE.md`, and `docs/STORAGE_RECOVERY_RUNBOOK.md`.
-- Historical PR #16 jobs executed zero steps due the old private-repository included-minutes limit. After the repo became public, Phase 1 CI ran successfully; see the current results below. CI success does not prove the owner's database/media backups are restored, Apache permissions work locally, or the branch is deployed.
-- The owner backup/hash from the prior local handoff is historical evidence of a database backup artifact only. It has not been restored. The existence and integrity of a separate private-media backup are also unverified. Local database restore, schema/row-count comparison, private-media sample restore, Apache file permissions, and HTTP runtime require the owner's actual Kali/XAMPP environment and isolated restore targets.
-- Phase 1 automated CI gate passed on `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`. PHP run `41219585375`, Graphify run `41219585292`, and database matrix run `41219585295` all passed. The database matrix covered MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, including migrations 000–018, integration tests, and backup/restore/schema/row-count comparison.
-- Phase 1 is not fully closed: the owner database backup has not been restored into a separate local test database; the separate private-media archive/sample restore is unverified; actual Apache `daemon` log-write permissions remain to be tested on Kali/XAMPP. Do not describe these local checks as CI-tested.
-- PR #17 is a draft targeting `audit/content-retention-consistency`, not `main`. It is not merged or deployed. Resolve the live branch head before further work.
+Coverage includes clean migrations 000–018, schema comparator, disposable backup/restore/schema/row-count checks, content and media recovery integration, logging/redaction, upload policy, public routes, and Graphify. The Apache `daemon` log ACL was separately verified locally.
 
+Still pending: locate and verify the owner's full database backup, restore it only to a new isolated database, and separately locate/sample-restore private media. These are not proven by CI. See [current state](docs/CURRENT_STATE.md), [backup/restore runbook](docs/DATABASE_BACKUP_RESTORE.md), and [completion plan](docs/COMPLETION_PLAN.md).
 
-## 10. Phase 2 execution handoff — 2026-10-31
+## 10. Phase 2 execution handoff — 2026-10-31 (historical, merged)
 
-- Active branch: `phase2/security-graphify-20261031`, based on Phase 1 candidate `a4074260328582bb2a25cd49e984626893fd5c14`. Always resolve the current branch head before further edits.
-- Phase 2 is in progress. PR #18 is a draft targeting the Phase 1 branch, not `main`. Earlier Phase 2 CI passed a baseline, but the newest account lifecycle and documentation changes still require exact-head CI verification.
-- Security changes implemented so far:
-  - Suspended-account login failure now returns the same external error as invalid credentials; internal security logging retains the distinct blocked-account event.
-  - Blocked-account attempts consume the same IP and identifier rate-limit buckets as invalid credentials.
-  - Migration `019_session_version_invalidation.sql` adds `users.auth_version INT UNSIGNED NOT NULL DEFAULT 1`.
-  - `AdminUserController::resetPassword()` increments `auth_version` in the same SQL update as the password hash.
-  - `AdminUserController::setStatus()` and `setRole()` increment the version on actual transitions; `AccountController::requestDeletion()` increments it when moving to `deletion_pending`; `AccountRetentionService` increments it again during final anonymization.
-  - `AuthService` binds sessions to the current auth version and rejects/clears stale sessions on the next request.
-  - `AuthController` passes the auth version returned by credential verification to session creation and login completion.
-  - `User::markLoggedIn()` only writes a password rehash when the account remains active and the auth version still equals the version checked by the login. This prevents a slow/in-flight login with an old password from overwriting the newer administrator-reset hash.
-  - `tests/php/auth-session-version-integration.php` covers stale-session rejection, stale old-password login rejection, refusal to overwrite a new password hash, and suspension/reactivation with an old cookie.
-  - `tests/php/account-session-revocation-policy.php` checks that status, role, deletion-request and anonymization write paths all increment the session version.
-  - `tests/php/login-information-disclosure.php` ensures blocked and invalid credentials return the same public error while retaining distinct internal events.
-  - `tests/php/admin-update-hardening.php` verifies CSRF, rate limiting, active-admin revalidation, fixed argv command and audit markers for the site updater.
-  - `tests/php/rate-limiter-integration.php` verifies blocked-account attempts consume the configured failure bucket.
-- POST route coverage:
-  - `tests/php/post-route-csrf-policy.php` parses every current `post()` / `postPublic()` declaration (49 declarations at the time of writing), verifies direct CSRF checks or explicit same-controller delegation, and restricts public POST routes to `/login` and `/register`.
-  - `docs/SECURITY_POST_ROUTE_MATRIX.md` records the current route inventory and known object-authorization boundaries.
-- Graphify artifact inspection: 706 nodes, 1,646 edges, 174 SQL queries, 21 migrations and 15 API call sites (10 auto-linked, 5 dynamic). The five dynamic sites were manually reconciled in `docs/javascript-api-route-map.md`: Push subscribe/unsubscribe/public-key, username availability, and two generic Service Worker request handlers. The duplicate `002_` migration prefix is intentional sequential history; `database/FRESH_INSTALL.md` gives the execution order.
-- Admin update action now enforces CSRF, per-user rate limit, active-admin database recheck, fixed script/working-directory constants, no request-controlled command arguments, and audit events. The referenced script `/home/a/bin/zayan-hardware-update.sh` and the host sudoers policy are external to Git; review them on the local machine before enabling production execution.
-  - The test is wired into `.github/workflows/php-lint.yml`; the session-version test and migration 019 are wired into `.github/workflows/database-migrations.yml`.
-- Fresh-install docs now include migration 019. Do not apply that migration to the owner's local database until the existing schema/history, backup, and rollout procedure are inspected.
-- Important compatibility note: existing PHP sessions do not contain `auth_version` and will require users to sign in again after the migration and new code are deployed together. Deploy schema before enabling code that requires the column.
-- Remaining Phase 2 work: execute CI on the exact draft PR head; inspect failures; complete POST ownership/role/participant and model-boundary review; review upload/private-file paths, XSS/output encoding and SQL access; finish account retention/audit review; inspect the external updater/sudoers locally; and update architecture/security maps after confirmed findings.
-- Do not merge to `main` or deploy without owner approval. Open the Phase 2 draft PR against `phase1/foundation-reliability-20261031`, not `main`.
+Phase 2's automated security baseline is merged into `main` through PR #18. Exact tested head `c23dde25f2bee53068c85e775ca56fa93f52e0a9` passed:
+- PHP syntax/security run 41238382181.
+- Graphify run 41238382162.
+- Database integration run 41238382193, including migration 019 on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
+
+Included changes: generic login errors, account `auth_version` session invalidation, password-reset/login race protection, CSRF policy for all 49 POST routes, public POST allow-list, admin updater route hardening, focused object-level issue/reply/diagnostic ownership tests, private-help participant/attachment tests, and Graphify/API route documentation.
+
+Remaining manual review before production:
+- exhaustive object-level authorization and state-transition review across all POST routes;
+- broader SQL/input-validation and output-encoding review;
+- remaining upload/private-file path and symlink edge cases;
+- storage-recovery reconciliation and notification retry behavior;
+- host updater/sudoers review (do not run the updater on the dirty local checkout).
+
+Account anonymization has no approved CLI entry point or cron worker. The 30-day deadline does not mean automatic completion; the removed CLI must not be reintroduced or scheduled without separate review and explicit owner approval.
+
+Phase 3 remains unstarted: complete browser/mobile/PWA acceptance, cross-device journeys, and final readiness report before claiming production readiness.
