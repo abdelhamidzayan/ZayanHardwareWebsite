@@ -140,7 +140,8 @@ try {
 
     echo "Logging channels, retention, and secret-redaction tests passed.\n";
 } catch (Throwable $error) {
-    fwrite(STDERR, "Logging test failed: " . $error::class . "\n");
+    // Assertion messages contain only fixed diagnostics, never test secret values.
+    fwrite(STDERR, "Logging test failed: " . $error::class . " — " . $error->getMessage() . "\n");
     $removeTree($tempRoot);
     exit(1);
 }
