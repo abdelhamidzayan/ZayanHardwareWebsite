@@ -104,6 +104,16 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 - `tests/php/content-write-integration.php` covers successful attachment writes, rollback after attachment failure, a move adapter that moves a file but reports failure (the service now tracks and compensates the destination), later file-move failure, duplicate tokens, reply/diagnostic failure, edit-history rollback, failed compensation, confirmed rollback after commit exception, and a commit that succeeds while its acknowledgement is lost.
 - The database workflow is configured to run this test against the disposable fresh-install schema on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. This test has **not** passed on the current head yet.
 
+### Administrative mutations and device catalog
+
+- AdminRosterService::assertActorActive() revalidates an administrator's role and active account status while locking the user row. The user/session role cached earlier in the request is not treated as sufficient for a sensitive write.
+- Skill-test creation and activation/deactivation now revalidate the administrator inside the same transaction as the test write and its security-audit event. Test activation locks the target test row and does not create duplicate audit events for no-op status submissions. Test creation locks the active skill domain before inserting the draft test.
+- Device-model moderation now enforces active-admin authorization in the model itself, locks the suggestion and manufacturer rows, prevents approval under an inactive manufacturer, and commits the catalog change plus the audit event atomically. Rejection remains possible for an inactive manufacturer's pending suggestion.
+- Featured-home-post changes now revalidate the active administrator inside a transaction, lock the target non-deleted post, and write a security-audit event atomically when the selection changes.
+- Device model search now caps query length at 80 characters, rate-limits authenticated searches, and returns models only when both model and manufacturer are active.
+- tests/php/device-catalog-integration.php verifies model-level rejection of a non-admin, active-admin approval, submitter/approver attribution, audit recording, overlong-query rejection, and search visibility. The database workflow includes this test, but the current head remains CI-unverified.
+- These changes improve the reviewed administration paths; they do not mean the full POST authorization matrix is complete. Other POST routes still require method-by-method verification and failure tests.
+
 ### Shared image upload limits
 
 - `ImageUploadPolicy` enforces an 8,000-pixel maximum dimension and a 20-million-pixel ceiling to limit compressed-image decompression risk.
@@ -135,6 +145,10 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 | Migration 018 and latest fresh-install 000–018 sequence | Present/configured; awaiting current-head CI |
 | First-admin bootstrap and delete guards | Passed on the prior CI baseline through migration 017 |
 | Reply tombstone / thread ancestry integration | Passed on the prior CI baseline |
+| Admin skill-test create/status writes and audit events | Implemented with active-admin row locking; current-head CI pending |
+| Device-model moderation authorization, duplicate guard, attribution and audit | Implemented with model-level integration test; current-head CI pending |
+| Featured-home-post mutations and audit events | Implemented with active-admin revalidation and row lock; controller-level integration coverage still needed |
+| Device model search length/rate/active-catalog constraints | Implemented; current-head CI pending |
 | ContentWriteService create/edit and filesystem compensation | Implemented; current-head CI pending |
 | Confirmed-rollback and ambiguous-commit failure injection | Implemented in test; current-head CI pending |
 | Shared image dimension/pixel policy | Implemented; current-head CI pending |
