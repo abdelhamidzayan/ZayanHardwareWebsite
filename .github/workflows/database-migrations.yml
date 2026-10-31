@@ -297,6 +297,15 @@ jobs:
           DB_PASS: root
         run: php tests/php/issue-authorization-integration.php
 
+      - name: Verify skill-test input bounds and public answer redaction
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/skill-test-input-integration.php
+
       - name: Exercise reply tombstone and thread preservation
         env:
           DB_HOST: 127.0.0.1
