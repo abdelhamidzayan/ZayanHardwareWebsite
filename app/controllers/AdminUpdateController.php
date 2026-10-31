@@ -67,7 +67,7 @@ final class AdminUpdateController extends Controller
         } finally {
             try {
                 $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
-            } catch (\\Throwable $lockError) {
+            } catch (\Throwable $lockError) {
                 App::logException('WARNING', 'admin.site_update.coordination_lock_release_failed', $lockError, [
                     'user_id' => $adminId,
                 ]);
@@ -75,7 +75,7 @@ final class AdminUpdateController extends Controller
         }
     }
 
-    private function executeUpdate(int $adminId, \\PDO $pdo): Response
+    private function executeUpdate(int $adminId, \PDO $pdo): Response
     {
         // Revalidate the actor against the database immediately before starting
         // the fixed, non-user-controlled update command.
