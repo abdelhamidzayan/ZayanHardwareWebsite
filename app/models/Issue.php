@@ -296,7 +296,7 @@ final class Issue extends Model
             );
             $stmt->execute([$updateId, $issueId, $userId, $userId]);
             $oldBody = $stmt->fetchColumn();
-            if (!is_string($oldBody)) throw new \\DomainException('diagnostic_update_not_editable');
+            if (!is_string($oldBody)) throw new \DomainException('diagnostic_update_not_editable');
 
             $pdo->prepare(
                 'INSERT INTO issue_diagnostic_update_edit_history (diagnostic_update_id, editor_id, previous_body) VALUES (?, ?, ?)'
@@ -304,7 +304,7 @@ final class Issue extends Model
             $pdo->prepare('UPDATE issue_diagnostic_updates SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$body, $updateId]);
             if ($ownsTransaction) $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -336,8 +336,8 @@ final class Issue extends Model
             );
             $stmt->execute([$issueId, $userId]);
             $issue = $stmt->fetch();
-            if (!$issue) throw new \\DomainException('not_owner_or_closed');
-            if ($issue['content_type'] !== 'help_request') throw new \\DomainException('diagnostic_only_for_help_request');
+            if (!$issue) throw new \DomainException('not_owner_or_closed');
+            if ($issue['content_type'] !== 'help_request') throw new \DomainException('diagnostic_only_for_help_request');
 
             $pdo->prepare('INSERT INTO issue_diagnostic_updates (issue_id, user_id, body) VALUES (?, ?, ?)')
                 ->execute([$issueId, $userId, $body]);
@@ -350,7 +350,7 @@ final class Issue extends Model
             }
             if ($ownsTransaction) $pdo->commit();
             return $updateId;
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -408,14 +408,14 @@ final class Issue extends Model
             );
             $stmt->execute([$replyId, $userId]);
             $oldBody = $stmt->fetchColumn();
-            if (!is_string($oldBody)) throw new \\DomainException('reply_not_editable');
+            if (!is_string($oldBody)) throw new \DomainException('reply_not_editable');
 
             $pdo->prepare('INSERT INTO issue_reply_edit_history (issue_reply_id, editor_id, previous_body) VALUES (?, ?, ?)')
                 ->execute([$replyId, $userId, $oldBody]);
             $pdo->prepare('UPDATE issue_replies SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$body, $replyId]);
             if ($ownsTransaction) $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
@@ -469,7 +469,7 @@ final class Issue extends Model
             );
             $stmt->execute([$issueId, $userId]);
             $old = $stmt->fetch();
-            if (!$old) throw new \\DomainException('not_editable');
+            if (!$old) throw new \DomainException('not_editable');
 
             $pdo->prepare(
                 'INSERT INTO issue_edit_history (issue_id, editor_id, previous_title, previous_description, previous_measurements)
@@ -479,7 +479,7 @@ final class Issue extends Model
                 'UPDATE issues SET title = ?, description = ?, measurements = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?'
             )->execute([$title, $description, $measurements !== '' ? $measurements : null, $issueId]);
             if ($ownsTransaction) $pdo->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
