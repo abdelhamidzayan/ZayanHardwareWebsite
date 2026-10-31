@@ -468,6 +468,10 @@ final class IssueController extends Controller
         }
         try {
             $parentAuthorId = $parentReplyId ? Issue::replyAuthor((int) $parentReplyId) : null;
+            // Resolve notification context before the content transaction commits;
+            // a later read failure must not make a saved reply look unpublished.
+            $issue = Issue::find($id);
+            $replyTitle = $issue && $issue['content_type'] === 'help_request' ? 'رد جديد على طلب المساعدة' : 'تعليق جديد على مشاركتك';
             $created = (new ContentWriteService(Database::connection()))->createReply(
                 $id,
                 (int) $user['id'],
@@ -477,8 +481,6 @@ final class IssueController extends Controller
             );
             $replyId = $created['id'];
             $resolvedBody = $created['body'];
-            $issue = Issue::find($id);
-            $replyTitle = $issue && $issue['content_type'] === 'help_request' ? 'رد جديد على طلب المساعدة' : 'تعليق جديد على مشاركتك';
 
             if ($parentReplyId && $parentAuthorId) {
                 NotificationService::notify(
