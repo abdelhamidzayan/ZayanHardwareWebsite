@@ -229,7 +229,7 @@ final class DraftController extends Controller
                         'storage_path'
                     );
                     if ($cleanupState === 'referenced') {
-                        $currentRevision = PostDraft::currentRevision($draftId, (int) $user['id']);
+                        $currentRevision++;
                         $saved[] = [
                             'media_uuid' => $uuid,
                             'media_kind' => $kind,
@@ -344,7 +344,7 @@ final class DraftController extends Controller
                 'rendered_path'
             );
             if ($cleanupState === 'referenced') {
-                $newRevision = PostDraft::currentRevision($draftId, (int) $user['id']);
+                $newRevision = $expectedRevision + 1;
             } elseif ($cleanupState === 'unknown') {
                 App::logException('ERROR', 'draft.rendered_upload_outcome_unknown', $error, [
                     'draft_id' => $draftId,
