@@ -465,6 +465,96 @@ try {
     }
     expectContentWrite($wrongTypeRejected, 'Diagnostic timeline must only accept help_request posts.');
 
+    // A failed COMMIT followed by a successful ROLLBACK is a confirmed rollback:
+    // remove the moved file and do not create an unnecessary recovery task.
+    $commitRollbackSource = makeUploadFile($sourceRoot, 'commit-failure-rollback.pdf');
+    $commitRollbackTitle = 'Commit failure rollback ' . bin2hex(random_bytes(4));
+    $commitRollbackService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        null,
+        $storageRoot,
+        static function (\PDO $connection): void {
+            throw new RuntimeException('synthetic commit failure before commit');
+        }
+    );
+    $commitRollbackObserved = false;
+    try {
+        $commitRollbackService->createIssue(
+            $ownerId,
+            'technical_post',
+            $commitRollbackTitle,
+            null,
+            null,
+            'The moved file must be compensated after a confirmed rollback.',
+            '',
+            [['tmp' => $commitRollbackSource, 'size' => filesize($commitRollbackSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $commitRollbackObserved = $error->getMessage() === 'synthetic commit failure before commit';
+    }
+    expectContentWrite($commitRollbackObserved, 'Injected pre-commit failure must be propagated.');
+    $issueCount->execute([$commitRollbackTitle]);
+    expectContentWrite((int) $issueCount->fetchColumn() === 0, 'Confirmed commit rollback must leave no issue row.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 2, 'Confirmed commit rollback must remove its moved file.');
+    $unknownTaskCount = $pdo->query(
+        "SELECT COUNT(*) FROM storage_recovery_tasks WHERE reason_code = 'commit_outcome_unknown' AND status = 'pending'"
+    );
+    expectContentWrite((int) $unknownTaskCount->fetchColumn() === 0, 'A confirmed rollback must not create an ambiguous-commit recovery task.');
+
+    // Simulate a COMMIT accepted by MySQL while its acknowledgement is lost.
+    // The service must preserve the committed file and record a reconciliation task.
+    $ambiguousCommitSource = makeUploadFile($sourceRoot, 'ambiguous-commit.pdf');
+    $ambiguousCommitTitle = 'Ambiguous commit outcome ' . bin2hex(random_bytes(4));
+    $ambiguousCommitService = new ContentWriteService(
+        $pdo,
+        static fn (string $from, string $to): bool => rename($from, $to),
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        null,
+        $storageRoot,
+        static function (\PDO $connection): void {
+            $connection->commit();
+            throw new RuntimeException('synthetic lost commit acknowledgement');
+        }
+    );
+    $ambiguousCommitObserved = false;
+    try {
+        $ambiguousCommitService->createIssue(
+            $ownerId,
+            'technical_post',
+            $ambiguousCommitTitle,
+            null,
+            null,
+            'A committed attachment must survive an ambiguous commit response.',
+            '',
+            [['tmp' => $ambiguousCommitSource, 'size' => filesize($ambiguousCommitSource), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (RuntimeException $error) {
+        $ambiguousCommitObserved = $error->getMessage() === 'synthetic lost commit acknowledgement';
+    }
+    expectContentWrite($ambiguousCommitObserved, 'Lost commit acknowledgement injection must be observed.');
+    $issueCount->execute([$ambiguousCommitTitle]);
+    expectContentWrite((int) $issueCount->fetchColumn() === 1, 'The ambiguous commit fixture must demonstrate a committed issue.');
+    $ambiguousAttachment = $pdo->prepare(
+        "SELECT i.id, a.file_path FROM issues i
+         JOIN issue_attachments a ON a.issue_id = i.id
+         WHERE i.title = ? LIMIT 1"
+    );
+    $ambiguousAttachment->execute([$ambiguousCommitTitle]);
+    $ambiguousRow = $ambiguousAttachment->fetch(\PDO::FETCH_ASSOC);
+    expectContentWrite(is_array($ambiguousRow), 'The committed attachment row must remain present after an ambiguous result.');
+    $ambiguousStoredFile = $storageRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $ambiguousRow['file_path']);
+    expectContentWrite(is_file($ambiguousStoredFile), 'The file referenced by a committed row must not be removed.');
+    $ambiguousTask = $pdo->prepare(
+        "SELECT id, status FROM storage_recovery_tasks
+         WHERE aggregate_type = 'issue' AND aggregate_id = ?
+           AND reason_code = 'commit_outcome_unknown' ORDER BY id DESC LIMIT 1"
+    );
+    $ambiguousTask->execute([(int) $ambiguousRow['id']]);
+    $ambiguousTaskRow = $ambiguousTask->fetch(\PDO::FETCH_ASSOC);
+    expectContentWrite(is_array($ambiguousTaskRow) && $ambiguousTaskRow['status'] === 'pending', 'Ambiguous commit must create a pending reconciliation task.');
+
     echo "Atomic issue/reply/diagnostic write integration passed: commit, rollback, media compensation and durable recovery.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, "Content-write integration failed: " . $error::class . ' ' . $error->getMessage() . PHP_EOL);
