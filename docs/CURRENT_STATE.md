@@ -7,7 +7,7 @@
 The owner approved a **three-phase completion plan**. Complete the remaining stabilization work in controlled phases, report each phase gate, and avoid repeating a full review after every change.
 
 - **Phase 1 — Database, data integrity, and operational reliability:** CI gate passed; owner-machine acceptance checks remain open.
-- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** starts after Phase 1.
+- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** in progress on `phase2/security-graphify-20261031`.
 - **Phase 3 — UI, PWA, cross-device acceptance, and final readiness:** starts after Phase 2.
 
 The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PLAN.md).
@@ -83,7 +83,24 @@ On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed o
 
 The owner database restore, private-media archive/sample restore, and real Apache (`daemon`) permissions/log-write checks remain unverified because they require the owner's local Kali/XAMPP environment. No live database or private media tree was modified by CI.
 
-## 8. Working rules for all three phases
+## 8. Phase 2 — current security work
+
+**Branch:** `phase2/security-graphify-20261031` (based on the Phase 1 CI-verified candidate; not merged to `main`).
+
+Implemented but awaiting CI verification:
+
+- Suspended-account login failures now return the same public error as invalid credentials, avoiding disclosure of account status.
+- Blocked-account attempts consume the same IP/identifier failure buckets as invalid credentials.
+- Migration 019 adds `users.auth_version`; administrator password resets increment it.
+- Login sessions store the auth version. Every authenticated request checks the database version and clears stale sessions.
+- Login completion is bound to the version checked with the password, and password rehash updates are conditional on that same version to prevent a stale in-flight login from restoring an old password hash.
+- Added regression coverage for stale sessions, stale login attempts, and password-rehash races.
+- Added a route policy test that scans all 49 declared POST routes, verifies CSRF in the handler or an explicit same-controller delegate, and locks the public POST allow-list to `/login` and `/register`.
+- Added [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md).
+
+**Not yet verified:** the new PHP tests, migration 019 across the database matrix, complete POST route scan, full authorization matrix review, refreshed Graphify report/artifact review, and fixes for any further findings. No Phase 2 CI result is claimed yet.
+
+## 9. Working rules for all three phases
 
 1. Follow the relevant scope and pass criteria in [COMPLETION_PLAN.md](COMPLETION_PLAN.md); do not broaden each phase into an unbounded audit.
 2. Inspect branch, commit, and `git status` before editing. Preserve modified and untracked local files.
