@@ -5,7 +5,7 @@
 - **Header:** The logged-out public header now contains only the brand, direct Help Center link, and sign-in link. The slide-down menu, secondary help/report links, and duplicate policies/privacy header link were removed.
 - **Policies:** The existing policies/privacy link remains in the guest footer and the site's other policy entry points; no policy page or route was removed.
 - **Verification:** Source-level change only. PHP/JS syntax checks and browser/mobile runtime checks have not yet been run for this branch.
-- **Status:** Implemented on a feature branch; not merged or deployed.
+- **Status:** Implemented on a feature branch; merge and deployment status are tracked by PR #26.
 
 ## 2026-10-31 — Single-file fresh database schema and GitHub cleanup
 
