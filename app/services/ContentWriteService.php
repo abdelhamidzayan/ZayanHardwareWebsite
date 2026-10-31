@@ -261,6 +261,8 @@ final class ContentWriteService
                 ]);
                 $this->recordRecoveryTask($issueId, $path, 'compensation_failed');
             }
+        }
+    }
 
     private function recordRecoveryTask(?int $issueId, string $absolutePath, string $reason): void
     {
@@ -286,7 +288,7 @@ final class ContentWriteService
 
         try {
             if ($this->pdo->inTransaction()) {
-                throw new \\LogicException('Recovery records require the content transaction to be closed.');
+                throw new \LogicException('Recovery records require the content transaction to be closed.');
             }
 
             $this->pdo->prepare(
@@ -307,8 +309,6 @@ final class ContentWriteService
                 'path' => $relativePath,
                 'reason_code' => $reason,
             ]);
-        }
-    }
         }
     }
 }
