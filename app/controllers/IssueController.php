@@ -96,6 +96,9 @@ final class IssueController extends Controller
                     'draft_mode_conflict' => 'اختار الكتابة أو التسجيل الصوتي فقط.',
                     'draft_text_invalid' => 'اكتب تفاصيل واضحة لا تقل عن 10 أحرف.',
                     'draft_media_missing' => 'أحد المرفقات غير موجود على الخادم. أعد مزامنته قبل النشر.',
+                    'draft_publish_outcome_unknown' => 'تعذر تأكيد نتيجة النشر. لا تعيد المحاولة الآن؛ راجع قائمة المنشورات والمسودة قبل إعادة النشر.',
+                    'draft_publish_restore_incomplete' => 'تم إيقاف النشر بأمان، لكن تعذر استرجاع بعض ملفات المسودة تلقائيًا. الملفات محفوظة للمراجعة؛ لا تحذف المسودة أو تعِد رفع مرفقاتها الآن.',
+                    'draft_publish_committed_media_incomplete' => 'تم تسجيل المنشور، لكن تعذر التأكد من كل المرفقات. لا تعِد النشر؛ افتح المنشورات وراجع المرفقات.',
                     default => 'راجع بيانات المنشور والمرفقات وحاول مرة أخرى.',
                 };
                 return $this->fail('/issues/create?draft=' . rawurlencode($draftId), $message);
