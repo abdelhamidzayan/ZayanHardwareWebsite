@@ -42,6 +42,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | Access/security/audit channels | Logger provides four channels; real Apache write permissions and HTTP lifecycle still need validation | Runtime check pending |
 | Disposable backup/restore comparison | Workflow now dumps, compresses, hashes, restores into a new schema, and compares tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts | Implemented in CI; awaiting executed workflow result |
 | Owner's full database backup/restore comparison | Previously recorded owner backup/hash has not yet been restored to a separate local test database | Pending owner-machine verification |
+| Private-media backup and sample restore | A separate archive/path and isolated restore of referenced private files have not been verified | Pending owner-machine verification |
 | Pending storage recovery reconciliation | Durable records exist; a read-only/manual triage runbook is now documented; no general automatic worker exists | Procedure documented; reconciliation pending |
 | Read-only schema comparator | Added `bin/compare-database-schema.php` for object and optional row-count comparison between two separate databases | Implemented; syntax/runtime check pending |
 | Current-head Actions verification | PR #16 head jobs completed with zero steps because included Actions minutes were exhausted | Not verified |
@@ -75,7 +76,7 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 On `phase1/foundation-reliability-20261031`, the following Phase 1 work is implemented but not yet test-executed: a read-only schema comparator, an automated disposable backup/restore/checksum/row-count step in the three-engine database workflow, stronger logging redaction/channel/retention regression coverage, and a safe read-only triage runbook for `storage_recovery_tasks`. The comparator includes views, routines, and events in addition to tables, columns, indexes, foreign keys, CHECK constraints, triggers, and row counts. No live database was modified.
 
-The owner-machine restore, Apache permissions, and live HTTP smoke checks remain unverified. GitHub Actions was previously quota-blocked; recheck usage before triggering workflows.
+The owner database restore, private-media archive/sample restore, Apache permissions, and live HTTP smoke checks remain unverified. GitHub Actions was previously quota-blocked; recheck usage before triggering workflows.
 
 ## 8. Working rules for all three phases
 
