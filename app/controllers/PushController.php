@@ -52,8 +52,9 @@ final class PushController extends Controller
         $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
         $knownPushHost = in_array($host, ['fcm.googleapis.com', 'web.push.apple.com'], true)
             || str_ends_with($host, '.push.services.mozilla.com');
+        $port = is_array($parts) ? ($parts['port'] ?? 443) : null;
         if (strlen($endpoint) > 2048 || !is_array($parts) || ($parts['scheme'] ?? '') !== 'https'
-            || !$knownPushHost || isset($parts['user']) || isset($parts['pass'])
+            || $port !== 443 || !$knownPushHost || isset($parts['user']) || isset($parts['pass'])
             || !preg_match('/^[A-Za-z0-9_-]{20,200}$/', $publicKey)
             || !preg_match('/^[A-Za-z0-9_-]{16,200}$/', $authToken)) {
             return $this->json(['error' => 'invalid_subscription'], 422);
