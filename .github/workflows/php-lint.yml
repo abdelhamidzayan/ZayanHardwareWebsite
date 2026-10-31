@@ -31,6 +31,8 @@ jobs:
       - name: Verify read-only database schema comparator CLI help
         run: php bin/compare-database-schema.php --help
 
+      - name: Verify HTTP access logs use real request metadata
+        run: php tests/php/logging-http-access.php
       - name: Verify exception logs redact secrets
         run: php tests/php/logging-exception-redaction.php
       - name: Verify image upload pixel limits and malformed input rejection
