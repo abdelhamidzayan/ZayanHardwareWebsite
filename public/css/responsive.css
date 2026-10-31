@@ -623,3 +623,18 @@ textarea { max-inline-size: 100%; }
     gap: 0;
   }
 }
+
+
+/* Active state is last in the stylesheet cascade so component rules cannot mask it. */
+.app-header .header-actions > a.header-page-link.is-active,
+.app-header .header-actions > .account-menu > .account-menu__trigger.is-active {
+  border: 1px solid var(--color-primary) !important;
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 20%) !important;
+}
+.app-header .header-actions > a.header-page-link.is-active > .icon,
+.app-header .header-actions > .account-menu > .account-menu__trigger.is-active > .icon {
+  color: var(--color-primary) !important;
+  stroke: currentColor !important;
+}
