@@ -36,7 +36,7 @@ Always report the exact branch and commit being discussed. A passing CI job does
 ## 4. Current verified GitHub snapshot — 2026-10-31
 
 - Active audit/fix branch: `fix/audit-priority-issues`.
-- Verified branch HEAD: `46960cf9efb33b2b0affa503d5e832725bdba4b4`.
+- Latest documentation-only branch HEAD: `72d00a45c49a63032addebeec23662da2da194d5` (README/AI handoff updates). The application-code and CI verification baseline remains `46960cf9efb33b2b0affa503d5e832725bdba4b4`.
 - PR #14 is a **Draft**; it is not merged and must not be described as deployed.
 - On that exact head, GitHub Actions completed successfully:
   - Graphify dependency graph: run [41138280152](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280152).
@@ -49,6 +49,7 @@ Always report the exact branch and commit being discussed. A passing CI job does
   - `002_registration_wizard.sql`
   Never run or reorder these blindly. Inspect the target database's migration history and schema first.
 - Graphify is static analysis, not a runtime call trace. Five dynamic/unresolved JavaScript API calls remain for manual review. A missing edge is not proof that no dependency exists.
+- The documentation-only commits after `46960cf` do not change application behavior; the CI results above are for the code baseline, not a new runtime deployment.
 - PR #13 also contains an earlier Graphify audit implementation and a separate curated AI documentation set on another branch. Do not mix its older source baseline with PR #14 without comparing branches and resolving overlap deliberately.
 
 ## 5. Owner's local environment — latest reported state
@@ -69,7 +70,15 @@ Always report the exact branch and commit being discussed. A passing CI job does
 
 All local details above are a dated handoff. Recheck the actual machine before acting.
 
-## 6. Non-negotiable content preservation
+## 6. Confirmed content-retention behavior and remaining review
+
+- `Issue::deleteIssue()` uses `deleted_at` (soft delete), not a physical row delete.
+- `Issue::deleteReply()` and `Issue::deleteDiagnosticUpdate()` also use `deleted_at`; reply edit history is stored separately.
+- `ContentEditorService::pruneUnusedInlineMedia()` is intentionally a no-op so attachments referenced by previous body revisions are retained.
+- The issue creation/edit/reply/diagnostic controller flows perform multiple database and filesystem steps. A database failure between steps can leave a partially completed operation (for example, a post/reply saved before inline-token resolution). This is a consistency/rollback review item, not evidence that existing posts were deleted. Add failure-injection tests before changing these flows.
+- `GET /attachments/{id}` and issue audio require authentication; verify the intended visibility policy whenever issue privacy rules change. Personal-help attachment delivery additionally checks conversation participation; draft media checks draft ownership.
+
+## 7. Non-negotiable content preservation
 
 The owner's highest-priority requirement is that technical knowledge must not be lost.
 
@@ -79,7 +88,7 @@ The owner's highest-priority requirement is that technical knowledge must not be
 - Do not prune, bulk-delete, or migrate media without a verified inventory, backup, explicit retention policy, and rollback plan.
 - Graphify is source-only and must not read or mutate member uploads, logs, backups, or database contents.
 
-## 7. Engineering workflow
+## 8. Engineering workflow
 
 For each feature, trace the complete path:
 
