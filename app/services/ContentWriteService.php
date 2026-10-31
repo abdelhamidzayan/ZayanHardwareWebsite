@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\App;
+use App\Models\Database;
 use App\Models\Issue;
 use PDO;
 use Throwable;
@@ -448,11 +449,9 @@ final class ContentWriteService
         }
 
         try {
-            if ($this->pdo->inTransaction()) {
-                throw new \LogicException('Recovery records require the content transaction to be closed.');
-            }
-
-            $this->pdo->prepare(
+            // Use a separate connection so an ambiguous or still-open content
+            // transaction cannot roll this recovery record back with itself.
+            Database::newConnection()->prepare(
                 "INSERT INTO storage_recovery_tasks
                     (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code, status)
                  VALUES ('issue', ?, ?, ?, ?, 'pending')
