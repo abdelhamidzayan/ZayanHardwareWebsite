@@ -296,7 +296,7 @@ final class ContentWriteService
                     (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code, status)
                  VALUES ('issue', ?, ?, ?, ?, 'pending')
                  ON DUPLICATE KEY UPDATE reason_code = VALUES(reason_code), status = 'pending',
-                    attempts = attempts + 1, last_error_code = NULL"
+                    attempts = attempts + 1, last_attempt_at = NULL, last_error_code = NULL, completed_at = NULL"
             )->execute([
                 $issueId,
                 $relativePath,
