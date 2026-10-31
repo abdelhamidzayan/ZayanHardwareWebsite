@@ -160,13 +160,14 @@ final class AuthService
         $id = $_SESSION['user_id'] ?? null;
         $sessionVersion = $_SESSION['auth_version'] ?? null;
         if (!is_int($id) || !is_int($sessionVersion) || $sessionVersion < 1) {
-            self::forget();
-            return null;
+            if (session_status() === PHP_SESSION_ACTIVE) self::forget();
+            return self::$current = null;
         }
 
         $user = User::findById($id);
+        $currentAuthVersion = User::authVersion($id);
         if ($user === null || $user['account_status'] !== 'active'
-            || (int) ($user['auth_version'] ?? 0) !== $sessionVersion) {
+            || $currentAuthVersion === null || $currentAuthVersion !== $sessionVersion) {
             self::forget();
 
             return null;
@@ -208,19 +209,23 @@ final class AuthService
         return ['user' => $row, 'error' => null];
     }
 
-    public static function login(int $userId): bool
+    public static function login(int $userId, ?int $expectedAuthVersion = null): bool
     {
-        // Bind the new session to the current database auth_version. A password
-        // reset increments that value and invalidates every previously issued session.
+        // Bind the new session to the current database auth_version. Comparing
+        // the version checked with the password also closes the in-flight reset race.
         $user = User::findById($userId);
-        if ($user === null || $user['account_status'] !== 'active') {
-            self::forget();
+        $currentAuthVersion = User::authVersion($userId);
+        if ($user === null || $user['account_status'] !== 'active'
+            || $currentAuthVersion === null
+            || ($expectedAuthVersion !== null && $currentAuthVersion !== $expectedAuthVersion)) {
+            if (session_status() === PHP_SESSION_ACTIVE) self::forget();
             return false;
         }
 
+        if (session_status() !== PHP_SESSION_ACTIVE) return false;
         session_regenerate_id(true);
         $_SESSION['user_id'] = $userId;
-        $_SESSION['auth_version'] = (int) $user['auth_version'];
+        $_SESSION['auth_version'] = $currentAuthVersion;
         unset($_SESSION['_csrf']);
         self::$loaded  = false;
         self::$current = null;
