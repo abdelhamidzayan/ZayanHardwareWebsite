@@ -27,6 +27,33 @@ The IP bucket is hashed before storage. Old buckets are pruned opportunistically
 
 Incoming uploads already use PHP temporary upload files and `move_uploaded_file()`; each upload service validates the temporary file before moving it into private storage. Avatar image re-encoding still requires the image library to decode the bounded 5 MiB source image.
 
+
+## Authentication session revocation
+
+Migration `019_session_version_invalidation.sql` adds `users.auth_version`. A successful login stores the current version in the session; authenticated requests compare the session value with the current database value and clear the session when they differ.
+
+Increment `auth_version` in the same transaction as every security-sensitive account transition:
+- administrator password reset;
+- account suspension, ban, or reactivation;
+- role change (promotion or demotion);
+- member deletion request (`deletion_pending`);
+- final identity anonymization.
+
+This prevents a cookie issued before a security transition from becoming valid again after the account is reactivated. Login completion also carries the version checked with the password, and the password rehash update is conditional on that version. A slow login started with the old password therefore cannot overwrite a newer administrative password reset.
+
+Existing sessions without `auth_version` require a fresh sign-in after migration 019 and the corresponding application code are deployed together. Apply the schema before deploying code that reads the new column. The migration is included in the clean-install path; it has not been applied to the owner's local database in this Phase 2 work.
+
+Regression coverage:
+- `tests/php/auth-session-version-integration.php`: password-reset revocation, stale login/re-hash race, suspension, and reactivation with an old cookie.
+- `tests/php/account-session-revocation-policy.php`: static guard over all account-state/role/anonymization write paths.
+- `tests/php/login-information-disclosure.php`: same public response for invalid and suspended accounts while retaining distinct internal security events.
+
+## Administrative site-update execution
+
+The in-app update action is protected by an authenticated active-admin check, CSRF validation, a per-admin rate limit, and an active-admin database row-lock recheck immediately before executing a fixed argument array. The command path and working directory are constants; request values are never appended as shell arguments. Start/completion/failure events are recorded in audit/application logs.
+
+The configured script itself (`/home/a/bin/zayan-hardware-update.sh`) and the machine's sudoers rule are outside the Git repository. Review and verify those two local operating-system controls separately before enabling the action on a live host. The repository regression test verifies the in-app guardrails, not the contents or permissions of the external script.
+
 ## Account deletion and technical-content retention
 
 The account-retention worker now completes the 30-day request by **anonymizing the account identity**, not by deleting the user row. The user ID stays unchanged so every foreign key and attribution link remains valid. Login is disabled, the username is replaced with a generated anonymous handle, the display name becomes `عضو محذوف`, email/phone and profile biography/workshop data are cleared, custom avatar binaries are removed, and push subscription credentials are neutralized.
