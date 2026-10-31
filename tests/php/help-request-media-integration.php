@@ -97,11 +97,29 @@ try {
     expectHelpMedia($successFailed === 0, 'Successful help attachment must not report a failure.');
     $attachmentCount->execute([$requestId]);
     expectHelpMedia((int) $attachmentCount->fetchColumn() === 1, 'Successful help attachment row must commit.');
-    $successRow = $pdo->prepare('SELECT file_path FROM help_request_attachments WHERE request_id = ? ORDER BY id DESC LIMIT 1');
+    $successRow = $pdo->prepare('SELECT id, file_path FROM help_request_attachments WHERE request_id = ? ORDER BY id DESC LIMIT 1');
     $successRow->execute([$requestId]);
-    $successRelative = (string) $successRow->fetchColumn();
+    $successAttachment = $successRow->fetch(PDO::FETCH_ASSOC);
+    expectHelpMedia(is_array($successAttachment), 'Successful help attachment metadata must be available.');
+    $successAttachmentId = (int) $successAttachment['id'];
+    $successRelative = (string) $successAttachment['file_path'];
     $successFile = $storageRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $successRelative);
     expectHelpMedia(is_file($successFile), 'Successful help attachment file must remain present.');
+
+    expectHelpMedia(HelpRequest::findForParticipant($requestId, $requesterId) !== null, 'Requester must be able to find their own help request.');
+    expectHelpMedia(HelpRequest::findForParticipant($requestId, $helperId) !== null, 'Assigned helper must be able to find the help request.');
+    expectHelpMedia(HelpRequest::findForParticipant($requestId, 999999) === null, 'A nonparticipant must not find a private help request.');
+    expectHelpMedia(HelpRequest::attachmentForParticipant($successAttachmentId, $requesterId) !== null, 'Requester must be able to access their private attachment metadata.');
+    expectHelpMedia(HelpRequest::attachmentForParticipant($successAttachmentId, $helperId) !== null, 'Assigned helper must be able to access private attachment metadata.');
+    expectHelpMedia(HelpRequest::attachmentForParticipant($successAttachmentId, 999999) === null, 'A nonparticipant must not access private attachment metadata.');
+
+    $unauthorizedAttachmentRejected = false;
+    try {
+        HelpRequest::addAttachment($requestId, $messageId, 999999, 'help-requests/invalid/forbidden.pdf', 'application/pdf', 10);
+    } catch (DomainException $error) {
+        $unauthorizedAttachmentRejected = $error->getMessage() === 'attachment_message_mismatch';
+    }
+    expectHelpMedia($unauthorizedAttachmentRejected, 'A nonparticipant must not attach files to another user\'s help conversation.');
 
     $insertionFailure = HelpRequestMediaService::store(
         $requestId, $messageId, $requesterId,
