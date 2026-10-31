@@ -120,6 +120,7 @@ Never claim a task is complete merely because code was added or CI passed. Separ
   - `tests/php/logging-exception-redaction.php`: synthetic raw header/query/context secrets, app/access/security/audit JSON channels, and log-retention checks.
   - `.github/workflows/database-migrations.yml`: disposable backup → gzip/checksum → restore into new database → schema and row-count comparison step, using the CI fixture only.
   - `docs/DATABASE_BACKUP_RESTORE.md`: safe owner-machine restore procedure for a separate target database.
+  - `docs/STORAGE_RECOVERY_RUNBOOK.md`: read-only triage of pending filesystem recovery tasks; no general cleanup worker exists.
 - Documentation refreshed: `README.md`, `UPDATES.md`, `docs/CURRENT_STATE.md`, and `docs/COMPLETION_PLAN.md`.
 - The latest recorded Actions jobs for PR #16's merged head executed zero steps due exhausted included minutes. None of the new Phase 1 changes should be described as PHP-tested, CI-passing, restored on the owner's machine, or deployed until the relevant checks actually run.
 - The owner backup/hash from the prior local handoff is historical evidence of a backup artifact only. Local restore, schema/row-count comparison, Apache file permissions, and HTTP runtime still require the owner's actual Kali/XAMPP environment and an isolated restore target.
