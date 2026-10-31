@@ -199,9 +199,10 @@ final class DraftController extends Controller
                 $destination = $privateRoot . DIRECTORY_SEPARATOR . $filename;
                 if (!move_uploaded_file($tmp, $destination)) throw new \DomainException('storage_failed');
 
+                $relativePath = 'drafts/' . $draftId . '/' . $filename;
                 $sha256 = hash_file('sha256', $destination);
                 if (!is_string($sha256)) {
-                    @unlink($destination);
+                    PostDraft::cleanupPrivateMedia($relativePath);
                     throw new \DomainException('storage_failed');
                 }
 
@@ -210,7 +211,7 @@ final class DraftController extends Controller
                         $draftId,
                         $uuid,
                         $kind,
-                        'drafts/' . $draftId . '/' . $filename,
+                        $relativePath,
                         $mime,
                         $size,
                         $sha256,
@@ -220,7 +221,26 @@ final class DraftController extends Controller
                         $currentRevision
                     );
                 } catch (\Throwable $e) {
-                    @unlink($destination);
+                    $cleanupState = PostDraft::cleanupUploadIfUnreferenced(
+                        $draftId,
+                        $uuid,
+                        (int) $user['id'],
+                        $relativePath,
+                        'storage_path'
+                    );
+                    if ($cleanupState === 'referenced') {
+                        $currentRevision = PostDraft::currentRevision($draftId, (int) $user['id']);
+                        $saved[] = [
+                            'media_uuid' => $uuid,
+                            'media_kind' => $kind,
+                            'mime_type' => $mime,
+                            'file_size' => $size,
+                            'sort_order' => count($existing) + count($saved),
+                            'url' => $this->mediaUrl($draftId, $uuid),
+                            'original_url' => $this->mediaUrl($draftId, $uuid),
+                        ];
+                        continue;
+                    }
                     throw $e;
                 }
 
@@ -305,28 +325,48 @@ final class DraftController extends Controller
         $destination = $directory . DIRECTORY_SEPARATOR . $filename;
         if (!move_uploaded_file($tmp, $destination)) return Response::json(['error' => 'storage_failed'], 500);
         $relative = 'drafts/' . $draftId . '/' . $filename;
+        $relative = 'drafts/' . $draftId . '/' . $filename;
         $sha = hash_file('sha256', $destination);
         if (!is_string($sha)) {
-            @unlink($destination);
+            PostDraft::cleanupPrivateMedia($relative);
             return Response::json(['error' => 'save_failed'], 500);
         }
         try {
             $newRevision = PostDraft::setRenderedPath(
                 $draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha, $expectedRevision
             );
-        } catch (\DomainException $e) {
-            @unlink($destination);
-            if ($e->getMessage() === 'draft_revision_conflict') return $this->revisionConflict($draftId, (int) $user['id']);
-            throw $e;
+        } catch (\Throwable $error) {
+            $cleanupState = PostDraft::cleanupUploadIfUnreferenced(
+                $draftId,
+                $mediaUuid,
+                (int) $user['id'],
+                $relative,
+                'rendered_path'
+            );
+            if ($cleanupState === 'referenced') {
+                $newRevision = PostDraft::currentRevision($draftId, (int) $user['id']);
+            } elseif ($cleanupState === 'unknown') {
+                App::logException('ERROR', 'draft.rendered_upload_outcome_unknown', $error, [
+                    'draft_id' => $draftId,
+                    'media_uuid' => $mediaUuid,
+                    'user_id' => (int) $user['id'],
+                ]);
+                return Response::json([
+                    'error' => 'save_outcome_unknown',
+                    'message' => 'تعذر تأكيد نتيجة الحفظ. احتفظنا بالملف لحين المراجعة؛ حدّث المسودة قبل إعادة الرفع.',
+                ], 503);
+            } elseif ($error instanceof \DomainException && $error->getMessage() === 'draft_revision_conflict') {
+                return $this->revisionConflict($draftId, (int) $user['id']);
+            } else {
+                throw $error;
+            }
         }
         if ($newRevision === null) {
-            @unlink($destination);
+            PostDraft::cleanupPrivateMedia($relative);
             return Response::json(['error' => 'media_not_found'], 404);
         }
         if (!empty($media['rendered_path'])) {
-            $old = realpath(App::root('storage/private/' . ltrim((string) $media['rendered_path'], '/')));
-            $root = realpath(App::root('storage/private'));
-            if ($root !== false && $old !== false && str_starts_with($old, $root . DIRECTORY_SEPARATOR) && is_file($old)) @unlink($old);
+            PostDraft::cleanupPrivateMedia((string) $media['rendered_path']);
         }
 
         return Response::json([
