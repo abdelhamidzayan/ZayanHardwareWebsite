@@ -114,7 +114,7 @@ BEFORE DELETE ON device_model_suggestions
 FOR EACH ROW
 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Device model suggestion and moderation history must be retained';
 
-CREATE TRIGGER trg_technician_profile_specialization_history_block_physical_delete
+CREATE TRIGGER trg_profile_specialization_history_no_delete
 BEFORE DELETE ON technician_profile_specialization_history
 FOR EACH ROW
 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Legacy technical specialization history must be retained';
