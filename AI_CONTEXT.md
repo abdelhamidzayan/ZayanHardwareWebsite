@@ -107,3 +107,20 @@ Then:
 7. update `UPDATES.md`, `docs/CURRENT_STATE.md` when the overall status changes, and the relevant feature/architecture/migration documentation. Update `README.md` only when top-level setup, navigation, or entry-point information changes.
 
 Never claim a task is complete merely because code was added or CI passed. Separate **implemented**, **tested**, **runtime-verified**, and **deployed** status.
+
+
+## 9. Phase 1 execution handoff — 2026-10-31
+
+- Owner-approved three-phase program: Phase 1 (database/data integrity/operational reliability), Phase 2 (security/account lifecycle/Graphify), Phase 3 (UI/PWA/cross-device/final acceptance). See [completion plan](docs/COMPLETION_PLAN.md).
+- Active Phase 1 branch: `phase1/foundation-reliability-20261031`.
+- Last recorded Phase 1 branch head: `ba6d8eac62bd288dbfa62e4065891991f1c1376f`. Re-resolve the live branch before the next task; this is a dated snapshot.
+- Implemented on this branch, not yet test-executed:
+  - `bin/compare-database-schema.php`: read-only schema comparison for tables, views, columns, indexes, foreign keys, CHECK constraints, triggers, stored routines, events, and optional row counts.
+  - `app/core/App.php`: complete Authorization and Cookie header redaction plus standalone Bearer and token-field redaction.
+  - `tests/php/logging-exception-redaction.php`: synthetic raw header/query/context secrets, app/access/security/audit JSON channels, and log-retention checks.
+  - `.github/workflows/database-migrations.yml`: disposable backup → gzip/checksum → restore into new database → schema and row-count comparison step, using the CI fixture only.
+  - `docs/DATABASE_BACKUP_RESTORE.md`: safe owner-machine restore procedure for a separate target database.
+- Documentation refreshed: `README.md`, `UPDATES.md`, `docs/CURRENT_STATE.md`, and `docs/COMPLETION_PLAN.md`.
+- The latest recorded Actions jobs for PR #16's merged head executed zero steps due exhausted included minutes. None of the new Phase 1 changes should be described as PHP-tested, CI-passing, restored on the owner's machine, or deployed until the relevant checks actually run.
+- The owner backup/hash from the prior local handoff is historical evidence of a backup artifact only. Local restore, schema/row-count comparison, Apache file permissions, and HTTP runtime still require the owner's actual Kali/XAMPP environment and an isolated restore target.
+- Do not move to Phase 2 until the Phase 1 acceptance criteria in `docs/COMPLETION_PLAN.md` are met or every remaining owner-machine blocker is explicitly recorded and resolved/accepted.
