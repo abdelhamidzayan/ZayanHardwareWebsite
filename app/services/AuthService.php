@@ -159,6 +159,14 @@ final class AuthService
 
         $id = $_SESSION['user_id'] ?? null;
         $sessionVersion = $_SESSION['auth_version'] ?? null;
+
+        // A normal guest session has no authentication markers. Keep its session ID
+        // stable so CSRF tokens survive navigation between public pages and forms.
+        // Rotate only when a partially present or invalid authentication state exists.
+        if ($id === null && $sessionVersion === null) {
+            return self::$current = null;
+        }
+
         if (!is_int($id) || !is_int($sessionVersion) || $sessionVersion < 1) {
             if (session_status() === PHP_SESSION_ACTIVE) self::forget();
             return self::$current = null;
