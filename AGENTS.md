@@ -20,6 +20,7 @@ Before any work, read [AI_CONTEXT.md](AI_CONTEXT.md) and [the architecture map](
 - Mutations require server-side validation, object-level authorization, and CSRF protection.
 - Private file delivery requires participant/owner authorization, canonical path containment, MIME validation, and safe streaming headers.
 - Database migrations are applied-state dependent. Never infer that a migration ran because its file exists; inspect the target schema/history first.
+- Administrative mutations must revalidate the actor's active administrator role at the model/service boundary under a row lock; write the resulting state change and its security-audit event in the same database transaction. A role check cached earlier in the request is not sufficient.
 
 ## Graphify and verification
 - Use `python tools/graphify/graphify.py`, `--check`, and `python -m unittest discover -s tests/python -v` for the repository's deterministic Graphify scanner.
