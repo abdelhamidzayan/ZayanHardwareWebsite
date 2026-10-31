@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\App;
 use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\HelpRequest;
@@ -103,26 +104,46 @@ final class HelpRequestController extends Controller
             return $this->fail($returnTo, 'اكتب عنوانًا واضحًا ووصفًا للمساعدة، أو أرفق صورة مع وصف مختصر.');
         }
         try {
-            $id = HelpRequest::create((int) $user['id'], (int) $helperId, $subject, $body);
-            $initialMessages = HelpRequest::messages($id);
-            $initialMessageId = (int) ($initialMessages[0]['id'] ?? 0);
-            $failedUploads = $initialMessageId > 0
-                ? HelpRequestMediaService::store($id, $initialMessageId, (int) $user['id'], $uploads)
-                : count($uploads);
+            $created = HelpRequest::createWithInitialMessage((int) $user['id'], (int) $helperId, $subject, $body);
+            $id = $created['request_id'];
+            $failedUploads = 0;
+            try {
+                $failedUploads = HelpRequestMediaService::store(
+                    $id,
+                    $created['message_id'],
+                    (int) $user['id'],
+                    $uploads
+                );
+            } catch (\Throwable $mediaError) {
+                // The request and first message are already committed. Report the
+                // attachment problem without inviting the user to submit a duplicate.
+                $failedUploads = count($uploads);
+                App::logException('ERROR', 'help_request.initial_media_failed', $mediaError, [
+                    'request_id' => $id,
+                    'message_id' => $created['message_id'],
+                    'user_id' => (int) $user['id'],
+                ]);
+            }
             NotificationService::notify(
                 (int) $helperId, (int) $user['id'], null, null, 'personal_help_request',
                 'طلب مساعدة شخصي جديد', $subject, '/help-requests/' . $id, 'personal-help-created:' . $id
             );
             $this->flash($failedUploads > 0 ? 'info' : 'success', $failedUploads > 0
-                ? 'تم إرسال الطلب، لكن تعذر حفظ بعض المرفقات.'
+                ? 'تم إرسال الطلب، لكن تعذر حفظ بعض المرفقات. افتح الطلب لمراجعة ما تم حفظه.'
                 : 'تم إرسال طلب المساعدة. سيظهر لك عند رد العضو.');
             return $this->redirect('/help-requests/' . $id);
         } catch (\DomainException) {
             return $this->fail($returnTo, 'هذا العضو لا يستقبل طلبات المساعدة حاليًا، أو أن الطلب غير صالح.');
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'help_request.create_failed', $error, [
+                'helper_id' => (int) $helperId,
+                'requester_id' => (int) $user['id'],
+            ]);
+            return $this->fail($returnTo, 'تعذر تأكيد إنشاء الطلب. راجع قائمة طلبات المساعدة قبل محاولة الإرسال مرة أخرى.');
         }
     }
 
-    public function accept(int $id): Response
+       public function accept(int $id): Response
     {
         return $this->respond($id, true);
     }
@@ -167,8 +188,8 @@ final class HelpRequestController extends Controller
         $body = trim($this->string('body'));
         try {
             $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
-        } catch (\DomainException $e) {
-            $message = match ($e->getMessage()) {
+        } catch (\DomainException $error) {
+            $message = match ($error->getMessage()) {
                 'too_many_attachments' => 'الحد الأقصى 8 مرفقات في الرسالة.',
                 'invalid_attachment_size' => 'أحد المرفقات أكبر من 8 ميجابايت أو غير صالح.',
                 'invalid_attachment_type' => 'المسموح صور JPG/PNG/WEBP/GIF أو ملفات PDF فقط.',
@@ -182,26 +203,48 @@ final class HelpRequestController extends Controller
             return $this->fail('/help-requests/' . $id, 'اكتب رسالة أو أرفق صورة، وبحد أقصى 5000 حرف.');
         }
         try {
-            $messageId = HelpRequest::sendMessage($id, (int) $user['id'], $body);
-            $failedUploads = HelpRequestMediaService::store($id, $messageId, (int) $user['id'], $uploads);
-            if ($failedUploads > 0) $this->flash('info', 'تم إرسال الرسالة، لكن تعذر حفظ بعض المرفقات.');
+            // Resolve the recipient before the message transaction commits. A
+            // later lookup failure must not make an already-saved message look lost.
             $request = HelpRequest::findForParticipant($id, (int) $user['id']);
-            if ($request) {
-                $recipient = (int) $request['requester_id'] === (int) $user['id']
-                    ? (int) $request['helper_id'] : (int) $request['requester_id'];
-                NotificationService::notify(
-                    $recipient, (int) $user['id'], null, null, 'personal_help_message',
-                    'رسالة جديدة في طلب المساعدة', $request['subject'],
-                    '/help-requests/' . $id, 'personal-help-message:' . $messageId
-                );
+            if (!$request) throw new \DomainException('conversation_unavailable');
+            $recipient = (int) $request['requester_id'] === (int) $user['id']
+                ? (int) $request['helper_id'] : (int) $request['requester_id'];
+
+            $messageId = HelpRequest::sendMessage($id, (int) $user['id'], $body);
+            $failedUploads = 0;
+            try {
+                $failedUploads = HelpRequestMediaService::store($id, $messageId, (int) $user['id'], $uploads);
+            } catch (\Throwable $mediaError) {
+                $failedUploads = count($uploads);
+                App::logException('ERROR', 'help_request.message_media_failed', $mediaError, [
+                    'request_id' => $id,
+                    'message_id' => $messageId,
+                    'user_id' => (int) $user['id'],
+                ]);
             }
+            if ($failedUploads > 0) {
+                $this->flash('info', 'تم إرسال الرسالة، لكن تعذر حفظ بعض المرفقات. افتح المحادثة لمراجعة ما تم حفظه.');
+            } else {
+                $this->flash('success', 'تم إرسال الرسالة بنجاح.');
+            }
+            NotificationService::notify(
+                $recipient, (int) $user['id'], null, null, 'personal_help_message',
+                'رسالة جديدة في طلب المساعدة', $request['subject'],
+                '/help-requests/' . $id, 'personal-help-message:' . $messageId
+            );
         } catch (\DomainException) {
             $this->flash('error', 'المحادثة مغلقة أو لا تملك صلاحية إرسال رسالة فيها.');
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'help_request.message_send_failed', $error, [
+                'request_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', 'تعذر تأكيد إرسال الرسالة. افتح المحادثة وتحقق من آخر رسالة قبل إعادة الإرسال.');
         }
         return $this->redirect('/help-requests/' . $id);
     }
 
-    public function close(int $id): Response
+       public function close(int $id): Response
     {
         if (!Csrf::verify($this->request->input('_token'))) return $this->redirect('/help-requests/' . $id);
         $user = AuthService::user();
