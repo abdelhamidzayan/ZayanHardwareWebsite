@@ -7,7 +7,8 @@ $projectRoot = dirname(__DIR__, 2);
 require $projectRoot . '/app/core/App.php';
 
 $tempRoot = sys_get_temp_dir() . '/zayan-log-redaction-' . bin2hex(random_bytes(6));
-if (!mkdir($tempRoot . '/config', 0700, true)) {
+$logsDirectory = $tempRoot . '/storage/logs';
+if (!mkdir($tempRoot . '/config', 0700, true) || !mkdir($logsDirectory, 0700, true)) {
     fwrite(STDERR, "Unable to create the isolated logging test directory.\n");
     exit(1);
 }
@@ -28,11 +29,21 @@ $removeTree = static function (string $path) use (&$removeTree): void {
     @rmdir($path);
 };
 
+// Prepare a stale log before boot so the retention sweep is exercised.
+$staleLog = $logsDirectory . '/app-2020-01-01.log';
+file_put_contents($staleLog, "old synthetic log\n");
+touch($staleLog, time() - (3 * 86400));
+$_ENV['LOG_RETENTION_DAYS'] = '1';
+
 try {
     App::boot($tempRoot);
 
+    if (is_file($staleLog)) {
+        throw new RuntimeException('The configured log retention sweep did not remove an expired log.');
+    }
+
     $pushException = new RuntimeException(
-        'Push failed for Authorization: Bearer PRIVATE_BEARER_SECRET at https://push.example.test/send?token=PRIVATE_URL_TOKEN'
+        'Push failed for Authorization: Bearer PRIVATE_BEARER_EXCEPTION_SECRET at https://push.example.test/send?token=PRIVATE_URL_TOKEN'
     );
     App::logException('WARNING', 'test.push.exception', $pushException, [
         'user_id' => 42,
@@ -46,17 +57,61 @@ try {
     $databaseException->errorInfo = ['HY000', 999, 'PRIVATE_DATABASE_SECRET'];
     App::logException('ERROR', 'test.database.exception', $databaseException);
 
-    $logPath = $tempRoot . '/storage/logs/app-' . gmdate('Y-m-d') . '.log';
-    $contents = is_file($logPath) ? (string) file_get_contents($logPath) : '';
+    // Exercise raw text paths, not only Throwable objects whose messages are
+    // intentionally omitted by exceptionContext().
+    App::log('WARNING', 'test.authorization Authorization: Bearer PRIVATE_BEARER_SECRET');
+    App::log('WARNING', 'test.cookie Cookie: zayan_session=PRIVATE_COOKIE_SECRET');
+    App::log('WARNING', 'test.url https://example.test/callback?access_token=PRIVATE_ACCESS_TOKEN&next=/feed');
+    App::log('NOTICE', 'test.context.header', [
+        'header' => 'Authorization: Bearer PRIVATE_CONTEXT_BEARER',
+    ]);
+
+    App::log('INFO', 'test.channel.access', ['status' => 404], 'access');
+    App::security('test.channel.security', [
+        'ip' => '127.0.0.1',
+        'csrf_token' => 'PRIVATE_CSRF_SECRET',
+    ]);
+    App::audit('test.channel.audit', [
+        'event_id' => 'synthetic-test',
+        'password' => 'PRIVATE_PASSWORD_SECRET',
+    ]);
+
+    $channels = ['app', 'access', 'security', 'audit'];
+    $contents = '';
+    foreach ($channels as $channel) {
+        $logPath = $logsDirectory . '/' . $channel . '-' . gmdate('Y-m-d') . '.log';
+        if (!is_file($logPath)) {
+            throw new RuntimeException('The ' . $channel . ' log channel did not create its daily file.');
+        }
+
+        $channelContents = (string) file_get_contents($logPath);
+        $contents .= $channelContents;
+        $records = array_filter(explode("\n", trim($channelContents)));
+        if ($records === []) {
+            throw new RuntimeException('The ' . $channel . ' log file is empty.');
+        }
+        foreach ($records as $record) {
+            $decoded = json_decode($record, true);
+            if (!is_array($decoded) || ($decoded['channel'] ?? null) !== $channel) {
+                throw new RuntimeException('The ' . $channel . ' log contains an invalid JSON record.');
+            }
+        }
+    }
 
     foreach ([
         'PRIVATE_BEARER_SECRET',
+        'PRIVATE_BEARER_EXCEPTION_SECRET',
         'PRIVATE_URL_TOKEN',
         'PRIVATE_CONTEXT_TOKEN',
+        'PRIVATE_CONTEXT_BEARER',
         'PRIVATE_DATABASE_SECRET',
+        'PRIVATE_COOKIE_SECRET',
+        'PRIVATE_ACCESS_TOKEN',
+        'PRIVATE_CSRF_SECRET',
+        'PRIVATE_PASSWORD_SECRET',
     ] as $secret) {
         if (str_contains($contents, $secret)) {
-            throw new RuntimeException('A synthetic secret appeared in the application log.');
+            throw new RuntimeException('A synthetic secret appeared in a log file.');
         }
     }
 
@@ -71,9 +126,9 @@ try {
         throw new RuntimeException('Exception context must not expose arbitrary message text.');
     }
 
-    echo "Exception logging redaction test passed.\n";
+    echo "Logging channels, retention, and secret-redaction tests passed.\n";
 } catch (Throwable $error) {
-    fwrite(STDERR, "Exception logging redaction test failed: " . $error::class . "\n");
+    fwrite(STDERR, "Logging test failed: " . $error::class . "\n");
     $removeTree($tempRoot);
     exit(1);
 }
