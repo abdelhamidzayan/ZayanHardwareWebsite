@@ -36,7 +36,7 @@ Always report the exact branch and commit being discussed. A passing CI job does
 ## 4. Current verified GitHub snapshot — 2026-10-31
 
 - Active audit/fix branch: `fix/audit-priority-issues`.
-- Latest documentation-only branch HEAD: `72d00a45c49a63032addebeec23662da2da194d5` (README/AI handoff updates). The application-code and CI verification baseline remains `46960cf9efb33b2b0affa503d5e832725bdba4b4`.
+- Application-code and CI verification baseline: `46960cf9efb33b2b0affa503d5e832725bdba4b4`. README/AI handoff documentation commits were added after this baseline on the same PR branch; always resolve the live branch HEAD before starting new work.
 - PR #14 is a **Draft**; it is not merged and must not be described as deployed.
 - On that exact head, GitHub Actions completed successfully:
   - Graphify dependency graph: run [41138280152](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41138280152).
