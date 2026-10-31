@@ -42,7 +42,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | Access/security/audit channels | Logger provides four channels; real Apache write permissions and HTTP lifecycle still need validation | Runtime check pending |
 | Disposable backup/restore comparison | Workflow now dumps, compresses, hashes, restores into a new schema, and compares tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts | Implemented in CI; awaiting executed workflow result |
 | Owner's full database backup/restore comparison | Previously recorded owner backup/hash has not yet been restored to a separate local test database | Pending owner-machine verification |
-| Pending storage recovery reconciliation | Durable recovery records exist; no automatic worker is present | Procedure pending |
+| Pending storage recovery reconciliation | Durable records exist; a read-only/manual triage runbook is now documented; no general automatic worker exists | Procedure documented; reconciliation pending |
 | Read-only schema comparator | Added `bin/compare-database-schema.php` for object and optional row-count comparison between two separate databases | Implemented; syntax/runtime check pending |
 | Current-head Actions verification | PR #16 head jobs completed with zero steps because included Actions minutes were exhausted | Not verified |
 
@@ -50,7 +50,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 
 - [Architecture and dependency map](architecture-code-map.md)
 - [Fresh database installation order](../database/FRESH_INSTALL.md)
-- [Database backup, restore, and comparison runbook](DATABASE_BACKUP_RESTORE.md)
+- [Database backup, restore, and comparison runbook](DATABASE_BACKUP_RESTORE.md)\n- [Storage recovery triage](STORAGE_RECOVERY_RUNBOOK.md)
 - [Content system implementation](content-system-implementation.md)
 - [Content migrations](content-system-migrations.md)
 - [Security hardening](security-hardening.md)
@@ -72,7 +72,7 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 ## 7. Latest Phase 1 implementation checkpoint
 
-On `phase1/foundation-reliability-20261031`, the following Phase 1 work is implemented but not yet test-executed: a read-only schema comparator, an automated disposable backup/restore/checksum/row-count step in the three-engine database workflow, and stronger logging redaction/channel/retention regression coverage. The comparator includes views, routines, and events in addition to tables, columns, indexes, foreign keys, CHECK constraints, triggers, and row counts. No live database was modified.
+On `phase1/foundation-reliability-20261031`, the following Phase 1 work is implemented but not yet test-executed: a read-only schema comparator, an automated disposable backup/restore/checksum/row-count step in the three-engine database workflow, stronger logging redaction/channel/retention regression coverage, and a safe read-only triage runbook for `storage_recovery_tasks`. The comparator includes views, routines, and events in addition to tables, columns, indexes, foreign keys, CHECK constraints, triggers, and row counts. No live database was modified.
 
 The owner-machine restore, Apache permissions, and live HTTP smoke checks remain unverified. GitHub Actions was previously quota-blocked; recheck usage before triggering workflows.
 
