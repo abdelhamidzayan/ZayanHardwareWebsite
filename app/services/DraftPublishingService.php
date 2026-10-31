@@ -19,7 +19,7 @@ final class DraftPublishingService
     ): int {
         $pdo = Database::connection();
         $commit = $commitTransaction !== null
-            ? \\Closure::fromCallable($commitTransaction)
+            ? \Closure::fromCallable($commitTransaction)
             : static function (PDO $connection): void { $connection->commit(); };
         $draft = PostDraft::findForUser($draftId, $userId);
         if (!$draft) throw new \DomainException('draft_not_found');
