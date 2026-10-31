@@ -2,6 +2,18 @@
 
 PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 
+## Start here — project architecture and AI handoff
+
+**Working on this repository? Read these first:**
+
+1. **[AI_CONTEXT.md](AI_CONTEXT.md)** — durable project handoff, current verified branch/CI state, preservation rules, and the required workflow for future AI sessions.
+2. **[Architecture and dependency map](docs/architecture-code-map.md)** — how requests flow through routes, controllers, services, models, database, views, and frontend.
+3. **[Graphify guide](docs/graphify.md)** — how to generate and review the machine-readable code relationship graph.
+4. **[Contributor rules](AGENTS.md)** — mandatory safety, architecture, and Git rules.
+5. [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
+
+The architecture map is the first technical reference. Always verify the active branch, commit, runtime, and database before changing code. Documentation and CI do not prove that an unmerged branch is deployed.
+
 ## Run locally
 1. Copy `.env.example` to `.env` and edit it.
 2. (Optional) `composer install` — without it `public/index.php` uses a built-in autoloader.
