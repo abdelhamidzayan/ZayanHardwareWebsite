@@ -18,6 +18,8 @@ The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PL
 - Merge commit: `098442813eb5a55e96d5fff27ce127f9b5f08591`.
 - This merge did **not** target `main` and is not evidence of deployment.
 - Current Phase 1 work is on `phase1/foundation-reliability-20261031`, based on that merge commit.
+- PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) is an open draft from the Phase 1 branch into `main`; it is not merged or deployed.
+- PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) is a separate Phase 2 draft based on the Phase 1 branch; do not merge it before Phase 1 owner-machine acceptance.
 - Do not assume the local Kali/XAMPP checkout, `main`, the merged audit branch, and any hosted deployment are synchronized.
 
 ## 3. Product boundaries and data preservation
@@ -34,7 +36,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 
 | Work item | Current evidence | Status |
 |---|---|---|
-| Ordered fresh-install migrations 000–018 | Full clean-install sequence passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 | CI verified on `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` |
+| Ordered fresh-install migrations 000–018 | Full clean-install sequence passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 | CI verified on `c35c71f39d0702178d8dc9aad041d247b29c29b1` |
 | MySQL/MariaDB matrix | All 3 matrix jobs completed successfully, including the complete integration suite | CI verified |
 | Core content write/media recovery | Issue/reply media writes, draft publish outcomes, symlink containment, personal-help media, authorization and reply tombstones passed | CI verified on all 3 engines |
 | Public/private route and upload checks | Public/private route policy, image upload policy and PHP/JS syntax suites passed | CI verified |
@@ -45,7 +47,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | Private-media backup and sample restore | A separate archive/path and isolated restore of referenced private files have not been verified | Pending owner-machine verification |
 | Pending storage recovery reconciliation | Durable records exist; a read-only/manual triage runbook is now documented; no general automatic worker exists | Procedure documented; reconciliation pending |
 | Read-only schema comparator | CLI check plus full schema-object and row-count comparison during restore passed on all 3 engines | CI verified |
-| Phase 1 branch CI verification | PHP, Graphify, and 3-engine database workflows all passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` | All CI gates passed; local acceptance pending |
+| Phase 1 branch CI verification | PHP, Graphify, and 3-engine database workflows all passed on commit `c35c71f39d0702178d8dc9aad041d247b29c29b1` | All CI gates passed; local acceptance pending |
 
 ## 5. Existing technical documentation
 
@@ -66,7 +68,7 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 ## 6. Verification boundaries and local work
 
-- Historical CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` covered migrations 000–017 only. The newer Phase 1 commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` passed the full 000–018 matrix and integration suite.
+- Historical CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` covered migrations 000–017 only. The newer Phase 1 head `c35c71f39d0702178d8dc9aad041d247b29c29b1` passed the full 000–018 matrix and integration suite.
 - PR #16's earlier zero-step runs were caused by exhausted included Actions minutes. After the repository became public, PR #17 successfully executed all current Phase 1 workflows; the current public-repository run is the source of truth.
 - The owner database restore and private-media restore remain separate local tasks and must not be confused with the disposable CI restore.
 - The owner's local backup and local database work must be performed only on the real machine after checking the exact source/target DB and rollback path. Never restore into the source database.
@@ -74,10 +76,11 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 ## 7. Latest Phase 1 implementation checkpoint
 
-On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`:
+On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed on commit `c35c71f39d0702178d8dc9aad041d247b29c29b1` (PHP run [41238036009](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036009), Graphify run [41238036104](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036104), database matrix [41238036402](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036402)):
 
 - PHP lint, CLI boot, rate-limiter API, draft rollback, public-route policy, schema-comparator CLI, HTTP access-log lifecycle, exception redaction/retention, upload policy, and JavaScript syntax all passed.
 - Graphify analyzer tests, graph generation, determinism check, and artifact upload passed.
+- Graphify snapshot for this head: 151 files, 72 routes, 168 SQL query fragments, 15 JavaScript API calls (10 statically linked; 5 remain dynamic/unresolved), 698 nodes, and 1,637 edges. It also reports the duplicate `002_` migration prefix; the documented fresh-install order and all three database CI runs passed. See [Graphify guide](graphify.md).
 - The full fresh-install sequence 000–018 and all integration suites passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
 - Disposable backup → gzip/checksum → restore into a new schema → schema-object and row-count comparison passed on all three engines.
 
