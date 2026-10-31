@@ -74,7 +74,10 @@ This matrix is generated from `config/routes.php` at the Phase 2 security review
 | Personal-help participant and attachment ownership | `HelpRequestController`, `HelpRequest`, `HelpRequestMediaService` | `tests/php/help-request-media-integration.php` |
 | Active administrator and last-admin protections | `AdminRosterService` and the relevant models | `tests/php/admin-roster-integration.php`, `tests/php/device-catalog-integration.php` |
 | Rate limits for authenticated and public actions | `RateLimiter` | `tests/php/rate-limiter-integration.php` |
-| Password reset invalidates older sessions | `users.auth_version`, `AuthService`, `AdminUserController` | `tests/php/auth-session-version-integration.php` |
+| Password reset, account status, role change, deletion request, and identity anonymization revoke older sessions | `users.auth_version`, `AuthService`, `AdminUserController`, `AccountController`, `AccountRetentionService` | `tests/php/auth-session-version-integration.php`, `tests/php/account-session-revocation-policy.php` |
+
+| Login error does not disclose suspended-account status | `AuthController::login()` returns the same public error while keeping internal security events distinct | `tests/php/login-information-disclosure.php` |
+| Admin site update execution | Active admin row recheck, CSRF, per-user rate limit, fixed command arguments and audit events | `tests/php/admin-update-hardening.php` |
 
 ## Maintenance
 
