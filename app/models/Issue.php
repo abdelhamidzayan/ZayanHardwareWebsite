@@ -372,23 +372,43 @@ final class Issue extends Model
     public static function addReply(int $issueId, int $userId, string $body, ?int $parentReplyId = null): int
     {
         $pdo = self::db();
-        if ($parentReplyId !== null) {
-            $stmt = $pdo->prepare(
-                'SELECT id FROM issue_replies
-                 WHERE id = ? AND issue_id = ? AND parent_reply_id IS NULL AND deleted_at IS NULL
-                 FOR UPDATE'
-            );
-            $stmt->execute([$parentReplyId, $issueId]);
-            if (!$stmt->fetchColumn()) throw new \DomainException('invalid_parent_reply');
-        }
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare(
-            "INSERT INTO issue_replies (issue_id, parent_reply_id, user_id, body)
-             SELECT ?, ?, ?, ? FROM issues WHERE id = ? AND status IN ('open','in_progress') AND deleted_at IS NULL"
-        );
-        $stmt->execute([$issueId, $parentReplyId, $userId, $body, $issueId]);
-        if ($stmt->rowCount() !== 1) throw new \DomainException('discussion_closed');
-        return (int) $pdo->lastInsertId();
+        try {
+            // Lock the issue first so reply creation cannot race a concurrent
+            // close/resolve/delete transition.
+            $issueStmt = $pdo->prepare(
+                "SELECT id FROM issues
+                 WHERE id = ? AND status IN ('open','in_progress') AND deleted_at IS NULL
+                 FOR UPDATE"
+            );
+            $issueStmt->execute([$issueId]);
+            if (!$issueStmt->fetchColumn()) throw new \DomainException('discussion_closed');
+
+            if ($parentReplyId !== null) {
+                $parentStmt = $pdo->prepare(
+                    'SELECT id FROM issue_replies
+                     WHERE id = ? AND issue_id = ? AND parent_reply_id IS NULL AND deleted_at IS NULL
+                     FOR UPDATE'
+                );
+                $parentStmt->execute([$parentReplyId, $issueId]);
+                if (!$parentStmt->fetchColumn()) throw new \DomainException('invalid_parent_reply');
+            }
+
+            $stmt = $pdo->prepare(
+                'INSERT INTO issue_replies (issue_id, parent_reply_id, user_id, body)
+                 VALUES (?, ?, ?, ?)'
+            );
+            $stmt->execute([$issueId, $parentReplyId, $userId, $body]);
+            $replyId = (int) $pdo->lastInsertId();
+
+            if ($ownsTransaction) $pdo->commit();
+            return $replyId;
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
+            throw $error;
+        }
     }
 
     public static function replyIssueId(int $replyId): ?int
