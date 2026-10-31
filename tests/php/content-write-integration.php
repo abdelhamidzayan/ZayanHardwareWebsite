@@ -141,6 +141,41 @@ try {
     $storageFiles = glob($storageRoot . '/issues/*/*') ?: [];
     expectContentWrite(count($storageFiles) === 1, 'Rollback must remove the uploaded file and leave only the successful attachment.');
 
+    // A move adapter may move the file and still report false. The service
+    // must notice the destination and compensate it during the DB rollback.
+    $movedButReportedFailure = makeUploadFile($sourceRoot, 'move-reported-failure.pdf');
+    $moveReportedFailureTitle = 'Content write move reported failure ' . bin2hex(random_bytes(4));
+    $moveReportedFailureService = new ContentWriteService(
+        $pdo,
+        static function (string $from, string $to): bool {
+            if (!rename($from, $to)) return false;
+            return false;
+        },
+        static fn (string $path): bool => !is_file($path) || unlink($path),
+        null,
+        $storageRoot
+    );
+    $moveReportedFailureObserved = false;
+    try {
+        $moveReportedFailureService->createIssue(
+            $ownerId,
+            'technical_post',
+            $moveReportedFailureTitle,
+            null,
+            null,
+            'A failed move response must not leave a file behind when the destination exists.',
+            '',
+            [['tmp' => $movedButReportedFailure, 'size' => filesize($movedButReportedFailure), 'mime' => 'application/pdf', 'ext' => 'pdf', 'token' => 'upload-0']]
+        );
+    } catch (DomainException $error) {
+        $moveReportedFailureObserved = $error->getMessage() === 'media_move_failed';
+    }
+    expectContentWrite($moveReportedFailureObserved, 'A move that reports false after moving must fail the content write.');
+    $issueCount->execute([$moveReportedFailureTitle]);
+    expectContentWrite((int) $issueCount->fetchColumn() === 0, 'Reported move failure must roll back the issue row.');
+    expectContentWrite(!is_file($movedButReportedFailure), 'The source file was moved before the adapter returned false.');
+    expectContentWrite(count(glob($storageRoot . '/issues/*/*') ?: []) === 1, 'A partially successful move must be compensated instead of leaving an orphan.');
+
     $moveOne = makeUploadFile($sourceRoot, 'move-first.pdf');
     $moveTwo = makeUploadFile($sourceRoot, 'move-second.pdf');
     $moveCalls = 0;
