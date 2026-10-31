@@ -16,6 +16,8 @@ The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PL
 
 - PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) merged into `main` on 2026-10-31. Merge commit: `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`.
 - PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) merged into `main` on 2026-10-31. Merge commit: `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
+- PR [#19](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/19) merged into `main` on 2026-10-31. Merge commit: `bf871bba8de078588a0d17778ed4520199188f96` (skill-test input and answer-exposure hardening).
+- Superseded PRs #13, #14, and #15 were closed after reviewing their changes; there are no open pull requests. Historical branch refs remain for cleanup/traceability.
 - **Authoritative development branch:** `main`. The Phase 2 code-integration merge commit is `dadddde53f394a0fe353b575ec13dbeb85749f6e`; subsequent commits on `main` are documentation updates. Resolve the live `main` head before new work.
 - The merged work includes the accumulated product features, Phase 1 reliability work, and the Phase 2 session/CSRF/object-authorization baseline. It has not been deployed.
 - Historical Phase 1/Phase 2 branches are retained for traceability until branch cleanup is verified. Do not create new feature work from those historical branches; branch new work from `main`.
