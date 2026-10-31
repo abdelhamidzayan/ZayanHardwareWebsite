@@ -2,6 +2,29 @@
 
 Graphify is a repeatable, dependency-free static code-graph generator maintained in this repository. It reads source files only. It does not boot the application, connect to MySQL, execute SQL, or modify application data.
 
+## Latest CI snapshot — 2026-10-31
+
+The Graphify artifact generated for Phase 1 head `c35c71f39d0702178d8dc9aad041d247b29c29b1` completed successfully in [workflow run 41238036104](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036104).
+
+| Metric | Snapshot |
+|---|---:|
+| Source files scanned | 151 |
+| PHP routes found | 72 |
+| SQL query fragments analyzed | 168 |
+| JavaScript API call sites | 15 |
+| API calls statically linked | 10 |
+| API calls dynamic/unresolved | 5 |
+| Graph nodes | 698 |
+| Graph edges | 1,637 |
+
+Node inventory: 53 classes, 347 methods, 20 migrations, 72 routes, 40 database tables, 15 API-call sites, and 151 files.
+
+The five dynamic/unresolved JavaScript call sites are not proof of broken endpoints. They use runtime values or request objects that the static matcher deliberately does not guess. Review them alongside [the manually maintained JavaScript API route map](javascript-api-route-map.md), then verify the relevant browser flows in Phase 3.
+
+The analyzer also warns that two migration filenames share prefix `002_`. This is a naming warning, not an ordering ambiguity: `database/FRESH_INSTALL.md` defines the intended sequential order, and the disposable fresh-install integration suite passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. Never infer migration state from filename prefixes.
+
+These counts describe one commit snapshot. Regenerate the graph after significant route, service, model, migration, or JavaScript endpoint changes.
+
 ## Generate the graph locally
 
 Requires Python 3.10+ and only the Python standard library.
