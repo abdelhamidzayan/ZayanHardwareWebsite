@@ -9,6 +9,7 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Models\PushSubscription;
 use App\Services\AuthService;
+use App\Services\RateLimiter;
 
 final class PushController extends Controller
 {
@@ -40,6 +41,9 @@ final class PushController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->json(['error' => 'csrf'], 419);
         $user = AuthService::user();
         if (!$user) return $this->json(['error' => 'unauthorized'], 401);
+        if (!RateLimiter::allowForUser('push.subscribe', (int) $user['id'], 10, 600, 50)) {
+            return $this->json(['error' => 'rate_limited'], 429);
+        }
 
         $endpoint = $this->string('endpoint');
         $publicKey = $this->string('p256dh');
@@ -67,6 +71,9 @@ final class PushController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->json(['error' => 'csrf'], 419);
         $user = AuthService::user();
         if (!$user) return $this->json(['error' => 'unauthorized'], 401);
+        if (!RateLimiter::allowForUser('push.unsubscribe', (int) $user['id'], 30, 600, 100)) {
+            return $this->json(['error' => 'rate_limited'], 429);
+        }
         $endpoint = $this->string('endpoint');
         if ($endpoint !== '' && strlen($endpoint) <= 2048) {
             PushSubscription::deleteForUserByEndpoint((int) $user['id'], $endpoint);
