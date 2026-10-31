@@ -121,7 +121,7 @@ final class AdminSkillTestController extends Controller
             $current = $pdo->prepare('SELECT is_active FROM skill_tests WHERE id = ? FOR UPDATE');
             $current->execute([$id]);
             $currentStatus = $current->fetchColumn();
-            if ($currentStatus === false) throw new \\DomainException('test_not_found');
+            if ($currentStatus === false) throw new \DomainException('test_not_found');
 
             if ((int) $currentStatus === (int) $active) {
                 $pdo->commit();
@@ -141,9 +141,9 @@ final class AdminSkillTestController extends Controller
                 hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
             ]);
             $pdo->commit();
-        } catch (\\Throwable $error) {
+        } catch (\Throwable $error) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            if ($error instanceof \\DomainException) {
+            if ($error instanceof \DomainException) {
                 return $this->fail('/admin/skill-tests', $error->getMessage() === 'admin_not_active'
                     ? 'لم تعد تملك صلاحية إدارة الاختبارات.'
                     : 'الاختبار غير موجود.');
