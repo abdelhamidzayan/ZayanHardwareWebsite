@@ -3,11 +3,9 @@
  * app/views/layouts/guest.php — public pages: login, registration, help and policies.
  */
 $authPage = $authPage ?? false;
-$guestPath = \App\Core\Request::capture()->path;
+$guestPath = \\App\\Core\\Request::capture()->path;
 $guestLoginActive = $guestPath === '/login';
 $guestHelpActive = $guestPath === '/help';
-$guestPoliciesActive = $guestPath === '/policies';
-$guestHelpMenuActive = $guestHelpActive || $guestPoliciesActive;
 ?>
 <!DOCTYPE html>
 <html lang="<?= $e($lang) ?>" dir="<?= $e($dir) ?>">
@@ -27,6 +25,16 @@ $guestHelpMenuActive = $guestHelpActive || $guestPoliciesActive;
 
         <nav class="guest-header__actions" aria-label="روابط الموقع">
             <a
+                class="guest-header__link<?= $guestHelpActive ? ' is-active' : '' ?>"
+                href="<?= $e($baseUrl) ?>/help"
+                aria-label="مركز المساعدة"
+                <?= $guestHelpActive ? 'aria-current="page"' : '' ?>
+            >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.2-1.8 2.7M12 17h.01"/></svg>
+                <span class="guest-header__label">مركز المساعدة</span>
+            </a>
+
+            <a
                 class="guest-header__link guest-header__login<?= $guestLoginActive ? ' is-active' : '' ?>"
                 href="<?= $e($baseUrl) ?>/login"
                 aria-label="تسجيل الدخول"
@@ -35,37 +43,6 @@ $guestHelpMenuActive = $guestHelpActive || $guestPoliciesActive;
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
                 <span class="guest-header__label">تسجيل الدخول</span>
             </a>
-
-            <details class="guest-nav-menu<?= $guestHelpMenuActive ? ' is-active' : '' ?>">
-                <summary
-                    class="guest-header__link guest-nav-menu__trigger"
-                    aria-label="المساعدة والسياسات"
-                    <?= $guestHelpMenuActive ? 'aria-current="page"' : '' ?>
-                >
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.2-1.8 2.7M12 17h.01"/></svg>
-                    <span class="guest-header__label">المساعدة</span>
-                    <svg class="icon guest-nav-menu__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
-                </summary>
-
-                <div class="guest-nav-menu__panel" aria-label="روابط المساعدة والسياسات">
-                    <a
-                        class="guest-nav-menu__item<?= $guestHelpActive ? ' is-active' : '' ?>"
-                        href="<?= $e($baseUrl) ?>/help"
-                        <?= $guestHelpActive ? 'aria-current="page"' : '' ?>
-                    >
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.2-1.8 2.7M12 17h.01"/></svg>
-                        <span>مركز المساعدة</span>
-                    </a>
-                    <a
-                        class="guest-nav-menu__item<?= $guestPoliciesActive ? ' is-active' : '' ?>"
-                        href="<?= $e($baseUrl) ?>/policies"
-                        <?= $guestPoliciesActive ? 'aria-current="page"' : '' ?>
-                    >
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3.1 7.8 7.5 9.5 4.4-1.7 7.5-5 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/></svg>
-                        <span>السياسات والخصوصية</span>
-                    </a>
-                </div>
-            </details>
         </nav>
     </div>
 </header>
