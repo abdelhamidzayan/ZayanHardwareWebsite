@@ -137,8 +137,15 @@ flowchart TD
 - The CLI worker runs in dry-run mode unless `--execute` is explicit. It re-checks due requests under row locks and anonymizes the existing `users` row in place.
 - The same numeric `users.id` is retained. Login is disabled, the public author name becomes `عضو محذوف`, and a generic avatar is served.
 - The worker does not delete database rows and does not traverse technical content directories. It only removes generated private custom-avatar image files. Public help-library author snapshots are anonymized while their technical article fields remain unchanged.
-- Personal-help and notification foreign keys in existing migrations include cascade rules on user deletion; retaining the user row is therefore essential to preserving those records. Do not replace anonymization with deleting the user row.
+- Migration `016_protect_technical_history.sql` changes 43 dependent-content and attribution foreign keys to `RESTRICT`. Migration `017_block_physical_content_delete.sql` adds `BEFORE DELETE` guards for standalone technical and audit rows too. These database rules backstop the existing soft-delete/anonymization services; they do not replace those workflows. Transient notifications and push subscriptions retain their separate cleanup lifecycle.
 - No cancellation endpoint is currently exposed for pending deletion requests. Do not promise self-service cancellation until that workflow is implemented and tested.
+
+### Technical content retention and reply tombstones
+
+- `Issue::deleteIssue()`, `Issue::deleteReply()`, and diagnostic deletion paths update soft-delete metadata; they do not physically remove published knowledge.
+- A reply whose parent is soft-deleted remains in the database with its original `parent_reply_id`. `Issue::replies()` returns a tombstone when that parent still has an active child; the view hides the deleted text while retaining its place in the discussion tree.
+- Migrations 016 and 017 enforce the rule below the model layer. A direct `DELETE` against a protected technical/audit table raises a database error, including standalone posts/replies with no child rows. Draft deletion, vote toggles, and transient push/notification cleanup remain separate intentional lifecycles.
+- CI verifies the new-install chain and delete guards with synthetic fixtures on MySQL 8.0, MariaDB 10.4.32 and MariaDB 10.11. This does not authorize applying these migrations to an already-running installation without schema comparison and backup.
 
 ## Data and storage ownership
 
@@ -156,7 +163,7 @@ flowchart TD
 ## Review and test boundaries
 
 - `php-lint.yml` verifies PHP syntax and JavaScript syntax.
-- `database-migrations.yml` applies the supported migration chain to disposable MySQL 8.0 and MariaDB 10.11 service databases and verifies representative schema writes.
+- `database-migrations.yml` replays the explicit fresh-install chain on disposable MySQL 8.0, MariaDB 10.4.32 and MariaDB 10.11 databases; it verifies baseline/profile schema, representative content writes, first-admin guards, retention constraints/triggers, and reply tombstones.
 - These workflows do not currently simulate browser sessions, parallel uploads from multiple devices, actual Web Push delivery, UI behavior on mobile Safari, or the 30-day retention worker against a representative anonymization fixture.
 - A clean migration CI run is not authorization to run migrations on a live installation. Confirm the target schema history and take a backup first.
 - Treat this document as a maintained static dependency map, not as generated Graphify output or a replacement for runtime/integration tests.
