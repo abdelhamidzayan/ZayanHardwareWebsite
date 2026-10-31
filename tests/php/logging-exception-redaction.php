@@ -63,6 +63,7 @@ try {
     App::log('WARNING', 'test.cookie Cookie: zayan_session=PRIVATE_COOKIE_SECRET');
     App::log('WARNING', 'test.url https://example.test/callback?access_token=PRIVATE_ACCESS_TOKEN&next=/feed');
     App::log('WARNING', 'test.query https://example.test/callback?token=PRIVATE_QUERY_TOKEN&next=/feed');
+    App::log('WARNING', 'test.bearer Bearer PRIVATE_STANDALONE_BEARER');
     App::log('NOTICE', 'test.context.header', [
         'header' => 'Authorization: Bearer PRIVATE_CONTEXT_BEARER',
     ]);
@@ -109,6 +110,7 @@ try {
         'PRIVATE_COOKIE_SECRET',
         'PRIVATE_ACCESS_TOKEN',
         'PRIVATE_QUERY_TOKEN',
+        'PRIVATE_STANDALONE_BEARER',
         'PRIVATE_CSRF_SECRET',
         'PRIVATE_PASSWORD_SECRET',
     ] as $secret) {
@@ -117,7 +119,7 @@ try {
         }
     }
 
-    foreach (['RuntimeException', 'PDOException', 'HY000', '999', 'test.push.exception'] as $expected) {
+    foreach ([\n        'RuntimeException', 'PDOException', 'HY000', '999', 'test.push.exception',\n        'test.authorization', 'test.cookie', 'test.url', 'test.query', 'test.bearer',\n        'test.channel.access', 'test.channel.security', 'test.channel.audit', '[REDACTED]',\n    ] as $expected) {
         if (!str_contains($contents, $expected)) {
             throw new RuntimeException('A safe exception diagnostic was not recorded: ' . $expected);
         }
