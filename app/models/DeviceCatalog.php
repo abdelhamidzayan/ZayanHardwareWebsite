@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Model;
+use App\Services\AdminRosterService;
 
 final class DeviceCatalog extends Model
 {
@@ -120,12 +121,24 @@ final class DeviceCatalog extends Model
         $pdo = self::db();
         $pdo->beginTransaction();
         try {
+            // Keep authorization at the model boundary as well as the controller.
+            AdminRosterService::assertActorActive($pdo, $adminId);
+
             $stmt = $pdo->prepare('SELECT * FROM device_model_suggestions WHERE id = ? FOR UPDATE');
             $stmt->execute([$suggestionId]);
             $suggestion = $stmt->fetch();
             if (!$suggestion || $suggestion['status'] !== 'pending') {
                 throw new \DomainException('suggestion_not_pending');
             }
+            $manufacturer = $pdo->prepare(
+                'SELECT id, is_active FROM device_manufacturers WHERE id = ? FOR UPDATE'
+            );
+            $manufacturer->execute([(int) $suggestion['manufacturer_id']]);
+            $manufacturerRow = $manufacturer->fetch(\\PDO::FETCH_ASSOC);
+            if (!$manufacturerRow || (int) $manufacturerRow['is_active'] !== 1) {
+                throw new \\DomainException('manufacturer_unavailable');
+            }
+
             $modelId = null;
             if ($approve) {
                 $duplicate = $pdo->prepare(
@@ -158,10 +171,24 @@ final class DeviceCatalog extends Model
                 ]);
                 $modelId = (int) $pdo->lastInsertId();
             }
+            $newStatus = $approve ? 'approved' : 'rejected';
             $pdo->prepare(
                 'UPDATE device_model_suggestions SET status = ?, reviewed_by = ?, reviewed_at = UTC_TIMESTAMP(),
                     approved_model_id = ? WHERE id = ?'
-            )->execute([$approve ? 'approved' : 'rejected', $adminId, $modelId, $suggestionId]);
+            )->execute([$newStatus, $adminId, $modelId, $suggestionId]);
+
+            $pdo->prepare(
+                'INSERT INTO security_audit_logs (actor_user_id, action, details_json)
+                 VALUES (?, ?, ?)'
+            )->execute([
+                $adminId,
+                'device_model_suggestion.' . $newStatus,
+                json_encode([
+                    'suggestion_id' => $suggestionId,
+                    'model_id' => $modelId,
+                    'manufacturer_id' => (int) $suggestion['manufacturer_id'],
+                ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            ]);
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
