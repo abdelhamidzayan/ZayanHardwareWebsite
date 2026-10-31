@@ -6,7 +6,7 @@
 - **Documentation:** Updated `database/FRESH_INSTALL.md`, README, current state, and completion plan. The numbered migrations remain as historical incremental migration records and must not be replayed on top of the new consolidated schema.
 - **GitHub hygiene:** Confirmed zero open PRs and zero open issues. Added a one-time path-scoped Actions workflow targeting only the 26 reviewed superseded branch refs; it preserves `main`. Branch deletion is pending workflow completion and live-ref verification.
 - **Safety:** No live database, media tree, or deployment was changed. The consolidated SQL is for a newly created empty database only.
-- **Status:** Implemented on `main`; branch cleanup completed and live verification shows only `main`. The MySQL 8.0 job passed the full fresh-install/integration sequence; the full three-engine matrix remains pending a clean exact-head run.
+- **Status:** Implemented on `main`; branch cleanup completed and live verification shows only `main`. The complete single-file fresh-install and integration matrix passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 (run [41240801466](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41240801466)). PHP and Graphify also passed on the same exact `main` head.
   
 # Zayan Hardware — Update Log
 
