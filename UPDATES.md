@@ -1,5 +1,18 @@
 # Zayan Hardware — Update Log
 
+## 2026-10-31 — Phase 2 exact-head CI passed; local Apache/updater checks recorded
+
+- **Type:** Verification / Security / Infrastructure / Documentation
+- **Summary:** Verified the three Phase 2 workflows on exact commit `889dd99c74824674789a138bfc7dd3b9dd30444e`; recorded local Apache log-directory and updater-policy findings.
+- **Code areas:** Documentation only in this checkpoint; no application code or local machine files changed.
+- **Database:** No migration applied to the owner's local database. Migration 019 remains part of the branch's tested fresh-install/integration workflow only.
+- **Safety:** All three exact-head workflows passed: [PHP syntax/security](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933680), [Graphify](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933760), and [database migration integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933686). Locally, Apache runs as `daemon`, but `storage/logs` is `root:root 0775` and daemon cannot write to the directory; existing log files are `daemon:daemon 0660`. The daemon sudoers rule is limited to the fixed updater script as user `a`. The script must not be run against the current dirty non-main checkout.
+- **Verification:** Exact-head CI passed. Local log-directory write failure and updater policy were verified by owner-run read-only commands. No permissions, sudoers, database, files, or local Git state were changed.
+- **Documentation:** [Current state](docs/CURRENT_STATE.md) · [Completion plan](docs/COMPLETION_PLAN.md) · [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md).
+- **Status:** Phase 2 CI-verified at the recorded commit; Phase 2 security review and local acceptance remain open.
+
+---
+
 ## 2026-10-31 — Phase 2 starts: session revocation and POST CSRF matrix
 
 - **Type:** Security / Authentication / Tests / Documentation / Database
