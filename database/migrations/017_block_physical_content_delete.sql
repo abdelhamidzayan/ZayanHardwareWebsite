@@ -118,3 +118,28 @@ CREATE TRIGGER trg_profile_specialization_history_no_delete
 BEFORE DELETE ON technician_profile_specialization_history
 FOR EACH ROW
 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Legacy technical specialization history must be retained';
+
+CREATE TRIGGER trg_user_skill_ratings_block_delete
+BEFORE DELETE ON user_skill_ratings
+FOR EACH ROW
+SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Verified technical skill ratings must be retained';
+
+CREATE TRIGGER trg_skill_tests_block_physical_delete
+BEFORE DELETE ON skill_tests
+FOR EACH ROW
+SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Skill assessment definitions must be deactivated, not physically deleted';
+
+CREATE TRIGGER trg_skill_domains_block_physical_delete
+BEFORE DELETE ON skill_domains
+FOR EACH ROW
+SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Technical skill domain definitions must be retained';
+
+CREATE TRIGGER trg_device_manufacturers_block_delete
+BEFORE DELETE ON device_manufacturers
+FOR EACH ROW
+SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Device manufacturer catalog entries must be deactivated, not physically deleted';
+
+CREATE TRIGGER trg_device_models_block_physical_delete
+BEFORE DELETE ON device_models
+FOR EACH ROW
+SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Device model catalog entries must be retained';
