@@ -1,6 +1,6 @@
 # Zayan Hardware — Three-Phase Completion Plan
 
-**Owner-approved direction:** Complete the remaining stabilization work in three controlled phases. Keep changes on dedicated Git branches and do not merge to `main` or deploy without separate approval.
+**Owner-approved direction:** Complete the remaining stabilization work in three controlled phases. The owner explicitly approved consolidation of the accumulated feature and Phase 1/2 baseline into `main` on 2026-10-31. Merging code is not deployment approval; production rollout still requires the relevant acceptance gates.
 
 ## Operating rules
 
@@ -97,14 +97,23 @@ Exit criteria:
 
 | Phase | Status | Gate |
 |---|---|---|
-| Phase 1 — Foundation and operations | **CI passed; local acceptance pending** | Current branch: `phase1/foundation-reliability-20261031`; PR #17 remains draft |
-| Phase 2 — Security and Graphify | **In progress; exact-head CI passed** | Current branch: `phase2/security-graphify-20261031`; commit `889dd99`; PR #18 draft |
-| Phase 3 — UI, PWA, final acceptance | Planned | Starts after Phase 2 gate |
+| Phase 1 — Foundation and operations | **Automated CI passed; merged into `main`; owner acceptance pending** | PR #17 merged; owner database backup restore and private-media sample restore remain unverified |
+| Phase 2 — Security and Graphify | **Automated baseline passed; merged into `main`; manual audit follow-up open** | PR #18 merged; exact tested head `c23dde25`; route-by-route authorization, SQL/input, XSS, file-edge and recovery reviews remain |
+| Phase 3 — UI, PWA, final acceptance | **Not started** | Browser/mobile/PWA acceptance and final readiness report remain |
 
-## Local runtime acceptance note (2026-10-31)\n\nThe owner verified that Apache runs as `daemon`, but `storage/logs` is `root:root` mode `0775` and `daemon` cannot write to the directory. Existing log files are `daemon:daemon` mode `0660`; `permission-test.log` is `0664`. The daemon sudoers rule permits only the fixed external updater script as user `a`. That script requires `main` and a clean worktree, while the owner checkout is on `local/audit-update-20261031` with a modified `.htaccess` and untracked files. Do not run it or clean/reset/checkout the local worktree. Resolve the log-directory ACL/permission policy with a narrowly scoped change after checking the logger/rotation implementation. Owner database restore and private-media restore remain pending.\n\n## Current branch and verification note
+## Local runtime acceptance note (2026-10-31)
 
-- This plan is being implemented on `phase1/foundation-reliability-20261031`, based on the merge commit of PR #16 (`098442813eb5a55e96d5fff27ce127f9b5f08591`).
-- PR #16 merged into `audit/content-retention-consistency`, not `main`.
-- Earlier PR #16 runs executed zero steps due the old private-repository included-minutes limit. After the repository became public, PR #17 executed the current Phase 1 workflows successfully on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`.
-- Run IDs: PHP `41219585375`; Graphify `41219585292`; database matrix `41219585295`. All jobs and steps completed successfully.
-- PR #17 is still a draft targeting `audit/content-retention-consistency`, not `main`. Do not merge it to `main` or mark it deployed.
+The owner verified that Apache runs as `daemon`. The `storage/logs` ACL was tightened to remove `other` access while preserving `daemon` write access; two real file-creation tests succeeded and new files inherited `other::---`.
+
+The owner checkout remains on `local/audit-update-20261031` with modified `.htaccess` and untracked files. The external updater requires a clean `main` worktree and was **not** run. Do not pull, reset, clean, or switch branches until local work is preserved and reconciled.
+
+The project-directory backup inventory found no full database backup or private-media archive. Owner database restore and private-media sample restore remain pending; no live database or private-media tree has been modified.
+
+## Current branch and verification note
+
+- PR #17 merged into `main` as `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`.
+- PR #18 merged into `main` as `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
+- The authoritative development branch is `main`; current baseline includes the accumulated feature stack plus Phase 1 and Phase 2 automated baselines.
+- Phase 1 latest workflow head `4bf013f81fc71bc32f8b221fefc1c778d00419d8`: PHP run 41238247509, Graphify run 41238247478, and database matrix 41238247686 all passed.
+- Phase 2 exact tested head `c23dde25f2bee53068c85e775ca56fa93f52e0a9`: PHP run 41238382181, Graphify run 41238382162, and database matrix 41238382193 all passed.
+- No live database migration, media restore, or deployment is claimed.
