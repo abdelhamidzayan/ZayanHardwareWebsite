@@ -107,7 +107,9 @@ Implemented and CI-verified:
 - [Graphify](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382162) — passed.
 - [Database integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382193) — passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, including migration 019.
 
-**Still open:** exhaustive object-level authorization review across every route/state transition; broader SQL/input-validation and output-encoding review; remaining upload/private-file edge cases; storage-recovery reconciliation and notification retry behavior; host-level updater/sudoers review. The CSRF static test is not proof of exhaustive authorization.
+**Additional merged security follow-up:** PR #19 merged into `main` as `bf871bba8de078588a0d17778ed4520199188f96`. Exact tested head `d58282608187d5cbd5af59c66c332b2a7394b20e` passed [database integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41239306049), [PHP syntax](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41239306080), and [Graphify](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41239306068). Skill-test authoring/input bounds, inactive-domain checks, public answer redaction, and bounded attempt-history persistence are now covered by a disposable-DB integration test.
+
+**Still open:** exhaustive object-level authorization review across every route/state transition; broader application-wide SQL/input-validation and output-encoding review (skill-test-specific validation is implemented); remaining upload/private-file edge cases; storage-recovery reconciliation and notification retry behavior; host-level updater/sudoers review. The CSRF static test is not proof of exhaustive authorization.
 
 Account anonymization has no approved CLI entry point or cron worker. A 30-day deadline does not mean automatic anonymization. Do not recreate the removed CLI or schedule it without separate review and explicit approval.
 
