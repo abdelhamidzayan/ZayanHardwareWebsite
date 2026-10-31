@@ -27,6 +27,14 @@ Before any work, read [AI_CONTEXT.md](AI_CONTEXT.md) and [the architecture map](
 - Run focused regression tests plus PHP/JS syntax and relevant database integration tests.
 - Review diffs and record what is implemented, tested, runtime-verified, and deployed separately.
 
+## GitHub Actions and usage budget
+- Keep the repository's GitHub Actions workflow files enabled and version-controlled. They are part of the project's verification system; do not delete them or permanently disable them to work around a quota limit.
+- Required CI coverage includes PHP/JavaScript syntax and focused tests, the fresh-install migration sequence across the supported MySQL/MariaDB versions, database integration tests, and Graphify generation/determinism checks.
+- When GitHub reports that included Actions minutes are exhausted, do not repeatedly rerun failed jobs or dispatch new workflows. A run that has no executed steps is not evidence that the application tests passed or failed.
+- Before any usage beyond the included allowance, verify the account's Actions billing budget. Use a **$0 spending budget** where supported to block accidental overage charges, and confirm that the budget applies to the relevant Actions usage. Do not assume this setting has been applied unless the owner confirms it.
+- Preserve the workflow YAML and test matrix while the quota is exhausted. Resume the full relevant CI matrix only after the account's displayed reset date or after the owner explicitly confirms that paid Actions usage is authorized. Batch related changes so the same matrix is not needlessly repeated.
+- Never mark an unverified commit as CI-passing. Record the exact commit SHA and separate implemented, CI-tested, locally/runtime-verified, and deployed states. CI must use disposable test databases and synthetic fixtures only.
+
 ## Git discipline
 - Do not merge PRs, push to the default branch, rewrite history, discard stashes, or overwrite owner changes without explicit approval.
 - Work on a dedicated branch and keep changes focused. Never describe a draft/unmerged PR as deployed.
