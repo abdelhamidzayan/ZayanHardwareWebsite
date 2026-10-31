@@ -415,13 +415,14 @@ final class PostDraft extends Model
             // A single-statement autocommit can lose its acknowledgement after
             // the row was deleted. Confirm through an independent connection
             // before touching any file.
+            $draftStillExists = null;
             try {
                 $check = Database::newConnection()->prepare(
                     'SELECT id FROM post_drafts WHERE id = ? AND user_id = ? LIMIT 1'
                 );
                 $check->execute([$id, $userId]);
                 $draftStillExists = $check->fetchColumn() !== false;
-                if (!$draftStillExists) {
+                if ($draftStillExists === false) {
                     foreach ($paths as $item) {
                         self::removePrivateFile((string) $item['storage_path']);
                         if (!empty($item['rendered_path'])) self::removePrivateFile((string) $item['rendered_path']);
@@ -435,6 +436,8 @@ final class PostDraft extends Model
                     'user_id' => $userId,
                 ]);
             }
+
+            if ($draftStillExists === true) throw $error;
 
             foreach ($paths as $item) {
                 self::recordStorageRecoveryTask((string) $item['storage_path'], 'draft_delete_outcome_unknown');
