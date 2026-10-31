@@ -135,7 +135,7 @@ final class DeviceCatalog extends Model
             );
             $manufacturer->execute([(int) $suggestion['manufacturer_id']]);
             $manufacturerRow = $manufacturer->fetch(\PDO::FETCH_ASSOC);
-            if (!$manufacturerRow || (int) $manufacturerRow['is_active'] !== 1) {
+            if (!$manufacturerRow || ($approve && (int) $manufacturerRow['is_active'] !== 1)) {
                 throw new \DomainException('manufacturer_unavailable');
             }
 
