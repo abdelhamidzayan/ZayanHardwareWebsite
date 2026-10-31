@@ -22,7 +22,7 @@ The documentation is a map, not a substitute for source inspection. Always verif
 
 ## GitHub Actions and CI budget
 
-GitHub Actions is part of the project's quality gate. Keep workflow files and their test matrix version-controlled; do not delete or permanently disable CI to work around exhausted minutes. When the included quota is exhausted, stop reruns and new dispatches until the reset date or explicit authorization for paid usage. Verify the Actions spending budget first; use a **$0 budget** where supported to prevent accidental overage. A run with no executed steps is neither a passing nor a failing application test. The full rules live in [AGENTS.md](AGENTS.md#github-actions-and-usage-budget).
+GitHub Actions is part of the project's quality gate. Keep workflow files and their test matrix version-controlled; do not delete or permanently disable CI to work around exhausted minutes. When the included quota is exhausted, stop reruns and new dispatches until the reset date or explicit authorization for paid usage. Verify the Actions spending budget first; use a **$0 budget** where supported to prevent accidental overage. A run with no executed steps is neither a passing nor a failing application test. The full rules live in [AGENTS.md](AGENTS.md#github-actions-and-usage-budget) and [the detailed Actions usage policy](docs/github-actions-policy.md).
 
 ## Run locally
 1. Copy `.env.example` to `.env` and edit it.
