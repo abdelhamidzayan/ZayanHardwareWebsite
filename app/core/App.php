@@ -191,7 +191,7 @@ final class App
 
     private static function sanitizeLogValue(mixed $value, string $key = '', int $depth = 0): mixed
     {
-        if ($key !== '' && preg_match('/password|passwd|token|secret|authorization|cookie|csrf|api[_-]?key|private[_-]?key/i', $key)) {
+        if ($key !== '' && preg_match('/password|passwd|token|secret|authorization|cookie|csrf|session[_-]?id|api[_-]?key|private[_-]?key/i', $key)) {
             return '[REDACTED]';
         }
 
@@ -241,7 +241,7 @@ final class App
         // Also cover bearer values appearing outside a standard header line.
         $value = preg_replace('/\\bBearer\\s+[^\\s,;]+/i', 'Bearer [REDACTED]', $value) ?? $value;
 
-        $pattern = "/\\b(password|passwd|access[_-]?token|refresh[_-]?token|id[_-]?token|token|secret|authorization|cookie|csrf|api[_-]?key)\\b\\s*[:=]\\s*(\"[^\"]*\"|'[^']*'|[^\\s,;&]+)/i";
+        $pattern = "/\\b(password|passwd|access[_-]?token|refresh[_-]?token|id[_-]?token|session[_-]?id|token|secret|authorization|cookie|csrf|api[_-]?key)\\b\\s*[:=]\\s*(\"[^\"]*\"|'[^']*'|[^\\s,;&]+)/i";
         return preg_replace($pattern, '$1=[REDACTED]', $value) ?? $value;
     }
 
