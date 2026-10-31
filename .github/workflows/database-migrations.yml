@@ -257,6 +257,15 @@ jobs:
           DB_PASS: root
         run: php tests/php/draft-publish-integration.php
 
+      - name: Exercise draft media recovery and symlink containment
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/draft-media-recovery-integration.php
+
       - name: Exercise personal-help attachment transactions and recovery
         env:
           DB_HOST: 127.0.0.1
