@@ -510,7 +510,7 @@ final class PostDraft extends Model
         }
     }
 
-    private static function removePrivateFile(string $relative): bool
+    private static function removePrivateFile(string $relative, ?string $draftStorageRootOverride = null): bool
     {
         $normalized = str_replace('\\', '/', ltrim($relative, '/'));
         if (preg_match('#^drafts/([a-f0-9-]{36})/([a-z0-9._-]{1,120})$#i', $normalized, $match) !== 1) {
@@ -520,8 +520,13 @@ final class PostDraft extends Model
             return false;
         }
 
-        $root = realpath(App::root('storage/private/drafts'));
+        $rootPath = $draftStorageRootOverride ?? App::root('storage/private/drafts');
+        $root = realpath($rootPath);
         if ($root === false) {
+            // The storage mount/root may be temporarily unavailable. We cannot
+            // prove the file is gone, so leave a durable task instead of
+            // silently treating the cleanup as complete.
+            self::recordStorageRecoveryTask($normalized, 'draft_media_storage_root_unavailable');
             App::log('WARNING', 'draft.media_cleanup_root_unavailable', [
                 'draft_id' => strtolower($match[1]),
             ]);
@@ -529,10 +534,19 @@ final class PostDraft extends Model
         }
         $draftDirectory = realpath($root . DIRECTORY_SEPARATOR . strtolower($match[1]));
         if ($draftDirectory === false) {
-            self::completeStorageRecoveryTask($normalized);
-            return true;
+            // realpath(false) does not distinguish a missing directory from an
+            // inaccessible one. Keep the task pending for explicit inspection.
+            self::recordStorageRecoveryTask($normalized, 'draft_media_directory_unavailable');
+            App::log('WARNING', 'draft.media_cleanup_directory_unavailable', [
+                'draft_id' => strtolower($match[1]),
+            ]);
+            return false;
         }
-        if (!str_starts_with($draftDirectory, $root . DIRECTORY_SEPARATOR) || !is_dir($draftDirectory)) {
+        $expectedDraftDirectory = $root . DIRECTORY_SEPARATOR . strtolower($match[1]);
+        if ($draftDirectory !== $expectedDraftDirectory || !is_dir($draftDirectory)) {
+            // Do not follow a UUID directory symlink into another draft folder,
+            // even when its target still sits somewhere inside the storage root.
+            self::recordStorageRecoveryTask($normalized, 'draft_media_directory_rejected');
             App::log('WARNING', 'draft.media_cleanup_directory_rejected', [
                 'draft_id' => strtolower($match[1]),
             ]);
@@ -596,20 +610,42 @@ final class PostDraft extends Model
         }
     }
 
-    private static function removePrivateDirectory(string $id): void
+    private static function removePrivateDirectory(string $id, ?string $draftStorageRootOverride = null): void
     {
         if (!preg_match('/^[a-f0-9-]{36}$/i', $id)) return;
-        $root = realpath(App::root('storage/private/drafts'));
-        if ($root === false) return;
-        $dir = realpath($root . DIRECTORY_SEPARATOR . $id);
-        if ($dir === false) return;
-        if (!str_starts_with($dir, $root . DIRECTORY_SEPARATOR) || !is_dir($dir)) return;
+        $rootPath = $draftStorageRootOverride ?? App::root('storage/private/drafts');
+        $normalizedId = strtolower($id);
+        $directoryTaskPath = 'drafts/' . $normalizedId . '/__directory__';
+        $root = realpath($rootPath);
+        if ($root === false) {
+            self::recordStorageRecoveryTask($directoryTaskPath, 'draft_media_directory_root_unavailable');
+            App::log('WARNING', 'draft.media_cleanup_root_unavailable', [
+                'draft_id' => $normalizedId,
+            ]);
+            return;
+        }
+        $expectedDirectory = $root . DIRECTORY_SEPARATOR . $normalizedId;
+        $dir = realpath($expectedDirectory);
+        if ($dir === false) {
+            self::recordStorageRecoveryTask($directoryTaskPath, 'draft_media_directory_unavailable');
+            App::log('WARNING', 'draft.media_cleanup_directory_unavailable', [
+                'draft_id' => $normalizedId,
+            ]);
+            return;
+        }
+        if ($dir !== $expectedDirectory || !is_dir($dir)) {
+            self::recordStorageRecoveryTask($directoryTaskPath, 'draft_media_directory_rejected');
+            App::log('WARNING', 'draft.media_cleanup_directory_rejected', [
+                'draft_id' => $normalizedId,
+            ]);
+            return;
+        }
 
         foreach (scandir($dir) ?: [] as $entry) {
             if ($entry === '.' || $entry === '..') continue;
             $path = $dir . DIRECTORY_SEPARATOR . $entry;
             if (is_file($path) || is_link($path)) {
-                self::removePrivateFile('drafts/' . strtolower($id) . '/' . $entry);
+                self::removePrivateFile('drafts/' . $normalizedId . '/' . $entry, $root);
             } else {
                 App::log('WARNING', 'draft.media_cleanup_unexpected_entry', [
                     'draft_id' => strtolower($id),
