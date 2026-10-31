@@ -129,7 +129,11 @@ final class RateLimiter
                  WHERE updated_at < (UTC_TIMESTAMP() - INTERVAL 2 DAY)'
             );
         } catch (\Throwable $cleanupError) {
-            \App\Core\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
+            \\App\\Core\\App::logException(
+                'WARNING',
+                'rate_limit.bucket_cleanup_failed',
+                $cleanupError
+            );
         }
     }
 
