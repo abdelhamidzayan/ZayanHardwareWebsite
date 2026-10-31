@@ -70,13 +70,13 @@ final class AdminSkillTestController extends Controller
         }
 
         $pdo = Database::connection();
-        $stmt = $pdo->prepare('SELECT 1 FROM skill_domains WHERE id = ? AND is_active = 1');
-        $stmt->execute([$domainId]);
-        if (!$stmt->fetchColumn()) return $this->fail('/admin/skill-tests', 'المجال الفني غير موجود.');
-
         $pdo->beginTransaction();
         try {
             AdminRosterService::assertActorActive($pdo, (int) $admin['id']);
+            $domain = $pdo->prepare('SELECT id FROM skill_domains WHERE id = ? AND is_active = 1 FOR UPDATE');
+            $domain->execute([$domainId]);
+            if (!$domain->fetchColumn()) throw new \DomainException('skill_domain_unavailable');
+
             $pdo->prepare(
                 'INSERT INTO skill_tests (skill_domain_id, title, version, questions_json, pass_score, max_attempts, cooldown_minutes, is_active, created_by)
                  VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)'
@@ -97,6 +97,9 @@ final class AdminSkillTestController extends Controller
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($e instanceof \DomainException && $e->getMessage() === 'skill_domain_unavailable') {
+                return $this->fail('/admin/skill-tests', 'المجال الفني غير موجود أو تم إيقافه. حدّث الصفحة وحاول مرة أخرى.');
+            }
             throw $e;
         }
 
