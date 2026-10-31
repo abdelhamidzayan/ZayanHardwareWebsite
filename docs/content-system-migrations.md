@@ -36,6 +36,7 @@ Profile, composer and consent additions follow migration 010:
 - `015_deleted_accounts_without_contact.sql`
 - `016_protect_technical_history.sql` — changes dependent-content and attribution foreign keys to `RESTRICT`, preventing cascading loss of technical history.
 - `017_block_physical_content_delete.sql` — adds `BEFORE DELETE` guards on core technical, personal-help and audit tables, including standalone rows that have no dependents.
+- `018_storage_recovery_tasks.sql` — stores retry/reconciliation metadata when filesystem compensation cannot safely complete; task rows are retained and no cleanup worker is started automatically.
 
 Migration 013 uses `CREATE TABLE IF NOT EXISTS` because the terms table is already created by the supported 002 sequence. Migrations 014 and 015 have already been applied to the owner's current local database; never replay them there.
 
