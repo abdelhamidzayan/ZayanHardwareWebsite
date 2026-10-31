@@ -238,6 +238,7 @@ final class IssueController extends Controller
         } catch (\DomainException $error) {
             $message = match ($error->getMessage()) {
                 'not_owner_or_closed' => 'تحديث التشخيص متاح لصاحب طلب المساعدة فقط ما دام الطلب غير مغلق.',
+                'diagnostic_only_for_help_request' => 'تحديثات التشخيص مخصصة لطلبات المساعدة الفنية فقط.',
                 'media_move_failed', 'storage_unavailable' => 'تعذر حفظ أحد المرفقات؛ لم يتم نشر التحديث حتى لا يظهر ناقصًا.',
                 default => 'تعذر حفظ تحديث التشخيص. لم يتم اعتماد أي جزء من العملية.',
             };
