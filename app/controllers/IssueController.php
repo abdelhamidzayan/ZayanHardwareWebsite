@@ -222,19 +222,36 @@ final class IssueController extends Controller
             return $this->fail('/issues/' . $id, 'راجع المرفقات: الحد الأقصى 8 ملفات صور أو PDF، كل ملف حتى 8 ميجابايت.');
         }
         try {
-            $updateId = Issue::addDiagnosticUpdate($id, (int) $user['id'], $body);
-            $stored = ContentEditorService::storeUploads($id, (int) $user['id'], $uploads, $body);
-            $resolvedBody = ContentEditorService::resolveInlineTokens($body, $stored['map']);
-            Issue::updateDiagnosticUpdateContent($updateId, (int) $user['id'], $resolvedBody);
-            ContentEditorService::pruneUnusedInlineMedia($id);
+            $created = (new ContentWriteService(Database::connection()))->createDiagnosticUpdate(
+                $id,
+                (int) $user['id'],
+                $body,
+                $uploads
+            );
+            $updateId = $created['id'];
+            $resolvedBody = $created['body'];
             NotificationService::notifyIssueParticipants(
                 $id, (int) $user['id'], 'diagnostic_update', 'تحديث جديد للتشخيص',
                 $resolvedBody, 'diagnostic-update:' . $updateId
             );
-            $this->flash((int) $stored['failed'] > 0 ? 'info' : 'success',
-                (int) $stored['failed'] > 0 ? 'تمت إضافة التحديث، لكن تعذر حفظ بعض المرفقات.' : 'تمت إضافة تحديث التشخيص مع حفظ توقيته.');
-        } catch (\DomainException) {
-            $this->flash('error', 'تحديث التشخيص متاح لصاحب طلب المساعدة فقط ما دام الطلب غير مغلق.');
+            $this->flash('success', 'تمت إضافة تحديث التشخيص وحفظ جميع مرفقاته.');
+        } catch (\DomainException $error) {
+            $message = match ($error->getMessage()) {
+                'not_owner_or_closed' => 'تحديث التشخيص متاح لصاحب طلب المساعدة فقط ما دام الطلب غير مغلق.',
+                'media_move_failed', 'storage_unavailable' => 'تعذر حفظ أحد المرفقات؛ لم يتم نشر التحديث حتى لا يظهر ناقصًا.',
+                default => 'تعذر حفظ تحديث التشخيص. لم يتم اعتماد أي جزء من العملية.',
+            };
+            App::logException('WARNING', 'issue.diagnostic_publish_failed', $error, [
+                'issue_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', $message);
+        } catch (\Throwable $error) {
+            App::logException('ERROR', 'issue.diagnostic_publish_failed', $error, [
+                'issue_id' => $id,
+                'user_id' => (int) $user['id'],
+            ]);
+            $this->flash('error', 'حدث خطأ داخلي. لم يتم اعتماد تحديث التشخيص أو مرفقاته.');
         }
         return $this->redirect('/issues/' . $id . '#diagnostic-updates');
     }
