@@ -465,6 +465,21 @@ try {
     }
     expectContentWrite($wrongTypeRejected, 'Diagnostic timeline must only accept help_request posts.');
 
+    // A concurrent resolve/close transition must prevent new replies.
+    $pdo->prepare("UPDATE issues SET status = 'resolved' WHERE id = ?")->execute([$issueId]);
+    $replyCountBeforeClosedAttempt = $pdo->prepare('SELECT COUNT(*) FROM issue_replies WHERE issue_id = ?');
+    $replyCountBeforeClosedAttempt->execute([$issueId]);
+    $closedReplyCount = (int) $replyCountBeforeClosedAttempt->fetchColumn();
+    $closedReplyRejected = false;
+    try {
+        $service->createReply($issueId, $ownerId, 'This reply must not be added to a resolved issue.', null, []);
+    } catch (DomainException $error) {
+        $closedReplyRejected = $error->getMessage() === 'discussion_closed';
+    }
+    expectContentWrite($closedReplyRejected, 'Resolved issue must reject a new reply at the model transaction boundary.');
+    $replyCountBeforeClosedAttempt->execute([$issueId]);
+    expectContentWrite((int) $replyCountBeforeClosedAttempt->fetchColumn() === $closedReplyCount, 'Rejected reply must leave the thread unchanged.');
+
     // A failed COMMIT followed by a successful ROLLBACK is a confirmed rollback:
     // remove the moved file and do not create an unnecessary recovery task.
     $commitRollbackSource = makeUploadFile($sourceRoot, 'commit-failure-rollback.pdf');
