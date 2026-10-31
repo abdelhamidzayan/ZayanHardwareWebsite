@@ -28,6 +28,22 @@ The IP bucket is hashed before storage. Old buckets are pruned opportunistically
 Incoming uploads already use PHP temporary upload files and `move_uploaded_file()`; each upload service validates the temporary file before moving it into private storage. Avatar image re-encoding still requires the image library to decode the bounded 5 MiB source image.
 
 
+## Serialized administrative account transitions
+
+The admin site updater now acquires the same MySQL advisory lock used by account status/role changes, deletion requests, and retention anonymization: `zayan_hardware_admin_deletion_request`. It holds that connection-level lock from the database recheck until the update command returns, and releases it in a `finally` block. The lock is acquired before the active-admin row check; lock acquisition failure aborts the update. This prevents a concurrent suspension, role demotion, deletion request, or anonymization from racing with the system update.
+
+The regression tests require the updater and account lifecycle write paths to acquire and release the same lock. The updater script and sudoers configuration remain host-level controls requiring local verification.
+
+## Frontend output / DOM sink review
+
+The reviewed JavaScript files contain three `innerHTML` assignments:
+- `app.js` and `register.js` assign only fixed SVG icon fragments selected by a boolean mode; no user-provided text is inserted.
+- `pwa-guide.js` constructs the install guide from fixed platform-specific labels, instructions, and steps selected from browser feature detection; those values do not come from account or post content.
+
+The reviewed issue, help-request, profile, authentication, and admin templates use the shared `$e` HTML-escaping helper for dynamic text and attributes. `JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP` protects the server-generated initial composer JSON embedded in a script context. Raw `$content` in the application layout is a captured server-side template render, not user content passed directly to HTML.
+
+Re-run this review when a new dynamic DOM sink, HTML renderer, or inline script payload is introduced. Prefer `textContent` and DOM node construction for any content derived from users or external services.
+
 ## Authentication session revocation
 
 Migration `019_session_version_invalidation.sql` adds `users.auth_version`. A successful login stores the current version in the session; authenticated requests compare the session value with the current database value and clear the session when they differ.
