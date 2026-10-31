@@ -377,14 +377,59 @@ final class PostDraft extends Model
         self::removePrivateFile($relative);
     }
 
-    private static function removePrivateFile(string $relative): void
+    /**
+     * Remove a just-uploaded draft file only after proving that the database
+     * does not reference it. Returns referenced, removed, or unknown.
+     */
+    public static function cleanupUploadIfUnreferenced(
+        string $draftId,
+        string $mediaUuid,
+        int $userId,
+        string $relative,
+        string $column
+    ): string {
+        if (!in_array($column, ['storage_path', 'rendered_path'], true)) {
+            throw new \InvalidArgumentException('Invalid draft media path column.');
+        }
+        try {
+            $pdo = self::db();
+            if ($pdo->inTransaction()) {
+                self::recordStorageRecoveryTask($relative, 'draft_media_commit_outcome_unknown');
+                return 'unknown';
+            }
+
+            $stmt = $pdo->prepare(
+                "SELECT m.{$column} FROM post_draft_media m
+                 JOIN post_drafts d ON d.id = m.draft_id
+                 WHERE m.draft_id = ? AND m.media_uuid = ? AND d.user_id = ? LIMIT 1"
+            );
+            $stmt->execute([$draftId, $mediaUuid, $userId]);
+            $storedPath = $stmt->fetchColumn();
+            if (is_string($storedPath) && hash_equals($storedPath, $relative)) {
+                return 'referenced';
+            }
+
+            return self::removePrivateFile($relative) ? 'removed' : 'unknown';
+        } catch (\Throwable $error) {
+            self::recordStorageRecoveryTask($relative, 'draft_media_commit_outcome_unknown');
+            App::logException('ERROR', 'draft.media_upload_outcome_unknown', $error, [
+                'draft_id' => $draftId,
+                'media_uuid' => $mediaUuid,
+                'user_id' => $userId,
+                'path_column' => $column,
+            ]);
+            return 'unknown';
+        }
+    }
+
+    private static function removePrivateFile(string $relative): bool
     {
         $normalized = str_replace('\\', '/', ltrim($relative, '/'));
         if (preg_match('#^drafts/([a-f0-9-]{36})/([a-z0-9._-]{1,120})$#i', $normalized, $match) !== 1) {
             App::log('WARNING', 'draft.media_cleanup_path_rejected', [
                 'reason' => 'invalid_relative_path',
             ]);
-            return;
+            return false;
         }
 
         $root = realpath(App::root('storage/private/drafts'));
@@ -392,30 +437,31 @@ final class PostDraft extends Model
             App::log('WARNING', 'draft.media_cleanup_root_unavailable', [
                 'draft_id' => strtolower($match[1]),
             ]);
-            return;
+            return false;
         }
         $draftDirectory = realpath($root . DIRECTORY_SEPARATOR . strtolower($match[1]));
         if ($draftDirectory === false) {
             self::completeStorageRecoveryTask($normalized);
-            return;
+            return true;
         }
         if (!str_starts_with($draftDirectory, $root . DIRECTORY_SEPARATOR) || !is_dir($draftDirectory)) {
             App::log('WARNING', 'draft.media_cleanup_directory_rejected', [
                 'draft_id' => strtolower($match[1]),
             ]);
-            return;
+            return false;
         }
 
         $file = $draftDirectory . DIRECTORY_SEPARATOR . $match[2];
         if (!is_file($file) && !is_link($file)) {
             self::completeStorageRecoveryTask($normalized);
-            return;
+            return true;
         }
         if (!@unlink($file)) {
             self::recordStorageRecoveryTask($normalized, 'draft_media_cleanup_failed');
-            return;
+            return false;
         }
         self::completeStorageRecoveryTask($normalized);
+        return true;
     }
 
     private static function recordStorageRecoveryTask(string $relativePath, string $reason): void
@@ -431,9 +477,14 @@ final class PostDraft extends Model
                     status = 'pending',
                     attempts = attempts + 1,
                     last_attempt_at = UTC_TIMESTAMP(),
-                    last_error_code = 'unlink_failed',
+                    last_error_code = VALUES(last_error_code),
                     completed_at = NULL"
-            )->execute([$relativePath, hash('sha256', $relativePath), $reason]);
+            )->execute([
+                $relativePath,
+                hash('sha256', $relativePath),
+                $reason,
+                $reason === 'draft_media_commit_outcome_unknown' ? 'commit_unknown' : 'unlink_failed',
+            ]);
         } catch (\Throwable $error) {
             App::logException('CRITICAL', 'draft.media_recovery_task_write_failed', $error, [
                 'reason_code' => $reason,
