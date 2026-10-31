@@ -68,11 +68,12 @@ Implemented on `phase2/security-graphify-20261031`; the exact latest CI head mus
 - Login/session verification is bound to the version checked with the password. Conditional password rehash updates prevent an in-flight old-password login from overwriting a newer administrator-reset hash.
 - Regression tests cover stale sessions, password-reset/login races, suspension/reactivation with an old cookie, generic login error messages, and a static policy over every account lifecycle mutation.
 - Automated CSRF policy test covers all 49 declared POST routes, including explicit `accept/decline → respond` delegation, and a strict public POST allow-list of `/login` and `/register`.
-- Admin site update is protected by CSRF, per-user rate limiting, an active-admin database recheck, fixed command arguments, and audit logging. The external update script and sudoers rule still require local inspection.
+- Admin site update is protected by CSRF, per-user rate limiting, an active-admin database recheck, fixed command arguments, audit logging, and the shared account lifecycle advisory lock held through command completion. Its external script and sudoers rule still require local inspection.
+- A frontend sink review covered all 13 JavaScript files and the key issue/help/profile/auth/admin templates. The only `innerHTML` sinks are fixed SVG fragments and fixed platform-specific PWA guide copy; dynamic template text uses the shared HTML escape helper, and composer JSON is emitted with `JSON_HEX_*`.
 - Graphify artifact was inspected; five dynamic API nodes were manually mapped to Push endpoints, username availability, and generic Service Worker navigation/static requests. The duplicated 002 migration prefix remains a documented sequential order, not an alternate migration.
 - See [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md), [security hardening](security-hardening.md), and [JavaScript API route map](javascript-api-route-map.md).
 
-The remaining Phase 2 gate is exact-head CI after the latest account state/version changes, plus the full object ownership/participant and model-boundary review, XSS/output encoding and private file/upload checks, and local verification of the external updater/sudoers. No Phase 2 completion is claimed yet.
+The latest branch must retain a passing exact-head CI gate after documentation and shared-lock changes. The remaining Phase 2 gate also includes the full object ownership/participant and model-boundary review, full SQL/input validation review, private file/upload containment, and local verification of the external updater/sudoers. No Phase 2 completion is claimed yet.
 
 ## Phase 3 — UI, PWA, cross-device acceptance, and final readiness
 
