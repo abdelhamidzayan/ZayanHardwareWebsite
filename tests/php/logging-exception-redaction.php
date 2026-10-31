@@ -119,7 +119,11 @@ try {
         }
     }
 
-    foreach ([\n        'RuntimeException', 'PDOException', 'HY000', '999', 'test.push.exception',\n        'test.authorization', 'test.cookie', 'test.url', 'test.query', 'test.bearer',\n        'test.channel.access', 'test.channel.security', 'test.channel.audit', '[REDACTED]',\n    ] as $expected) {
+    foreach ([
+        'RuntimeException', 'PDOException', 'HY000', '999', 'test.push.exception',
+        'test.authorization', 'test.cookie', 'test.url', 'test.query', 'test.bearer',
+        'test.channel.access', 'test.channel.security', 'test.channel.audit', '[REDACTED]',
+    ] as $expected) {
         if (!str_contains($contents, $expected)) {
             throw new RuntimeException('A safe exception diagnostic was not recorded: ' . $expected);
         }
