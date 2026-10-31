@@ -40,14 +40,17 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | Public/private route and upload checks | Focused route and upload tests exist | Implemented; current-head CI pending |
 | Exception log redaction | Complete Authorization/Cookie header redaction, bearer/query-token checks, four-channel JSON checks, and retention regression coverage added | Implemented; PHP test pending execution |
 | Access/security/audit channels | Logger provides four channels; real Apache write permissions and HTTP lifecycle still need validation | Runtime check pending |
-| Disposable backup/restore comparison | Workflow now dumps, compresses, hashes, restores into a new schema, and compares tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts | Implemented in CI; awaiting executed workflow result |\n| Owner's full database backup/restore comparison | Previously recorded owner backup/hash has not yet been restored to a separate local test database | Pending owner-machine verification |
-| Pending storage recovery reconciliation | Durable recovery records exist; no automatic worker is present | Procedure pending |\n| Read-only schema comparator | Added `bin/compare-database-schema.php` for object and optional row-count comparison between two separate databases | Implemented; syntax/runtime check pending |
+| Disposable backup/restore comparison | Workflow now dumps, compresses, hashes, restores into a new schema, and compares tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts | Implemented in CI; awaiting executed workflow result |
+| Owner's full database backup/restore comparison | Previously recorded owner backup/hash has not yet been restored to a separate local test database | Pending owner-machine verification |
+| Pending storage recovery reconciliation | Durable recovery records exist; no automatic worker is present | Procedure pending |
+| Read-only schema comparator | Added `bin/compare-database-schema.php` for object and optional row-count comparison between two separate databases | Implemented; syntax/runtime check pending |
 | Current-head Actions verification | PR #16 head jobs completed with zero steps because included Actions minutes were exhausted | Not verified |
 
 ## 5. Existing technical documentation
 
 - [Architecture and dependency map](architecture-code-map.md)
-- [Fresh database installation order](../database/FRESH_INSTALL.md)\n- [Database backup, restore, and comparison runbook](DATABASE_BACKUP_RESTORE.md)
+- [Fresh database installation order](../database/FRESH_INSTALL.md)
+- [Database backup, restore, and comparison runbook](DATABASE_BACKUP_RESTORE.md)
 - [Content system implementation](content-system-implementation.md)
 - [Content migrations](content-system-migrations.md)
 - [Security hardening](security-hardening.md)
@@ -67,7 +70,13 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 - The owner's local backup and local database work must be performed only on the real machine after checking the exact source/target DB and rollback path. Never restore into the source database.
 - Local environment details in [AI_CONTEXT.md](../AI_CONTEXT.md) are dated handoff notes; recheck before acting.
 
-## 7. Latest Phase 1 implementation checkpoint\n\nOn `phase1/foundation-reliability-20261031`, the following Phase 1 work is implemented but not yet test-executed: a read-only schema comparator, an automated disposable backup/restore/checksum/row-count step in the three-engine database workflow, and stronger logging redaction/channel/retention regression coverage. The comparator includes views, routines, and events in addition to tables, columns, indexes, foreign keys, CHECK constraints, triggers, and row counts. No live database was modified.\n\nThe owner-machine restore, Apache permissions, and live HTTP smoke checks remain unverified. GitHub Actions was previously quota-blocked; recheck usage before triggering workflows.\n\n## 8. Working rules for all three phases
+## 7. Latest Phase 1 implementation checkpoint
+
+On `phase1/foundation-reliability-20261031`, the following Phase 1 work is implemented but not yet test-executed: a read-only schema comparator, an automated disposable backup/restore/checksum/row-count step in the three-engine database workflow, and stronger logging redaction/channel/retention regression coverage. The comparator includes views, routines, and events in addition to tables, columns, indexes, foreign keys, CHECK constraints, triggers, and row counts. No live database was modified.
+
+The owner-machine restore, Apache permissions, and live HTTP smoke checks remain unverified. GitHub Actions was previously quota-blocked; recheck usage before triggering workflows.
+
+## 8. Working rules for all three phases
 
 1. Follow the relevant scope and pass criteria in [COMPLETION_PLAN.md](COMPLETION_PLAN.md); do not broaden each phase into an unbounded audit.
 2. Inspect branch, commit, and `git status` before editing. Preserve modified and untracked local files.
