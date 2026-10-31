@@ -61,16 +61,18 @@ Exit criteria:
 
 ### Phase 2 implementation checkpoint
 
-Implemented on `phase2/security-graphify-20261031`, pending execution of the Phase 2 CI suite:
+Implemented on `phase2/security-graphify-20261031`; the exact latest CI head must pass after the most recent account lifecycle updates:
 
 - Generic public login errors for invalid credentials and suspended accounts; blocked-account attempts count against the same IP/identifier rate limits.
-- Per-account `auth_version` migration 019. Administrator password resets increment the version and invalidate prior sessions.
-- Login/session verification bound to the version checked with the password. Conditional password rehash updates prevent an in-flight login using an old password from overwriting an administrator-reset hash.
-- Regression test for stale-session invalidation and the concurrent password-reset/login race.
-- Automated CSRF policy test for every declared POST route (49 current declarations), including the explicit `accept/decline → respond` delegation, and a strict public POST allow-list of `/login` and `/register`.
-- [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md).
+- Per-account `auth_version` migration 019. Administrator password resets, account status changes/reactivation, role changes, member deletion requests, and final identity anonymization increment the version, invalidating every previously issued session.
+- Login/session verification is bound to the version checked with the password. Conditional password rehash updates prevent an in-flight old-password login from overwriting a newer administrator-reset hash.
+- Regression tests cover stale sessions, password-reset/login races, suspension/reactivation with an old cookie, generic login error messages, and a static policy over every account lifecycle mutation.
+- Automated CSRF policy test covers all 49 declared POST routes, including explicit `accept/decline → respond` delegation, and a strict public POST allow-list of `/login` and `/register`.
+- Admin site update is protected by CSRF, per-user rate limiting, an active-admin database recheck, fixed command arguments, and audit logging. The external update script and sudoers rule still require local inspection.
+- Graphify artifact was inspected; five dynamic API nodes were manually mapped to Push endpoints, username availability, and generic Service Worker navigation/static requests. The duplicated 002 migration prefix remains a documented sequential order, not an alternate migration.
+- See [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md), [security hardening](security-hardening.md), and [JavaScript API route map](javascript-api-route-map.md).
 
-No Phase 2 tests are claimed as passing until the draft PR workflows execute on the current branch head. The full authorization matrix and Graphify review remain in progress; further findings may require additional fixes.
+The remaining Phase 2 gate is exact-head CI after the latest account state/version changes, plus the full object ownership/participant and model-boundary review, XSS/output encoding and private file/upload checks, and local verification of the external updater/sudoers. No Phase 2 completion is claimed yet.
 
 ## Phase 3 — UI, PWA, cross-device acceptance, and final readiness
 
@@ -95,7 +97,7 @@ Exit criteria:
 | Phase | Status | Gate |
 |---|---|---|
 | Phase 1 — Foundation and operations | **CI passed; local acceptance pending** | Current branch: `phase1/foundation-reliability-20261031`; PR #17 remains draft |
-| Phase 2 — Security and Graphify | **In progress; CI pending** | Current branch: `phase2/security-graphify-20261031`; draft PR pending |
+| Phase 2 — Security and Graphify | **In progress; exact-head CI pending** | Current branch: `phase2/security-graphify-20261031`; PR #18 draft |
 | Phase 3 — UI, PWA, final acceptance | Planned | Starts after Phase 2 gate |
 
 ## Current branch and verification note
