@@ -24,6 +24,7 @@ final class AdminFeaturedPostsController extends Controller
              FROM issues i
              JOIN users u ON u.id = i.user_id
              LEFT JOIN featured_home_issues fp ON fp.issue_id = i.id
+             WHERE i.deleted_at IS NULL
              ORDER BY i.created_at DESC
              LIMIT 200"
         )->fetchAll();
@@ -51,7 +52,7 @@ final class AdminFeaturedPostsController extends Controller
         }
 
         $pdo = Database::connection();
-        $check = $pdo->prepare('SELECT id FROM issues WHERE id = ?');
+        $check = $pdo->prepare('SELECT id FROM issues WHERE id = ? AND deleted_at IS NULL');
         $check->execute([$id]);
         if (!$check->fetchColumn()) return $this->fail('/admin', 'المنشور غير موجود.');
 
