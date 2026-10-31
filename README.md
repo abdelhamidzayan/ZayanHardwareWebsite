@@ -13,6 +13,10 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 5. **[GitHub Actions and usage-budget policy](AGENTS.md#github-actions-and-usage-budget)** — CI requirements, quota exhaustion, and zero-overage safeguards.
 6. [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
 
+## GitHub Actions and CI budget
+
+GitHub Actions is part of the project's quality gate. Keep workflow files and their test matrix version-controlled; do not delete or permanently disable CI to work around exhausted minutes. When the included quota is exhausted, stop reruns and new dispatches until the reset date or explicit authorization for paid usage. Verify the Actions spending budget first; use a **$0 budget** where supported to prevent accidental overage. A run with no executed steps is neither a passing nor a failing application test. The full rules live in [AGENTS.md](AGENTS.md#github-actions-and-usage-budget).
+
 The architecture map is the first technical reference. Always verify the active branch, commit, runtime, and database before changing code. Documentation and CI do not prove that an unmerged branch is deployed.
 
 ## Run locally
