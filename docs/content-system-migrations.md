@@ -34,7 +34,8 @@ Profile, composer and consent additions follow migration 010:
 - `013_terms_acceptance_audit.sql`
 - `014_rate_limit_buckets.sql`
 - `015_deleted_accounts_without_contact.sql`
+- `016_protect_technical_history.sql` — changes dependent-content and attribution foreign keys to `RESTRICT`, preventing physical deletion of technical history.
 
 Migration 013 uses `CREATE TABLE IF NOT EXISTS` because the terms table is already created by the supported 002 sequence. Migrations 014 and 015 have already been applied to the owner's current local database; never replay them there.
 
-The migrations add tables/columns and preserve existing technical issue IDs, replies, attachments, issue-result records, edit history, and reputation events. Routine content deletion remains soft-delete/retention behavior; do not introduce physical content cleanup as part of schema installation.
+Migration 016 additionally changes referential actions to `RESTRICT` on technical and personal-help records so a future hard-delete path cannot cascade away posts, replies, attachments, edit history, diagnosis, repair outcomes, consent records, or attribution. Routine content deletion remains soft-delete/retention behavior; do not introduce physical content cleanup as part of schema installation.
