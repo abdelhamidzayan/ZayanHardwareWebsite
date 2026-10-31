@@ -113,7 +113,8 @@ Record the following separately:
 | Restore into a new separate database | Pending owner-machine verification |
 | Schema object comparison | Pending owner-machine verification |
 | Row-count comparison | Pending owner-machine verification |
-| Critical row/attachment-reference spot checks | Pending owner-machine verification |\n| Private-media backup inventory and isolated sample restore | Pending owner-machine verification |
+| Critical row/attachment-reference spot checks | Pending owner-machine verification |
+| Private-media backup inventory and isolated sample restore | Pending owner-machine verification |
 | CI disposable backup/restore matrix | Added to workflow; awaits executed CI result |
 
 Never mark the owner's backup as restore-verified until the target restore and comparisons actually pass.
