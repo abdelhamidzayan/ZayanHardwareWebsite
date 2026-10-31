@@ -4,7 +4,7 @@
  */
 'use strict';
 const CACHE_PREFIX='zayan-hardware-static-';
-const STATIC_CACHE=CACHE_PREFIX+'v15';
+const STATIC_CACHE=CACHE_PREFIX+'v16';
 const OFFLINE_URL=new URL('./offline.html',self.registration.scope).href;
 const STATIC_PATH=/\/(?:css|js|assets)\//;
 const STATIC_FILE=/\.(?:css|js|svg|png|jpg|jpeg|webp|woff2?)$/i;
@@ -13,7 +13,7 @@ self.addEventListener('activate',(event)=>{event.waitUntil((async()=>{const keys
 self.addEventListener('fetch',(event)=>{const request=event.request;if(request.method!=='GET')return;const url=new URL(request.url);if(url.origin!==self.location.origin)return;
 if(request.mode==='navigate'){event.respondWith((async()=>{try{return await fetch(request);}catch(_){const cache=await caches.open(STATIC_CACHE);return(await cache.match(OFFLINE_URL))||new Response('أنت غير متصل بالإنترنت. اتصل بالشبكة ثم حاول مجددًا.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;}
 if(!STATIC_PATH.test(url.pathname)||!STATIC_FILE.test(url.pathname))return;
-event.respondWith((async()=>{const cache=await caches.open(STATIC_CACHE);const cached=await cache.match(request);if(cached)return cached;try{const response=await fetch(request);if(response&&response.ok&&response.type==='basic')await cache.put(request,response.clone());return response;}catch(_){return new Response('',{status:504,statusText:'Offline'});}})());});
+event.respondWith((async()=>{const cache=await caches.open(STATIC_CACHE);try{const freshRequest=new Request(request,{cache:'no-cache'});const response=await fetch(freshRequest);if(response&&response.ok&&response.type==='basic')await cache.put(request,response.clone());return response;}catch(_){const cached=await cache.match(request);if(cached)return cached;return new Response('',{status:504,statusText:'Offline'});}})());});
 
 
 self.addEventListener('push',(event)=>{
