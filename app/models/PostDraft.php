@@ -568,7 +568,7 @@ final class PostDraft extends Model
                 $relativePath,
                 hash('sha256', $relativePath),
                 $reason,
-                $reason === 'draft_media_commit_outcome_unknown' ? 'commit_unknown' : 'unlink_failed',
+                (str_contains($reason, 'outcome_unknown') || str_contains($reason, 'commit')) ? 'commit_unknown' : 'unlink_failed',
             ]);
         } catch (\Throwable $error) {
             App::logException('CRITICAL', 'draft.media_recovery_task_write_failed', $error, [
