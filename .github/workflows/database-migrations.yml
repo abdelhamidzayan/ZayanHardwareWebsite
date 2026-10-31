@@ -172,7 +172,7 @@ jobs:
             trg_help_requests_block_physical_delete trg_help_request_messages_block_physical_delete
             trg_help_request_attachments_block_physical_delete trg_help_request_publications_block_physical_delete
             trg_help_public_posts_block_physical_delete trg_device_model_suggestions_block_physical_delete
-            trg_technician_profile_specialization_history_block_physical_delete
+            trg_profile_specialization_history_no_delete
           )
           for trigger in "${expected_triggers[@]}"; do
             trigger_exists="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = '${DB_NAME}' AND TRIGGER_NAME = '${trigger}';")"
