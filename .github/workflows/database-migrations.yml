@@ -210,6 +210,15 @@ jobs:
           fi
           echo "Full fresh-install schema and content smoke test passed on ${{ matrix.database.label }} (FKs: ${fk_count})"
 
+      - name: Verify last active administrator protection
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/admin-roster-integration.php
+
       - name: Verify model-level issue review and vote authorization
         env:
           DB_HOST: 127.0.0.1
