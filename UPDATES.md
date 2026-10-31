@@ -3,12 +3,12 @@
 ## 2026-10-31 — Phase 2 starts: session revocation and POST CSRF matrix
 
 - **Type:** Security / Authentication / Tests / Documentation / Database
-- **Summary:** Started Phase 2 on a branch based on the Phase 1 CI candidate. Hardened login failure handling, made admin password resets revoke previously issued sessions, closed the in-flight stale-password rehash race, and added automated CSRF coverage for every declared POST route.
-- **Code areas:** `AuthService`, `AuthController`, `User`, `AdminUserController`, `RateLimiter`, migration `019_session_version_invalidation.sql`, `tests/php/auth-session-version-integration.php`, `tests/php/rate-limiter-integration.php`, `tests/php/post-route-csrf-policy.php`, and the PHP/database workflows.
+- **Summary:** Hardened login information disclosure, made account/password/role lifecycle transitions revoke previous sessions, closed the in-flight stale-password rehash race, protected the admin updater, and added automated CSRF/authorization regression gates.
+- **Code areas:** `AuthService`, `AuthController`, `User`, `AdminUserController`, `AccountController`, `AccountRetentionService`, `AdminUpdateController`, `RateLimiter`, migration `019_session_version_invalidation.sql`, session/login/account-policy/admin-update/POST-CSRF tests, Graphify JavaScript route map, and PHP/database workflows.
 - **Database:** Migration 019 adds `users.auth_version` (default 1). It is included in the fresh-install sequence and disposable database workflow. It has **not** been applied to the owner's local database.
-- **Safety:** Public login errors no longer disclose suspended-account status. An old login attempt cannot overwrite a newer password hash because the rehash update requires the same auth version used during password verification. Existing sessions without the version will be required to sign in again after the migration is deployed.
-- **Verification:** Not yet executed on this branch. CI has not been run for Phase 2; the integration test and route scan are pending. Do not mark these fixes tested until the draft PR workflow passes.
-- **Documentation:** [Completion plan](docs/COMPLETION_PLAN.md) · [Current state](docs/CURRENT_STATE.md) · [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md).
+- **Safety:** Public login errors do not disclose suspended-account status. Password reset, suspension/ban/reactivation, role change, deletion request, and identity anonymization increment the auth version. Old sessions remain invalid after reactivation; an in-flight old-password login cannot overwrite a newer password hash. Existing sessions without the version must sign in again after the migration is deployed.
+- **Verification:** Earlier Phase 2 CI runs passed the PHP/Graphify/database baseline through migration 019, but later commits added admin-update hardening, generic login error checks, and account state/role session invalidation. The latest exact-head workflows are pending. Do not mark the newest changes tested until all current-head jobs pass.
+- **Documentation:** [Completion plan](docs/COMPLETION_PLAN.md) · [Current state](docs/CURRENT_STATE.md) · [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md) · [Security hardening](docs/security-hardening.md) · [JavaScript route map](docs/javascript-api-route-map.md).
 - **Status:** Implemented on `phase2/security-graphify-20261031`; tests pending; not merged to `main` or deployed.
 
 ---
