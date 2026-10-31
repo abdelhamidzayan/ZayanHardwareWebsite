@@ -16,7 +16,7 @@ $includeRows = false;
 foreach (array_slice($argv, 1) as $argument) {
     if ($argument === '--help' || $argument === '-h') {
         echo "Usage: DB_NAME=source_database php bin/compare-database-schema.php --compare-to=restored_database [--rows]\n";
-        echo "Read-only comparison of tables, columns, indexes, foreign keys, CHECK constraints, triggers, and optionally row counts.\n";
+        echo "Read-only comparison of tables, views, columns, indexes, foreign keys, CHECK constraints, triggers, routines, events, and optionally row counts.\n";
         exit(0);
     }
     if (str_starts_with($argument, '--compare-to=')) {
