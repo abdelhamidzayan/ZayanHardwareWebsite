@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use App\Core\App;
 use App\Models\Database;
+use App\Models\User;
 use App\Services\AuthService;
 
 if (PHP_SAPI !== 'cli' || (string) getenv('DB_NAME') !== 'zayan_fresh_install_test') {
@@ -69,12 +70,32 @@ try {
     expectSessionVersion($initialVersion === (int) $row['auth_version'], 'The login session must store the current database auth_version.');
     expectSessionVersion((int) (AuthService::user()['id'] ?? 0) === $userId, 'The current session should resolve to its active member.');
 
-    // Simulate the auth_version increment performed by the admin password-reset flow.
-    $pdo->prepare('UPDATE users SET auth_version = auth_version + 1 WHERE id = ?')->execute([$userId]);
+    // Simulate the atomic password/hash version update performed by the admin reset flow.
+    $newPasswordHash = password_hash('synthetic-new-password', PASSWORD_DEFAULT);
+    $staleRehash = password_hash('synthetic-old-password-rehash', PASSWORD_DEFAULT);
+    $pdo->prepare(
+        'UPDATE users SET password_hash = ?, auth_version = auth_version + 1 WHERE id = ?'
+    )->execute([$newPasswordHash, $userId]);
+
     $resetRequestCache();
     expectSessionVersion(AuthService::user() === null, 'A session issued before password reset must be rejected on the next request.');
     expectSessionVersion(!isset($_SESSION['user_id']) && !isset($_SESSION['auth_version']), 'A stale session must be cleared after rejection.');
 
+    expectSessionVersion(
+        !User::markLoggedIn($userId, $staleRehash, $initialVersion),
+        'A stale in-flight login must not be allowed to write its password rehash after an administrator reset.'
+    );
+    $storedHash = $pdo->prepare('SELECT password_hash FROM users WHERE id = ?');
+    $storedHash->execute([$userId]);
+    expectSessionVersion(
+        hash_equals($newPasswordHash, (string) $storedHash->fetchColumn()),
+        'The administrator-reset password hash must not be overwritten by a stale login.'
+    );
+
+    expectSessionVersion(
+        !AuthService::login($userId, $initialVersion),
+        'A login that verified the old password before the reset must not create a session afterward.'
+    );
     expectSessionVersion(AuthService::login($userId), 'The member should be able to establish a new session after using the new credentials.');
     expectSessionVersion((int) $_SESSION['auth_version'] === $initialVersion + 1, 'The new login must store the incremented auth_version.');
     expectSessionVersion((int) (AuthService::user()['id'] ?? 0) === $userId, 'The new version-bound session should be accepted.');
