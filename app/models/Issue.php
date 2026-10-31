@@ -291,6 +291,7 @@ final class Issue extends Model
                 "SELECT d.body FROM issue_diagnostic_updates d
                  JOIN issues i ON i.id = d.issue_id
                  WHERE d.id = ? AND d.issue_id = ? AND d.user_id = ? AND i.user_id = ?
+                   AND i.content_type = 'help_request'
                    AND i.status IN ('open','in_progress','awaiting_confirmation')
                    AND i.deleted_at IS NULL AND d.deleted_at IS NULL FOR UPDATE"
             );
@@ -372,7 +373,11 @@ final class Issue extends Model
     {
         $pdo = self::db();
         if ($parentReplyId !== null) {
-            $stmt = $pdo->prepare('SELECT id FROM issue_replies WHERE id = ? AND issue_id = ? AND parent_reply_id IS NULL AND deleted_at IS NULL LIMIT 1');
+            $stmt = $pdo->prepare(
+                'SELECT id FROM issue_replies
+                 WHERE id = ? AND issue_id = ? AND parent_reply_id IS NULL AND deleted_at IS NULL
+                 FOR UPDATE'
+            );
             $stmt->execute([$parentReplyId, $issueId]);
             if (!$stmt->fetchColumn()) throw new \DomainException('invalid_parent_reply');
         }
