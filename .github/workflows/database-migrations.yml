@@ -224,6 +224,15 @@ jobs:
           DB_PASS: root
         run: php tests/php/admin-roster-integration.php
 
+      - name: Exercise atomic issue and reply media writes
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/content-write-integration.php
+
       - name: Verify model-level issue review and vote authorization
         env:
           DB_HOST: 127.0.0.1
