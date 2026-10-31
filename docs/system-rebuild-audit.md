@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-10-31  
 **Working branch:** `audit/system-rebuild-20261031`  
-**Last observed PR head before this audit-log update:** `c015a8d751c17e1ffa3349786324eaf08e38609d`  
+**Reference note:** SHA values and workflow results below are dated snapshots; query the live PR head before starting another change.  
 **PR:** [#16 — Audit rebuild: fresh install, retention guards and route consistency](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16)  
 **PR state:** Draft / open / unmerged; base `audit/content-retention-consistency`  
 **Status:** Foundational protection and several new content-write changes are implemented. The latest code is not yet CI-verified. This document is not a final sign-off.
@@ -112,15 +112,15 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 
 ## 5. Remaining gaps
 
-1. **Draft media lifecycle:** revision locking exists, but database row changes and filesystem cleanup/replacement are not yet one recoverable operation in all cases.
-2. **Personal-help transaction boundary:** message/request state and its attachment filesystem/database work still need the same complete transaction and durable compensation treatment.
+1. **Draft media lifecycle:** publishing has a transaction-aware file-move/restore path, including ambiguous-commit recovery. Draft upload, rendered-image replacement, editor-state changes, per-item deletion, and draft deletion also use revision locking and reference checks/compensation. Remaining edge cases include cleanup when the private draft storage root itself is unavailable (currently logged but not always durably queued), and broader end-to-end tests for the full draft CRUD journey.
+2. **Personal-help media semantics:** request + initial message, and each sent message, are committed separately from media. Each attachment then gets its own DB transaction, file compensation, and recovery-task recording. This intentionally permits a message to exist when one or more attachments fail; the controller tells the user to open the conversation and review what was saved. It is not an all-or-nothing transaction across the message and every attachment. Current-head integration and the partial-save UI journey still need CI/runtime verification.
 3. **Recovery operations:** migration 018 records pending tasks but no background worker or automatic file deletion exists. A future reconciliation command must inspect both the database references and file state and must never remove a referenced technical file.
 4. **POST authorization matrix:** complete every POST route across authentication, role, owner/participant, state transitions, CSRF, rate limits, validation, and model-level invariants.
 5. **Dynamic JavaScript API references:** five sites were unresolved in the last successful Graphify snapshot and require manual view/script tracing.
 6. **Browser/PWA:** automated registration/login, composer, mobile layout, offline transitions, Safari installation, push delivery, and private attachment journeys remain unverified.
 7. **Owner backup and live schema:** the latest owner backup has not been restored again during this audit, and the current local database's schema/applied migration history has not been re-introspected here. Do not apply migrations 016–018 locally until the actual schema/history, backup, and rollback plan are reviewed.
 8. **Runtime/storage:** no fresh Kali/XAMPP/Apache permission test or live HTTP/PWA verification was executed in this pass.
-9. **Notifications after writes:** notifications happen after the content transaction. Verify that notification failures cannot mislead the user into retrying a content write that already committed; consider an outbox or explicitly isolated notification error handling.
+9. **Notification delivery guarantee:** `NotificationService` treats notification creation and Web Push as best-effort side effects and catches/logs delivery failures, so a committed content write is not reported as a failed write merely because notification delivery failed. There is no durable outbox/retry guarantee yet; transient delivery failures can still mean a notification is missed. This is a delivery-reliability enhancement, not a content-transaction blocker.
 
 ## 6. Verification ledger
 
@@ -138,7 +138,10 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 | ContentWriteService create/edit and filesystem compensation | Implemented; current-head CI pending |
 | Confirmed-rollback and ambiguous-commit failure injection | Implemented in test; current-head CI pending |
 | Shared image dimension/pixel policy | Implemented; current-head CI pending |
-| Draft and personal-help media recovery | Incomplete |
+| Draft publication file recovery | Implemented with failure-injection tests; current-head CI pending |
+| Draft media CRUD cleanup | Revision-locked operations and reference checks implemented; storage-root-unavailable edge case and full browser journey remain |
+| Personal-help message/media | Per-attachment transaction and compensation implemented; intentional partial-save semantics; current-head CI/UI verification pending |
+| Notification delivery | Best-effort isolation reviewed; no durable outbox/retry |
 | Full POST authorization matrix | Partial review only |
 | Dynamic JavaScript API references | Five sites remain for manual review |
 | Browser/mobile Safari/PWA journeys | Not tested |
