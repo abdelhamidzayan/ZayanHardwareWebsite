@@ -102,7 +102,7 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 - Confirmed rollback permits removal of newly moved files. Cleanup failures are written to `storage_recovery_tasks`.
 - If the commit response is ambiguous, moved files are preserved and a pending recovery task is recorded rather than risking deletion of a file referenced by committed DB rows.
 - A successful explicit rollback after a commit exception is now treated as confirmed rollback. The service injects the commit operation for deterministic failure testing.
-- `tests/php/content-write-integration.php` covers successful attachment writes, rollback after attachment failure, a move adapter that moves a file but reports failure (the service now tracks and compensates the destination), later file-move failure, duplicate tokens, reply/diagnostic failure, edit-history rollback, failed compensation, confirmed rollback after commit exception, and a commit that succeeds while its acknowledgement is lost.
+- `tests/php/content-write-integration.php` covers successful attachment writes, rollback after attachment failure, move adapters that report false or throw after moving (the service tracks and compensates the destination), later file-move failure, duplicate tokens, reply/diagnostic failure, edit-history rollback, failed compensation, confirmed rollback after commit exception, and a commit that succeeds while its acknowledgement is lost.
 - The database workflow is configured to run this test against the disposable fresh-install schema on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. This test has **not** passed on the current head yet.
 
 ### Administrative mutations and device catalog
@@ -123,7 +123,7 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 
 ## 5. Remaining gaps
 
-1. **Draft media lifecycle:** publishing has a transaction-aware file-move/restore path, including ambiguous-commit recovery. Draft upload, rendered-image replacement, editor-state changes, per-item deletion, and draft deletion also use revision locking and reference checks/compensation. Remaining edge cases include cleanup when the private draft storage root itself is unavailable (currently logged but not always durably queued), and broader end-to-end tests for the full draft CRUD journey.
+1. **Draft media lifecycle:** publishing has a transaction-aware file-move/restore path, including ambiguous-commit recovery. Draft upload, rendered-image replacement, editor-state changes, per-item deletion, and draft deletion use revision locking and reference checks/compensation. Cleanup now records durable pending tasks when the storage root or draft UUID directory cannot be resolved, rejects UUID-directory symlinks that point at another location, and refuses dot-only filenames. `tests/php/draft-media-recovery-integration.php` covers unavailable roots/directories and cross-draft symlinks. A broader end-to-end browser journey for full draft CRUD remains.
 2. **Personal-help media semantics:** request + initial message, and each sent message, are committed separately from media. Each attachment then gets its own DB transaction, file compensation, and recovery-task recording. This intentionally permits a message to exist when one or more attachments fail; the controller tells the user to open the conversation and review what was saved. It is not an all-or-nothing transaction across the message and every attachment. Current-head integration and the partial-save UI journey still need CI/runtime verification.
 3. **Recovery operations:** migration 018 records pending tasks but no background worker or automatic file deletion exists. A future reconciliation command must inspect both the database references and file state and must never remove a referenced technical file.
 4. **POST authorization matrix:** complete every POST route across authentication, role, owner/participant, state transitions, CSRF, rate limits, validation, and model-level invariants.
@@ -150,11 +150,12 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 | Device-model moderation authorization, duplicate guard, attribution and audit | Implemented with model-level integration test; current-head CI pending |
 | Featured-home-post mutations and audit events | Implemented with active-admin revalidation and row lock; controller-level integration coverage still needed |
 | Device model search length/rate/active-catalog constraints | Implemented; current-head CI pending |
-| ContentWriteService create/edit and filesystem compensation | Implemented; current-head CI pending |
+| ContentWriteService create/edit and filesystem compensation | Implemented; false-return and throw-after-move failure injection added; current-head CI pending |
 | Confirmed-rollback and ambiguous-commit failure injection | Implemented in test; current-head CI pending |
 | Shared image dimension/pixel policy | Implemented; current-head CI pending |
 | Draft publication file recovery | Implemented with failure-injection tests; current-head CI pending |
-| Draft media CRUD cleanup | Revision-locked operations and reference checks implemented; storage-root-unavailable edge case and full browser journey remain |
+| Draft media cleanup root/directory recovery and UUID-symlink containment | Implemented with isolated integration test; current-head CI pending |
+| Draft media CRUD cleanup | Revision-locked operations, durable unavailable-root/directory tasks, UUID-symlink containment and dot-filename rejection implemented; current-head CI and full browser journey pending |
 | Personal-help message/media | Per-attachment transaction and compensation implemented; intentional partial-save semantics; current-head CI/UI verification pending |
 | Notification delivery | Best-effort isolation reviewed; no durable outbox/retry |
 | Full POST authorization matrix | Partial review only |
