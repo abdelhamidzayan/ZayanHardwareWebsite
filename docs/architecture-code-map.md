@@ -51,6 +51,8 @@ The repeatable source scanner is maintained in `tools/graphify/graphify.py`. It 
 
 The authoritative route declarations and guest exposure are both in `config/routes.php`: public routes use `getPublic()` or `postPublic()`; every route registered with `get()` or `post()` is private to authenticated members. This keeps the guest allowlist synchronized with the route table.
 
+The browser-to-route dependency map is maintained in [JavaScript API route map](javascript-api-route-map.md). It manually resolves dynamic URLs built from `data-*` attributes, draft IDs, media UUIDs, and HTML form actions that Graphify cannot always resolve statically.
+
 ## Core feature dependency flows
 
 ### Technical post and discussion lifecycle
@@ -144,7 +146,8 @@ flowchart TD
 
 - `Issue::deleteIssue()`, `Issue::deleteReply()`, and diagnostic deletion paths update soft-delete metadata; they do not physically remove published knowledge.
 - A reply whose parent is soft-deleted remains in the database with its original `parent_reply_id`. `Issue::replies()` returns a tombstone when that parent still has an active child; the view hides the deleted text while retaining its place in the discussion tree.
-- Migrations 016 and 017 enforce the rule below the model layer. A direct `DELETE` against a protected technical/audit table raises a database error, including standalone posts/replies with no child rows. Draft deletion, vote toggles, and transient push/notification cleanup remain separate intentional lifecycles.
+- Migrations 016 and 017 enforce the rule below the model layer. A direct `DELETE` against a protected technical/audit table raises a database error, including standalone posts/replies with no child rows. Migration 017 also protects skill ratings/assessment definitions, skill domains, and device manufacturer/model catalog rows. Draft deletion, vote toggles, and transient push/notification cleanup remain separate intentional lifecycles.
+- `AdminRosterService` centralizes active-administrator checks; `AdminUserController` uses it under the shared administrator-roster advisory lock and target/actor row locks before role or status changes.
 - CI verifies the new-install chain and delete guards with synthetic fixtures on MySQL 8.0, MariaDB 10.4.32 and MariaDB 10.11. This does not authorize applying these migrations to an already-running installation without schema comparison and backup.
 
 ## Data and storage ownership
@@ -163,7 +166,7 @@ flowchart TD
 ## Review and test boundaries
 
 - `php-lint.yml` verifies PHP syntax and JavaScript syntax.
-- `database-migrations.yml` replays the explicit fresh-install chain on disposable MySQL 8.0, MariaDB 10.4.32 and MariaDB 10.11 databases; it verifies baseline/profile schema, representative content writes, first-admin guards, retention constraints/triggers, and reply tombstones.
-- These workflows do not currently simulate browser sessions, parallel uploads from multiple devices, actual Web Push delivery, UI behavior on mobile Safari, or the 30-day retention worker against a representative anonymization fixture.
+- `database-migrations.yml` replays the explicit fresh-install chain on disposable MySQL 8.0, MariaDB 10.4.32 and MariaDB 10.11 databases; it verifies baseline/profile schema, representative content writes, first-admin guards, retention constraints/triggers, reply tombstones, issue review/vote authorization, and administrator-roster invariants.
+- These workflows do not currently simulate browser sessions, parallel uploads from multiple devices, actual Web Push delivery, UI behavior on mobile Safari, or the 30-day retention worker against a representative anonymization fixture. Five dynamically assembled JavaScript API expressions remain unresolved by Graphify's static matcher; their call sites are manually mapped in `docs/javascript-api-route-map.md`.
 - A clean migration CI run is not authorization to run migrations on a live installation. Confirm the target schema history and take a backup first.
 - Treat this document as a maintained static dependency map, not as generated Graphify output or a replacement for runtime/integration tests.
