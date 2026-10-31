@@ -19,6 +19,7 @@
 4. [Architecture and dependency map](docs/architecture-code-map.md) — request lifecycle, route/controller/service/model/view relationships.
 5. [Graphify guide](docs/graphify.md) — use when architectural dependencies are relevant or a Graphify review is requested.
 6. [Security hardening](docs/security-hardening.md) — rate limits, private media, account retention.
+7. [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md) — current POST endpoint CSRF and authorization map.
 7. [Post composer and drafts](docs/post-composer-and-drafts.md) and [profiles/personal help](docs/profiles-personal-help.md) when working on those features.
 8. [Account retention policy](docs/account-retention.md) and [content-system migrations](docs/content-system-migrations.md) before touching account lifecycle or schema.
 9. Read the actual source at the active branch before changing anything. Documentation is a map, not a substitute for source inspection.
@@ -130,3 +131,27 @@ Never claim a task is complete merely because code was added or CI passed. Separ
 - Phase 1 automated CI gate passed on `5723fb26f02d14a0d66cc5db43093a8fd1a08aab`. PHP run `41219585375`, Graphify run `41219585292`, and database matrix run `41219585295` all passed. The database matrix covered MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, including migrations 000–018, integration tests, and backup/restore/schema/row-count comparison.
 - Phase 1 is not fully closed: the owner database backup has not been restored into a separate local test database; the separate private-media archive/sample restore is unverified; actual Apache `daemon` log-write permissions remain to be tested on Kali/XAMPP. Do not describe these local checks as CI-tested.
 - PR #17 is a draft targeting `audit/content-retention-consistency`, not `main`. It is not merged or deployed. Resolve the live branch head before further work.
+
+
+## 10. Phase 2 execution handoff — 2026-10-31
+
+- Active branch: `phase2/security-graphify-20261031`, based on Phase 1 candidate `a4074260328582bb2a25cd49e984626893fd5c14`. Always resolve the current branch head before further edits.
+- Phase 2 is in progress. No Phase 2 tests have yet been confirmed passing and no Phase 2 PR has been opened at this checkpoint.
+- Security changes implemented so far:
+  - Suspended-account login failure now returns the same external error as invalid credentials; internal security logging retains the distinct blocked-account event.
+  - Blocked-account attempts consume the same IP and identifier rate-limit buckets as invalid credentials.
+  - Migration `019_session_version_invalidation.sql` adds `users.auth_version INT UNSIGNED NOT NULL DEFAULT 1`.
+  - `AdminUserController::resetPassword()` increments `auth_version` in the same SQL update as the password hash.
+  - `AuthService` binds sessions to the current auth version and rejects/clears stale sessions on the next request.
+  - `AuthController` passes the auth version returned by credential verification to session creation and login completion.
+  - `User::markLoggedIn()` only writes a password rehash when the account remains active and the auth version still equals the version checked by the login. This prevents a slow/in-flight login with an old password from overwriting the newer administrator-reset hash.
+  - `tests/php/auth-session-version-integration.php` covers stale-session rejection, stale old-password login rejection, and refusal to overwrite the new password hash.
+  - `tests/php/rate-limiter-integration.php` verifies blocked-account attempts consume the configured failure bucket.
+- POST route coverage:
+  - `tests/php/post-route-csrf-policy.php` parses every current `post()` / `postPublic()` declaration (49 declarations at the time of writing), verifies direct CSRF checks or explicit same-controller delegation, and restricts public POST routes to `/login` and `/register`.
+  - `docs/SECURITY_POST_ROUTE_MATRIX.md` records the current route inventory and known object-authorization boundaries.
+  - The test is wired into `.github/workflows/php-lint.yml`; the session-version test and migration 019 are wired into `.github/workflows/database-migrations.yml`.
+- Fresh-install docs now include migration 019. Do not apply that migration to the owner's local database until the existing schema/history, backup, and rollout procedure are inspected.
+- Important compatibility note: existing PHP sessions do not contain `auth_version` and will require users to sign in again after the migration and new code are deployed together. Deploy schema before enabling code that requires the column.
+- Remaining Phase 2 work: execute CI on the exact draft PR head; inspect failures; complete the POST ownership/role/participant and model-boundary matrix; review the admin site-update execution boundary, registration/password-reset/session flows, upload and private-file paths, XSS/SQL access, account retention and audit behavior; regenerate/download/review the Graphify artifact; reconcile dynamic JavaScript API references; update architecture/security maps after confirmed findings.
+- Do not merge to `main` or deploy without owner approval. Open the Phase 2 draft PR against `phase1/foundation-reliability-20261031`, not `main`.
