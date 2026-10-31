@@ -4,21 +4,23 @@
 
 ## 1. Current goal and delivery plan
 
-The owner approved a **three-phase completion plan**. Complete the remaining stabilization work in controlled phases, report each phase gate, and avoid repeating a full review after every change.
+The owner approved completing the stabilization program, integrating the accumulated feature work, and consolidating development on one authoritative `main` branch.
 
-- **Phase 1 — Database, data integrity, and operational reliability:** CI gate passed; owner-machine acceptance checks remain open.
-- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** in progress on `phase2/security-graphify-20261031`.
-- **Phase 3 — UI, PWA, cross-device acceptance, and final readiness:** starts after Phase 2.
+- **Phase 1 — Foundation and operations:** automated CI passed and the release baseline was merged into `main`. Owner-machine database and private-media acceptance remain pending.
+- **Phase 2 — Security and Graphify:** automated security baseline passed and was merged into `main`. The broader manual security review remains open.
+- **Phase 3 — UI, PWA, cross-device acceptance:** not started; browser/mobile acceptance and final readiness remain future work.
 
-The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PLAN.md).
+The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PLAN.md). A merge into `main` is a development baseline, not a deployment or production-readiness claim.
 
 ## 2. GitHub and release state
 
-- PR [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16) was merged on 2026-10-31 into `audit/content-retention-consistency`.
-- Merge commit: `098442813eb5a55e96d5fff27ce127f9b5f08591`.
-- This merge did **not** target `main` and is not evidence of deployment.
-- Current Phase 1 work is on `phase1/foundation-reliability-20261031`, based on that merge commit.
-- Do not assume the local Kali/XAMPP checkout, `main`, the merged audit branch, and any hosted deployment are synchronized.
+- PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) merged into `main` on 2026-10-31. Merge commit: `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`.
+- PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) merged into `main` on 2026-10-31. Merge commit: `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
+- **Authoritative development branch:** `main`, currently at `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
+- The merged work includes the accumulated product features, Phase 1 reliability work, and the Phase 2 session/CSRF/object-authorization baseline. It has not been deployed.
+- Historical Phase 1/Phase 2 branches are retained for traceability until branch cleanup is verified. Do not create new feature work from those historical branches; branch new work from `main`.
+- The owner's local Kali checkout remains on `local/audit-update-20261031` at `46960cf9efb33b2b0affa503d5e832725bdba4b4`, with modified and untracked files. It is not synchronized with `main`. Preserve those files; do not run the updater, reset, clean, or pull until a safe local reconciliation plan is prepared.
+- No merge above is evidence of deployment, live database migration, or production acceptance.
 
 ## 3. Product boundaries and data preservation
 
@@ -39,13 +41,13 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | Core content write/media recovery | Issue/reply media writes, draft publish outcomes, symlink containment, personal-help media, authorization and reply tombstones passed | CI verified on all 3 engines |
 | Public/private route and upload checks | Public/private route policy, image upload policy and PHP/JS syntax suites passed | CI verified |
 | Exception log redaction | Authorization/Cookie/Bearer/query/session-ID redaction, four log channels, JSON validity, and retention regression passed | CI verified |
-| Access/security/audit channels | Real HTTP request/shutdown logging passed with method/path/status/request ID and query-token exclusion; actual Apache user/ACL remains to be checked on local XAMPP | HTTP integration CI verified; local Apache check pending |
+| Access/security/audit channels | Real HTTP request/shutdown logging passed; Apache `daemon` successfully created log files locally and new files inherited `other::---` | CI and local ACL verified |
 | Disposable backup/restore comparison | Backup → gzip/checksum → restore into a new schema → compare tables/views/columns/indexes/FKs/checks/triggers/routines/events/row counts passed on all 3 engines | CI verified |
-| Owner's full database backup/restore comparison | Previously recorded owner backup/hash has not yet been restored to a separate local test database | Pending owner-machine verification |
-| Private-media backup and sample restore | A separate archive/path and isolated restore of referenced private files have not been verified | Pending owner-machine verification |
+| Owner's full database backup/restore comparison | No full backup archive was found in the project-directory inventory; external backup locations were not inspected | Pending; requires locating a real backup and restoring only to a separate test database |
+| Private-media backup and sample restore | No private-media archive was found in the project-directory inventory; external backup locations were not inspected | Pending; requires a separate archive and isolated sample restore |
 | Pending storage recovery reconciliation | Durable records exist; a read-only/manual triage runbook is now documented; no general automatic worker exists | Procedure documented; reconciliation pending |
 | Read-only schema comparator | CLI check plus full schema-object and row-count comparison during restore passed on all 3 engines | CI verified |
-| Phase 1 branch CI verification | PHP, Graphify, and 3-engine database workflows all passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` | All CI gates passed; local acceptance pending |
+| Phase 1 release-candidate CI verification | PHP, Graphify, and 3-engine database workflows all passed on `4bf013f81fc71bc32f8b221fefc1c778d00419d8` | All CI gates passed; local backup/media acceptance pending |
 
 ## 5. Existing technical documentation
 
@@ -66,63 +68,63 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 ## 6. Verification boundaries and local work
 
-- Historical CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` covered migrations 000–017 only. The newer Phase 1 commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` passed the full 000–018 matrix and integration suite.
-- PR #16's earlier zero-step runs were caused by exhausted included Actions minutes. After the repository became public, PR #17 successfully executed all current Phase 1 workflows; the current public-repository run is the source of truth.
-- The owner database restore and private-media restore remain separate local tasks and must not be confused with the disposable CI restore.
-- The owner's local backup and local database work must be performed only on the real machine after checking the exact source/target DB and rollback path. Never restore into the source database.
-- Local environment details in [AI_CONTEXT.md](../AI_CONTEXT.md) are dated handoff notes; recheck before acting.
+- Phase 1 automated verification passed on the release candidate before its merge into `main`; Phase 2 added migration 019 and passed the same MySQL/MariaDB integration matrix.
+- CI backup/restore tests use disposable databases. They do not prove that the owner's own backup archive exists or can be restored.
+- The project-directory inventory did not identify a full database backup or private-media archive. Their presence in another disk, backup service, or external directory remains unknown.
+- No owner database restore, live migration, or private-media restore has been performed as part of this work. Never restore into the source database.
+- Apache log directory ACL and inheritance were verified locally: `daemon` can create files and newly created files inherit `other::---`.
+- Local Git changes and dated environment notes are recorded in [AI_CONTEXT.md](../AI_CONTEXT.md); recheck before acting.
 
 ## 7. Latest Phase 1 implementation checkpoint
 
-On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed on commit `c35c71f39d0702178d8dc9aad041d247b29c29b1` (PHP run [41238036009](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036009), Graphify run [41238036104](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036104), database matrix [41238036402](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238036402)):
+The Phase 1 release candidate passed all workflows on head `4bf013f81fc71bc32f8b221fefc1c778d00419d8`:
+- [PHP syntax/security workflow](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247509) — passed.
+- [Graphify workflow](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247478) — passed.
+- [Database integration matrix](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238247686) — passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
 
-- PHP lint, CLI boot, rate-limiter API, draft rollback, public-route policy, schema-comparator CLI, HTTP access-log lifecycle, exception redaction/retention, upload policy, and JavaScript syntax all passed.
-- Graphify analyzer tests, graph generation, determinism check, and artifact upload passed.
-- Graphify snapshot for this head: 151 files, 72 routes, 168 SQL query fragments, 15 JavaScript API calls (10 statically linked; 5 remain dynamic/unresolved), 698 nodes, and 1,637 edges. It also reports the duplicate `002_` migration prefix; the documented fresh-install order and all three database CI runs passed. See [Graphify guide](graphify.md).
-- The full fresh-install sequence 000–018 and all integration suites passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11.
-- Disposable backup → gzip/checksum → restore into a new schema → schema-object and row-count comparison passed on all three engines.
+The gate covered PHP/JS syntax, CLI boot, public-route and CSRF policy, rate limiting, draft rollback, upload policy, HTTP access logging, exception redaction, Graphify determinism, clean migrations 000–018, content/media recovery integration, and disposable backup → gzip/checksum → restore → schema-object/row-count comparison.
 
-The owner database restore, private-media archive/sample restore, and real Apache (`daemon`) permissions/log-write checks remain unverified because they require the owner's local Kali/XAMPP environment. No live database or private media tree was modified by CI.
+Graphify snapshot: 151 files, 72 routes, 168 SQL query fragments, 15 JavaScript API call sites (10 statically linked; 5 dynamic/unresolved), 698 nodes, and 1,637 edges. See [Graphify guide](graphify.md).
+
+Owner database backup restore and private-media sample restore remain pending. The Apache log ACL was subsequently verified locally; no live database or private-media tree was modified.
 
 ## 8. Phase 2 — current security work
 
-**Branch:** `phase2/security-graphify-20261031`  
-**Latest verified commit:** `889dd99c74824674789a138bfc7dd3b9dd30444e`
+**Merged development baseline:** PR #18, merge commit `dadddde53f394a0fe353b575ec13dbeb85749f6e`.  
+**Exact tested Phase 2 head:** `c23dde25f2bee53068c85e775ca56fa93f52e0a9`.
 
-Implemented and CI-verified on that exact commit:
-
-- Suspended-account login failures return the same public error as invalid credentials; blocked-account attempts consume the same IP/identifier failure buckets.
+Implemented and CI-verified:
+- Generic login errors for invalid credentials and suspended accounts; blocked-account attempts consume the same IP/identifier rate-limit buckets.
 - Migration 019 adds `users.auth_version`; password reset, account status/reactivation, role changes, deletion requests, and final identity anonymization revoke older sessions.
-- Login/session version binding and conditional password rehash prevent stale sessions and an in-flight old-password login from restoring an obsolete hash.
-- Regression coverage includes stale sessions, password-reset/login races, suspension/reactivation with an old cookie, generic login errors, and account lifecycle mutation policy.
-- Automated CSRF policy scans all 49 declared POST routes and enforces the public POST allow-list (`/login`, `/register`). This is not proof that all object-level authorization is correct.
-- Admin updater hardening includes CSRF, per-user rate limiting, active-admin revalidation, fixed command arguments, audit events, and a shared lifecycle lock.
-- Graphify generated 706 nodes and 1,646 edges; the review recorded 174 SQL queries, 21 migrations, 15 API call sites, and manual mapping of five dynamic API references.
-- The frontend sink review covered 13 JavaScript files and key issue/help/profile/auth/admin templates. Dynamic text is escaped; reviewed `innerHTML` sinks use fixed SVG fragments or fixed PWA guide copy.
+- Login/session version binding and conditional password rehash prevent stale sessions and old-password login races.
+- Automated CSRF policy scans all 49 declared POST routes and enforces the public POST allow-list (`/login`, `/register`).
+- Admin updater route uses CSRF, per-user rate limiting, active-admin revalidation, fixed command arguments, audit events, and a shared lifecycle lock.
+- Object-level regression tests reject cross-user technical-post/reply/diagnostic writes, unauthorized acceptance on another member's help request, and nonparticipant access/writes to private-help requests and attachments.
+- Graphify and JavaScript API route documentation were updated.
 
-**Exact-head CI:** all three workflows completed successfully on `889dd99c74824674789a138bfc7dd3b9dd30444e`:
-- [PHP syntax/security tests](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933680) — passed.
-- [Graphify dependency graph](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933760) — passed.
-- [Database migration integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933686) — passed.
+**Exact-head CI:**
+- [PHP syntax/security](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382181) — passed.
+- [Graphify](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382162) — passed.
+- [Database integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41238382193) — passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11, including migration 019.
 
-**Still open:** full object-level authorization matrix for all routes; broader SQL/input validation review; complete XSS/output-encoding review; upload/private-file lifecycle and containment review; storage-recovery/notification retry behavior; and local updater/sudoers runtime inspection. The external updater script is not the same as the in-app updater controller.
+**Still open:** exhaustive object-level authorization review across every route/state transition; broader SQL/input-validation and output-encoding review; remaining upload/private-file edge cases; storage-recovery reconciliation and notification retry behavior; host-level updater/sudoers review. The CSRF static test is not proof of exhaustive authorization.
 
-No Phase 2 completion is claimed. PR #18 remains a draft; no merge to `main`, production database migration, or deployment is claimed.
+Account anonymization has no approved CLI entry point or cron worker. A 30-day deadline does not mean automatic anonymization. Do not recreate the removed CLI or schedule it without separate review and explicit approval.
+
+Phase 2's automated baseline is merged; the broader manual security review is not marked complete.
 
 ## 9. Local runtime findings (2026-10-31)
 
-The owner checked the Kali/XAMPP host:
-
+The owner verified the following on Kali/XAMPP:
 - Apache workers run as `daemon`.
-- `storage/logs` is `root:root` mode `0775` with an access ACL granting `daemon` `rwx` and a default ACL for new entries. An initial `test -w` check returned false, but a later real create-file test executed as `daemon` succeeded and confirmed ACL inheritance. No chmod/chown change is required.
-- The observed default ACL currently includes `default:other::r-x`; the newly created test file inherited `other::r--`. This means newly created log files may be readable by local users outside the Apache account. Existing application/access/security/audit log files are `daemon:daemon` and normally have no `other` access; `permission-test.log` is an exception (`other::r--`). Tighten the directory's `other` and default-`other` ACL to `---`, and restrict `permission-test.log`, before treating local log confidentiality as closed.
-- The `daemon` sudo policy permits only `/usr/bin/bash /home/a/bin/zayan-hardware-update.sh` as user `a`; this is a narrow command rule, not unrestricted sudo.
-- The external update script is mode `0700`, owned by `a:a`. It requires branch `main`, a clean tracked worktree, and allows only a small untracked-file exception. The current local checkout is instead `local/audit-update-20261031`, has a modified `.htaccess`, and has untracked files. **Do not run the updater or clean/reset/checkout this worktree.**
-- Local HEAD `46960cf9efb33b2b0affa503d5e832725bdba4b4` differs from the Phase 2 CI-verified GitHub candidate. Preserve the local modifications and untracked files.
+- The `storage/logs` access/default ACL was tightened to remove `other` access while retaining `daemon` write access. Two real create-file tests as `daemon` succeeded; new files inherited `other::---`.
+- The daemon sudo policy permits only `/usr/bin/bash /home/a/bin/zayan-hardware-update.sh` as user `a`. The external script is mode `0700`, owned by `a:a`, and requires a clean `main` worktree.
+- The local checkout remains on `local/audit-update-20261031` with a modified `.htaccess` and untracked `.htaccess.before-rewrite-fix`, `composer.lock`, Python cache directories, `update.sh`, and `zayan_hardware_audit.sql`. Do not run the updater, pull, reset, clean, or switch branches until these files are preserved and reconciled.
+- The local project-directory backup inventory found no full database or private-media backup archive. Do not improvise a restore or use the live database as a target.
 
-**Verified local result:** the working `daemon` ACL is retained; unnecessary `other` read/traverse access was removed from the log directory's access/default ACL and `permission-test.log`. Two real create-file tests executed as `daemon` succeeded, and both new files inherited `other::---`. Apache write access remains functional. No broad chmod, recursive ownership change, or updater execution was used. Owner-database restore and private-media restore remain separate pending acceptance checks.
+**Verified:** Apache log confidentiality and write access. **Not verified:** owner database restore, private-media restore, host updater execution, or hosted deployment.
 
-## 9. Working rules for all three phases
+## 10. Working rules for all three phases
 
 1. Follow the relevant scope and pass criteria in [COMPLETION_PLAN.md](COMPLETION_PLAN.md); do not broaden each phase into an unbounded audit.
 2. Inspect branch, commit, and `git status` before editing. Preserve modified and untracked local files.
