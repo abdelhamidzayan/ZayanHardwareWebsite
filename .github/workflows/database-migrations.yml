@@ -3,7 +3,7 @@ name: Database migration integration
 on:
   pull_request:
   push:
-    branches: [main, feature/profiles-help-media, fix/audit-priority-issues]
+    branches: [main, feature/profiles-help-media, fix/audit-priority-issues, audit/system-rebuild-20261031]
 
 jobs:
   migrations:
@@ -144,6 +144,15 @@ jobs:
           fk_count="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.key_column_usage WHERE table_schema = '${DB_NAME}' AND referenced_table_name IS NOT NULL;")"
           test "${fk_count}" -ge 50
           echo "Full fresh-install schema and content smoke test passed on ${{ matrix.database.label }} (FKs: ${fk_count})"
+
+      - name: Exercise reply tombstone and thread preservation
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/reply-tombstone-integration.php
 
       - name: Verify sequential registration migrations and legacy data preservation
         run: |
