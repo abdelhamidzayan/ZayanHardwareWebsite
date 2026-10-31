@@ -471,7 +471,7 @@ final class PostDraft extends Model
                 "INSERT INTO storage_recovery_tasks
                     (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code,
                      status, attempts, last_attempt_at, last_error_code)
-                 VALUES ('draft', NULL, ?, ?, ?, 'pending', 1, UTC_TIMESTAMP(), 'unlink_failed')
+                 VALUES ('draft', NULL, ?, ?, ?, 'pending', 1, UTC_TIMESTAMP(), ?)
                  ON DUPLICATE KEY UPDATE
                     reason_code = VALUES(reason_code),
                     status = 'pending',
