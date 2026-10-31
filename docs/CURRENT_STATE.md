@@ -1,79 +1,79 @@
 # Zayan Hardware — Current Project State
 
-> **Last documented:** 2026-10-31  
-> This is a compact handoff, not a substitute for checking the live repository, local checkout, database, or deployment.
+> **Last updated:** 2026-10-31. Always recheck live GitHub refs, local checkout, database, and deployment before acting.
 
-## 1. Current development direction
+## 1. Current goal and delivery plan
 
-The owner's current priority is to **finish the planned product features first**. The broad, time-consuming, full-system audit and final Graphify/security/documentation sweep are deferred until the planned feature set is complete.
+The owner approved a **three-phase completion plan**. Complete the remaining stabilization work in controlled phases, report each phase gate, and avoid repeating a full review after every change.
 
-This does **not** defer essential safety:
-- Every feature still receives focused validation and relevant regression tests.
-- Authentication, authorization, CSRF, input validation, private-file access, and data-retention rules must be respected while implementing the feature.
-- Destructive database/filesystem operations still require explicit approval, a verified backup, and a rollback plan.
-- Documentation is updated as part of every meaningful feature delivery.
+- **Phase 1 — Database, data integrity, and operational reliability:** current phase.
+- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** starts after Phase 1.
+- **Phase 3 — UI, PWA, cross-device acceptance, and final readiness:** starts after Phase 2.
 
-Do not restart a full-system audit or rebuild existing architecture unless the owner explicitly asks.
+The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PLAN.md).
 
-## 2. Git and release state — dated snapshot
+## 2. GitHub and release state
 
-- The documentation baseline for this handoff was prepared from `audit/system-rebuild-20261031`, PR [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16).
-- At the last check on 2026-10-31, PR #16 was **Draft, open, and unmerged**, based on `audit/content-retention-consistency`.
-- This documentation work is on its own branch: `docs/ai-handoff-and-feature-log-20261031`.
-- The default branch `main`, PR branch, documentation branch, owner's local checkout, local XAMPP instance, and any hosted deployment are separate states.
+- PR [#16](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16) was merged on 2026-10-31 into `audit/content-retention-consistency`.
+- Merge commit: `098442813eb5a55e96d5fff27ce127f9b5f08591`.
+- This merge did **not** target `main` and is not evidence of deployment.
+- Current Phase 1 work is on `phase1/foundation-reliability-20261031`, based on that merge commit.
+- Do not assume the local Kali/XAMPP checkout, `main`, the merged audit branch, and any hosted deployment are synchronized.
 
-**Before every task, query the live branch/PR head and inspect the actual checkout.** The branch names and SHAs above are dated references only. Do not assume these documentation changes are already in `main`, in the owner's local checkout, or deployed.
-
-## 3. Product boundaries and non-negotiable data rules
+## 3. Product boundaries and data preservation
 
 Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hardware repair, board-level diagnosis, measurements, schematics, and repair outcomes.
 
 - Keep the existing PHP MVC architecture: Core → Controllers → Services / Models → Views.
 - Do not add CRM/customer-management or mobile software-repair scope without owner approval.
 - Never physically delete technical posts, replies, diagnostic updates, repair results, schematics, attachments, edit history, reputation, or approved help knowledge as part of normal account/content operations.
-- Preserve stable technical attribution and user IDs. Account retention must follow the documented anonymization/preservation policy; do not replace it with physical user deletion.
-- Never bulk-delete media or run retention workers against real data without explicit approval, verified backup, and rollback plan.
+- Preserve stable technical attribution and user IDs. Account retention must follow the documented anonymization/preservation policy, not physical user deletion.
+- Destructive database/filesystem operations require explicit approval, a verified backup, and a rollback plan.
 
-Read [AGENTS.md](../AGENTS.md) and [AI_CONTEXT.md](../AI_CONTEXT.md) for the full rules and detailed historical handoff.
+## 4. Phase 1 — current checklist
 
-## 4. Existing implementation — read before extending
-
-The current documented codebase already includes the following areas. These are starting points for source inspection, not permission to assume every path is bug-free or every test is green.
-
-| Area | Existing implementation / important constraint | Reference |
+| Work item | Current evidence | Status |
 |---|---|---|
-| Architecture | Custom PHP MVC, named route parameters, services, models, views, vanilla JS/CSS, PWA | [Architecture map](architecture-code-map.md) |
-| Technical content | Soft-delete behavior and DB guards protect technical history; reply tombstones preserve reply-tree relationships | [Content implementation](content-system-implementation.md), [Content migrations](content-system-migrations.md) |
-| Content writes | `ContentWriteService` coordinates issue/reply/diagnostic writes and staged private-file moves; failure recovery needs focused tests | [AI handoff](../AI_CONTEXT.md) |
-| Draft media | Revision-aware draft media handling and durable recovery-task records exist; pending tasks do not imply an automatic recovery worker | [AI handoff](../AI_CONTEXT.md) |
-| Personal help | Message and attachment writes use separate transactions; partial attachment failure is possible and reported | [Profiles and personal help](profiles-personal-help.md) |
-| Administration | Sensitive reviewed writes revalidate active admin authorization at the model/service boundary and record audit events transactionally | [AI handoff](../AI_CONTEXT.md) |
-| Logging | Structured daily logs are documented under `storage/logs/`; logs and private uploads must remain outside `public/` | [README logging section](../README.md#logging-and-diagnostics) |
-| Security | Rate limits, private media, account lifecycle, and upload safeguards have dedicated documentation | [Security hardening](security-hardening.md), [Account retention](account-retention.md) |
-| Graphify | A deterministic source graph exists as a static-analysis aid; it is not a runtime trace | [Graphify guide](graphify.md) |
+| Ordered fresh-install migrations 000–018 | Documented in `database/FRESH_INSTALL.md`; workflow contains all 20 SQL files in supported order | Implemented; current-head CI pending |
+| MySQL/MariaDB matrix | Workflow configured for MySQL 8.0, MariaDB 10.4.32, and 10.11 | Implemented; current-head CI pending |
+| Core content write/media recovery | Dedicated integration tests exist for content writes, draft publish/recovery, help media, and reply tombstones | Implemented; current-head CI pending |
+| Public/private route and upload checks | Focused route and upload tests exist | Implemented; current-head CI pending |
+| Exception log redaction | Existing isolated test covers exception context; raw header/channel/retention coverage needs strengthening | Partially verified |
+| Access/security/audit channels | Logger provides four channels; real Apache write permissions and HTTP lifecycle still need validation | Runtime check pending |
+| Full database backup/restore comparison | Owner-provided local backup and checksum were recorded in the prior handoff; restore and schema/row-count comparison are not recorded as completed | Pending |
+| Pending storage recovery reconciliation | Durable recovery records exist; no automatic worker is present | Procedure pending |
+| Current-head Actions verification | PR #16 head jobs completed with zero steps because included Actions minutes were exhausted | Not verified |
 
-## 5. Verification caveats carried from the last handoff
+## 5. Existing technical documentation
 
-- The last recorded successful database CI baseline covered migrations 000–017. Migration 018 and the newest content-write/recovery test changes were documented as awaiting successful CI verification at the time of the handoff.
-- GitHub Actions usage was reported exhausted on 2026-10-31, with a displayed reset date of 2026-11-01. Recheck the account's live usage/budget before rerunning or dispatching workflows; do not assume a spending cap is configured.
-- A CI run with no executed steps is neither a passing nor failing application test.
-- The local backup, local database migration state, local uncommitted changes, and local runtime details are recorded as dated information in [AI_CONTEXT.md](../AI_CONTEXT.md). Recheck them on the actual machine before acting.
-- Existing tests, historical green CI, or documentation do not prove that the current branch is tested, the local site works, Safari/PWA works, or the project is deployed.
+- [Architecture and dependency map](architecture-code-map.md)
+- [Fresh database installation order](../database/FRESH_INSTALL.md)
+- [Content system implementation](content-system-implementation.md)
+- [Content migrations](content-system-migrations.md)
+- [Security hardening](security-hardening.md)
+- [Account retention](account-retention.md)
+- [Post composer and drafts](post-composer-and-drafts.md)
+- [Profiles and personal help](profiles-personal-help.md)
+- [Graphify guide](graphify.md)
+- [System rebuild audit snapshot](system-rebuild-audit.md)
 
-## 6. Feature delivery workflow
+Documentation is a map, not proof. Inspect the actual code and live database state relevant to the change.
 
-For each requested feature:
+## 6. Verification boundaries and local work
 
-1. Read [AGENTS.md](../AGENTS.md), [AI_CONTEXT.md](../AI_CONTEXT.md), this file, [UPDATES.md](../UPDATES.md), and the relevant feature documentation.
-2. Check `git status`, active branch, commit, and current source. Preserve all modified/untracked files.
-3. Trace only the feature's real dependencies end to end: route → controller → authorization/CSRF/rate limit → service → model/SQL → migration → view/UI → JS/API → storage/logs/notifications → tests.
-4. Implement the smallest complete change that fits the existing architecture. Avoid unrelated refactors and duplicate systems.
-5. Run focused tests and checks relevant to the feature, including regression/failure paths. Use broader checks when the change affects shared architecture, security boundaries, or database foundations.
-6. Update [UPDATES.md](../UPDATES.md), this file when the overall state changes, and the relevant feature/architecture/migration documents. Update [README.md](../README.md) when setup, project entry points, or top-level navigation changes.
-7. Report changed files, tests actually run, results, manual steps, and anything still unverified.
+- Previous successful CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` verified migrations 000–017 and the earlier test set, not migration 018 or the latest additions.
+- The latest recorded PHP, Graphify, and database matrix jobs for PR #16 executed zero steps because Actions minutes were exhausted. Do not describe that state as passing or failing application tests.
+- The account's displayed Actions reset date was 2026-11-01; recheck live quota and spending budget before starting new workflows.
+- The owner's local backup and local database work must be performed only on the real machine after checking the exact source/target DB and rollback path. Never restore into the source database.
+- Local environment details in [AI_CONTEXT.md](../AI_CONTEXT.md) are dated handoff notes; recheck before acting.
 
-Do not run a full Graphify review or full-system audit for every small feature. Use the existing graph and guide when a change crosses architectural boundaries or when the owner requests it.
+## 7. Working rules for all three phases
 
-## 7. Next task
+1. Follow the relevant scope and pass criteria in [COMPLETION_PLAN.md](COMPLETION_PLAN.md); do not broaden each phase into an unbounded audit.
+2. Inspect branch, commit, and `git status` before editing. Preserve modified and untracked local files.
+3. Use disposable synthetic databases for CI and isolate any restore test in a newly named database.
+4. Run focused regression tests for every fix, then the broader phase gate.
+5. Update [UPDATES.md](../UPDATES.md), this file, and the relevant feature/runbook/architecture documents with verified facts.
+6. At the end of each phase, report passed checks, failed checks, blocked local checks, changed files, and the next phase.
 
-The next feature is selected by the owner in the conversation. Do not invent a feature or start unrelated cleanup while waiting for its scope.
+Do not mark a phase complete while its acceptance criteria remain unverified.
