@@ -239,6 +239,9 @@ final class ContentWriteService
                 'issue_id' => $issueId,
                 'moved_files' => $movedFiles,
             ]);
+            foreach ($movedFiles as $path) {
+                $this->recordRecoveryTask($issueId, $path, 'commit_outcome_unknown');
+            }
             return;
         }
 
@@ -249,13 +252,63 @@ final class ContentWriteService
                         'issue_id' => $issueId,
                         'path' => $path,
                     ]);
+                    $this->recordRecoveryTask($issueId, $path, 'compensation_failed');
                 }
             } catch (Throwable $cleanupError) {
                 App::logException('ERROR', 'content.write.file_compensation_failed', $cleanupError, [
                     'issue_id' => $issueId,
                     'path' => $path,
                 ]);
+                $this->recordRecoveryTask($issueId, $path, 'compensation_failed');
             }
+
+    private function recordRecoveryTask(?int $issueId, string $absolutePath, string $reason): void
+    {
+        $prefix = $this->storageRoot . DIRECTORY_SEPARATOR;
+        if ($issueId === null || !str_starts_with($absolutePath, $prefix)) {
+            App::log('CRITICAL', 'content.write.recovery_task_path_invalid', [
+                'issue_id' => $issueId,
+                'path' => $absolutePath,
+                'reason_code' => $reason,
+            ]);
+            return;
+        }
+
+        $relativePath = str_replace(DIRECTORY_SEPARATOR, '/', substr($absolutePath, strlen($prefix)));
+        if (!str_starts_with($relativePath, 'issues/' . $issueId . '/')) {
+            App::log('CRITICAL', 'content.write.recovery_task_path_outside_issue', [
+                'issue_id' => $issueId,
+                'path' => $relativePath,
+                'reason_code' => $reason,
+            ]);
+            return;
+        }
+
+        try {
+            if ($this->pdo->inTransaction()) {
+                throw new \\LogicException('Recovery records require the content transaction to be closed.');
+            }
+
+            $this->pdo->prepare(
+                "INSERT INTO storage_recovery_tasks
+                    (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code, status)
+                 VALUES ('issue', ?, ?, ?, ?, 'pending')
+                 ON DUPLICATE KEY UPDATE reason_code = VALUES(reason_code), status = 'pending',
+                    attempts = attempts + 1, last_error_code = NULL"
+            )->execute([
+                $issueId,
+                $relativePath,
+                hash('sha256', $relativePath),
+                $reason,
+            ]);
+        } catch (Throwable $recordError) {
+            App::logException('CRITICAL', 'content.write.recovery_task_record_failed', $recordError, [
+                'issue_id' => $issueId,
+                'path' => $relativePath,
+                'reason_code' => $reason,
+            ]);
+        }
+    }
         }
     }
 }
