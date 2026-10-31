@@ -113,12 +113,13 @@ Never claim a task is complete merely because code was added or CI passed. Separ
 
 - Owner-approved three-phase program: Phase 1 (database/data integrity/operational reliability), Phase 2 (security/account lifecycle/Graphify), Phase 3 (UI/PWA/cross-device/final acceptance). See [completion plan](docs/COMPLETION_PLAN.md).
 - Active Phase 1 branch: `phase1/foundation-reliability-20261031`.
-- Last recorded Phase 1 branch head before this handoff refresh: `1af2a8a33d7172803f3a5451ae2e13f3f2db08f4`. Re-resolve the live branch before the next task; this is a dated snapshot.
+- Always resolve the live Phase 1 branch head before each task. Do not treat a commit SHA copied from an older handoff as the current head.
 - Implemented on this branch, not yet test-executed:
   - `bin/compare-database-schema.php`: read-only schema comparison for tables, views, columns, indexes, foreign keys, CHECK constraints, triggers, stored routines, events, and optional row counts.
-  - `app/core/App.php`: complete Authorization and Cookie header redaction plus standalone Bearer and token-field redaction.
+  - `app/core/App.php`: complete Authorization and Cookie header redaction plus standalone Bearer, token-field, and session-ID redaction.
   - `tests/php/logging-exception-redaction.php`: synthetic raw Authorization/Cookie/Bearer/query/session-ID/context secrets, app/access/security/audit JSON channels, and log-retention checks.
-  - `.github/workflows/database-migrations.yml`: disposable backup → gzip/checksum → restore into new database → schema and row-count comparison step, using the CI fixture only.\n  - `.github/workflows/php-lint.yml`: PHP syntax suite includes the new comparator CLI help check and expanded logging regression test.
+  - `.github/workflows/database-migrations.yml`: disposable backup → gzip/checksum → restore into new database → schema and row-count comparison step, using the CI fixture only.
+  - `.github/workflows/php-lint.yml`: PHP syntax suite includes the new comparator CLI help check and expanded logging regression test.
   - `docs/DATABASE_BACKUP_RESTORE.md`: safe owner-machine database restore, schema/row-count comparison, and separate private-media archive/sample-restore procedure.
   - `docs/STORAGE_RECOVERY_RUNBOOK.md`: read-only triage of pending filesystem recovery tasks; no general cleanup worker exists.
 - Documentation refreshed: `README.md`, `UPDATES.md`, `docs/CURRENT_STATE.md`, `docs/COMPLETION_PLAN.md`, `docs/DATABASE_BACKUP_RESTORE.md`, and `docs/STORAGE_RECOVERY_RUNBOOK.md`.
