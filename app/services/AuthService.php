@@ -158,12 +158,15 @@ final class AuthService
         self::$loaded = true;
 
         $id = $_SESSION['user_id'] ?? null;
-        if (!is_int($id)) {
-            return self::$current = null;
+        $sessionVersion = $_SESSION['auth_version'] ?? null;
+        if (!is_int($id) || !is_int($sessionVersion) || $sessionVersion < 1) {
+            self::forget();
+            return null;
         }
 
         $user = User::findById($id);
-        if ($user === null || $user['account_status'] !== 'active') {
+        if ($user === null || $user['account_status'] !== 'active'
+            || (int) ($user['auth_version'] ?? 0) !== $sessionVersion) {
             self::forget();
 
             return null;
@@ -205,13 +208,23 @@ final class AuthService
         return ['user' => $row, 'error' => null];
     }
 
-    public static function login(int $userId): void
+    public static function login(int $userId): bool
     {
+        // Bind the new session to the current database auth_version. A password
+        // reset increments that value and invalidates every previously issued session.
+        $user = User::findById($userId);
+        if ($user === null || $user['account_status'] !== 'active') {
+            self::forget();
+            return false;
+        }
+
         session_regenerate_id(true);
         $_SESSION['user_id'] = $userId;
+        $_SESSION['auth_version'] = (int) $user['auth_version'];
         unset($_SESSION['_csrf']);
         self::$loaded  = false;
         self::$current = null;
+        return true;
     }
 
     public static function logout(): void
@@ -221,7 +234,7 @@ final class AuthService
 
     private static function forget(): void
     {
-        unset($_SESSION['user_id'], $_SESSION['_csrf']);
+        unset($_SESSION['user_id'], $_SESSION['auth_version'], $_SESSION['_csrf']);
         session_regenerate_id(true);
         self::$current = null;
         self::$loaded  = true;
