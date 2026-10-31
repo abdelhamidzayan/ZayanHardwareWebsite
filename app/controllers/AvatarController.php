@@ -13,8 +13,13 @@ use App\Services\RateLimiter;
 
 final class AvatarController extends Controller
 {
-    public function show(int $userId): Response
+    public function show(string $userId): Response
     {
+        if (!preg_match('/^[1-9][0-9]*$/D', $userId)) return $this->notFound();
+        $parsedUserId = filter_var($userId, FILTER_VALIDATE_INT);
+        if ($parsedUserId === false || $parsedUserId < 1) return $this->notFound();
+        $userId = $parsedUserId;
+
         $user = User::findById($userId);
         if (!$user) return $this->notFound();
 
