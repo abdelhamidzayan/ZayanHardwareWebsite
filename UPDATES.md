@@ -78,3 +78,10 @@ Use this format for future updates:
 - **Verification:** Documentation links and paths were checked against the repository tree on this branch. No application tests were required because application code was not changed.
 - **Documentation:** [AI context](AI_CONTEXT.md) · [Current state](docs/CURRENT_STATE.md) · [AI start prompt](docs/AI_START_PROMPT.md) · [Architecture map](docs/architecture-code-map.md).
 - **Status:** Documentation files added/updated on branch `docs/ai-handoff-and-feature-log-20261031`. This is not a merge to `main`, not a deployment, and not an application-code release.
+
+
+## 2026-10-31 — Object-level authorization regression expansion
+
+- Extended `tests/php/issue-authorization-integration.php` to reject cross-user edits and soft-deletes of technical posts, edits/deletes of another author's replies, unauthorized diagnostic creation/edit/delete, and accepting a solution on another member's help request. Existing moderator/admin result-review and self-vote protections remain covered.
+- Extended `tests/php/help-request-media-integration.php` to verify requester/helper access to private request and attachment metadata, reject a nonparticipant, and reject a nonparticipant attachment write.
+- These are focused model/service integration cases, not a claim that every POST route has exhaustive end-to-end authorization coverage. The remaining route-by-route authorization review stays open until all handlers and state transitions are reconciled.
