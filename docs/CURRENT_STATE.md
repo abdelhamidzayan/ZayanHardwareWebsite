@@ -17,10 +17,10 @@ The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PL
 - PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) merged into `main` on 2026-10-31. Merge commit: `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`.
 - PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) merged into `main` on 2026-10-31. Merge commit: `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
 - PR [#19](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/19) merged into `main` on 2026-10-31. Merge commit: `bf871bba8de078588a0d17778ed4520199188f96` (skill-test input and answer-exposure hardening).
-- Superseded PRs #13, #14, and #15 were closed after reviewing their changes; there are no open pull requests. Historical branch refs remain for cleanup/traceability.
+- Superseded PRs #13, #14, and #15 were closed after reviewing their changes; the live repository currently has no open pull requests or open issues. A path-scoped one-time GitHub Actions workflow has been added to delete the 26 reviewed superseded branch refs while preserving `main`; verify its run before claiming branch cleanup complete.
 - **Authoritative development branch:** `main`. The Phase 2 code-integration merge commit is `dadddde53f394a0fe353b575ec13dbeb85749f6e`; subsequent commits on `main` are documentation updates. Resolve the live `main` head before new work.
 - The merged work includes the accumulated product features, Phase 1 reliability work, and the Phase 2 session/CSRF/object-authorization baseline. It has not been deployed.
-- Historical Phase 1/Phase 2 branches are retained for traceability until branch cleanup is verified. Do not create new feature work from those historical branches; branch new work from `main`.
+- The only supported development base is `main`. A one-time cleanup workflow targets only the 26 explicitly reviewed historical branch names; it skips `main` and does not affect future branches.
 - The owner's local Kali checkout remains on `local/audit-update-20261031` at `46960cf9efb33b2b0affa503d5e832725bdba4b4`, with modified and untracked files. It is not synchronized with `main`. Preserve those files; do not run the updater, reset, clean, or pull until a safe local reconciliation plan is prepared.
 - No merge above is evidence of deployment, live database migration, or production acceptance.
 
@@ -38,7 +38,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 
 | Work item | Current evidence | Status |
 |---|---|---|
-| Ordered fresh-install migrations 000–018 | Full clean-install sequence passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 | CI verified on `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` |
+| Single-file fresh install | `database/fresh_install.sql` consolidates the final schema; current-head CI is validating it on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 | Awaiting exact-head workflow result |
 | MySQL/MariaDB matrix | All 3 matrix jobs completed successfully, including the complete integration suite | CI verified |
 | Core content write/media recovery | Issue/reply media writes, draft publish outcomes, symlink containment, personal-help media, authorization and reply tombstones passed | CI verified on all 3 engines |
 | Public/private route and upload checks | Public/private route policy, image upload policy and PHP/JS syntax suites passed | CI verified |
@@ -54,7 +54,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 ## 5. Existing technical documentation
 
 - [Architecture and dependency map](architecture-code-map.md)
-- [Fresh database installation order](../database/FRESH_INSTALL.md)
+- [Single-file fresh database installation](../database/FRESH_INSTALL.md) · [SQL schema](../database/fresh_install.sql)
 - [Database backup, restore, and comparison runbook](DATABASE_BACKUP_RESTORE.md)
 - [Storage recovery triage](STORAGE_RECOVERY_RUNBOOK.md)
 - [Content system implementation](content-system-implementation.md)
