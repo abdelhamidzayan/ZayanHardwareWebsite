@@ -48,7 +48,13 @@ After installation, verify:
 
 ## First administrator
 
-A clean installation runs migrations before a user exists. Therefore the historical `002_final_registration_permissions.sql` bootstrap statement has no account to promote on an empty database. The first administrator must be established by a guarded operator-only procedure after creating the owner's account. Do not make the first public registrant an administrator automatically.
+A clean installation runs migrations before a user exists. Therefore the historical `002_final_registration_permissions.sql` bootstrap statement has no account to promote on an empty database. Create the owner's account through registration, then run the guarded operator-only command from the project root:
+
+```bash
+DB_NAME=zayan_hardware php bin/bootstrap-first-admin.php --username=OWNER_USERNAME --confirm-database=zayan_hardware --confirm-first-admin
+```
+
+Replace `OWNER_USERNAME` and `zayan_hardware` with the actual username and configured database name. The command requires CLI access, exact database-name confirmation, an active account, and zero existing administrator accounts. It serializes concurrent attempts and writes a security-audit record. It refuses to run when any admin already exists. Do not make the first public registrant an administrator automatically.
 
 ## Existing installations
 
