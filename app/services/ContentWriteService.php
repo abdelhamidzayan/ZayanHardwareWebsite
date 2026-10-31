@@ -19,6 +19,7 @@ final class ContentWriteService
     private \Closure $moveFile;
     private \Closure $removeFile;
     private ?\Closure $afterAttachment;
+    private \Closure $commitTransaction;
     private string $storageRoot;
 
     public function __construct(
@@ -26,7 +27,8 @@ final class ContentWriteService
         ?callable $moveFile = null,
         ?callable $removeFile = null,
         ?callable $afterAttachment = null,
-        ?string $storageRoot = null
+        ?string $storageRoot = null,
+        ?callable $commitTransaction = null
     ) {
         $this->moveFile = $moveFile !== null
             ? \Closure::fromCallable($moveFile)
@@ -37,6 +39,9 @@ final class ContentWriteService
         $this->afterAttachment = $afterAttachment !== null
             ? \Closure::fromCallable($afterAttachment)
             : null;
+        $this->commitTransaction = $commitTransaction !== null
+            ? \Closure::fromCallable($commitTransaction)
+            : static function (PDO $pdo): void { $pdo->commit(); };
         $this->storageRoot = rtrim($storageRoot ?? App::root('storage/private'), '/\\');
         if ($this->storageRoot === '') {
             throw new \InvalidArgumentException('Private storage root is required.');
@@ -74,7 +79,7 @@ final class ContentWriteService
             Issue::updateDescriptionContent($issueId, $userId, $resolvedDescription);
 
             $commitStarted = true;
-            $this->pdo->commit();
+            ($this->commitTransaction)($this->pdo);
 
             return $issueId;
         } catch (Throwable $error) {
@@ -105,7 +110,7 @@ final class ContentWriteService
             Issue::updateReplyContent($replyId, $userId, $resolvedBody);
 
             $commitStarted = true;
-            $this->pdo->commit();
+            ($this->commitTransaction)($this->pdo);
 
             return ['id' => $replyId, 'body' => $resolvedBody];
         } catch (Throwable $error) {
@@ -165,7 +170,7 @@ final class ContentWriteService
             Issue::updateDiagnosticUpdateContent($updateId, $userId, $resolvedBody);
 
             $commitStarted = true;
-            $this->pdo->commit();
+            ($this->commitTransaction)($this->pdo);
 
             return ['id' => $updateId, 'body' => $resolvedBody];
         } catch (Throwable $error) {
@@ -196,7 +201,7 @@ final class ContentWriteService
             Issue::updateDescriptionContent($issueId, $userId, $resolvedDescription);
 
             $commitStarted = true;
-            $this->pdo->commit();
+            ($this->commitTransaction)($this->pdo);
 
             return ['body' => $resolvedDescription];
         } catch (Throwable $error) {
@@ -229,7 +234,7 @@ final class ContentWriteService
             Issue::updateReplyContent($replyId, $userId, $resolvedBody);
 
             $commitStarted = true;
-            $this->pdo->commit();
+            ($this->commitTransaction)($this->pdo);
 
             return ['body' => $resolvedBody];
         } catch (Throwable $error) {
@@ -259,7 +264,7 @@ final class ContentWriteService
             Issue::updateDiagnosticUpdateContent($updateId, $userId, $resolvedBody);
 
             $commitStarted = true;
-            $this->pdo->commit();
+            ($this->commitTransaction)($this->pdo);
 
             return ['body' => $resolvedBody];
         } catch (Throwable $error) {
@@ -378,7 +383,9 @@ final class ContentWriteService
         if ($this->pdo->inTransaction()) {
             try {
                 $this->pdo->rollBack();
-                $rollbackConfirmed = !$commitStarted;
+                // A successful explicit rollback confirms that the transaction
+                // did not commit, even when the commit call itself threw.
+                $rollbackConfirmed = true;
             } catch (Throwable $rollbackError) {
                 $rollbackConfirmed = false;
                 App::logException('CRITICAL', 'content.write.rollback_failed', $rollbackError, [
