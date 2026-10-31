@@ -259,6 +259,15 @@ foreach ($replies as $reply) {
         <?php else : ?>
             <?php foreach ($topLevelReplies as $reply) : ?>
                 <article id="reply-<?= (int) $reply['id'] ?>" class="card reply-card <?= (int) $reply['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
+                    <?php if (!empty($reply['deleted_at'])) : ?>
+                        <header class="reply-card__head">
+                            <div class="reply-card__identity">
+                                <strong>تعليق محذوف</strong>
+                                <span class="muted">تم الاحتفاظ بالردود المرتبطة به للحفاظ على سياق النقاش.</span>
+                            </div>
+                        </header>
+                        <div class="reply-card__body"><p class="muted">نص التعليق الأصلي لم يعد معروضًا.</p></div>
+                    <?php else : ?>
                     <header class="reply-card__head">
                         <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $reply['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($reply['avatar_path']) ? '/avatar/' . (int) $reply['user_id'] : '/assets/avatars/' . rawurlencode((string) ($reply['avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="40" height="40" loading="lazy"></a>
                         <div class="reply-card__identity"><strong><a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $reply['username'])) ?>"><?= $e($reply['display_name']) ?></a></strong><span class="muted"><?= $e($specializations[$reply['specialization'] ?? ''] ?? 'فني هاردوير') ?> · السمعة <?= (int) $reply['reputation_points'] ?> نقطة · <?= $e($reply['created_at']) ?></span></div>
@@ -307,13 +316,15 @@ foreach ($replies as $reply) {
                             </details>
                         <?php endif; ?>
                     </footer>
+
+                    <?php endif; ?>
                     <?php if (!empty($childrenByParent[(int) $reply['id']])) : ?>
                         <div class="reply-card__children" aria-label="الردود على التعليق">
                             <?php foreach ($childrenByParent[(int) $reply['id']] as $child) : ?>
                                 <article id="reply-<?= (int) $child['id'] ?>" class="reply-card reply-card--nested <?= (int) $child['id'] === (int) $issue['accepted_reply_id'] ? 'reply-card--accepted' : '' ?>">
                                     <header class="reply-card__head">
                                         <a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $child['username'])) ?>"><img class="avatar avatar-image" src="<?= $e($baseUrl . (!empty($child['avatar_path']) ? '/avatar/' . (int) $child['user_id'] : '/assets/avatars/' . rawurlencode((string) ($child['avatar_key'] ?? 'technician-blue')) . '.svg')) ?>" alt="" width="36" height="36" loading="lazy"></a>
-                                        <div class="reply-card__identity"><strong><a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $child['username'])) ?>"><?= $e($child['display_name']) ?></a></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
+                                        <div class="reply-card__identity"><strong><a href="<?= $e($baseUrl) ?>/profile/<?= $e(rawurlencode((string) $child['username'])) ?>"><?= $e($child['display_name']) ?></a></strong><span class="muted"><?= $e($child['created_at']) ?><?php if (!empty($child['parent_deleted_at'])) : ?> · رد على تعليق محذوف<?php elseif (!empty($child['parent_author_name'])) : ?> · رد على <?= $e($child['parent_author_name']) ?><?php endif; ?></span></div>
                                     </header>
                                     <div class="reply-card__body" dir="auto"><?= \App\Services\ContentEditorService::renderInlineContent((string) $child['body'], $attachments, $baseUrl) ?></div>
                                     <footer class="reply-card__actions">
