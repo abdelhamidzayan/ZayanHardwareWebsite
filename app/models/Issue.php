@@ -310,7 +310,7 @@ final class Issue extends Model
         }
     }
 
-        public static function deleteDiagnosticUpdate(int $issueId, int $updateId, int $userId): void
+    public static function deleteDiagnosticUpdate(int $issueId, int $updateId, int $userId): void
     {
         $stmt = self::db()->prepare(
             "UPDATE issue_diagnostic_updates d
@@ -356,7 +356,7 @@ final class Issue extends Model
         }
     }
 
-        public static function history(int $issueId): array
+    public static function history(int $issueId): array
     {
         $stmt = self::db()->prepare(
             'SELECT h.previous_title, h.previous_description, h.previous_measurements, h.created_at,
@@ -421,7 +421,7 @@ final class Issue extends Model
         }
     }
 
-        public static function deleteReply(int $replyId, int $userId): int
+    public static function deleteReply(int $replyId, int $userId): int
     {
         $pdo = self::db();
         $pdo->beginTransaction();
@@ -485,7 +485,7 @@ final class Issue extends Model
         }
     }
 
-        public static function vote(int $replyId, int $userId): void
+    public static function vote(int $replyId, int $userId): void
     {
         $pdo = self::db();
         $pdo->beginTransaction();
