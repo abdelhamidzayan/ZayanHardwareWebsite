@@ -112,6 +112,32 @@ try {
     }
     expectUploadPolicy($countMismatchRejected, 'Personal-help media validator must reject mismatched upload array lengths.');
 
+    $issueIndexMismatchRejected = false;
+    try {
+        ContentEditorService::validateUploads([
+            'name' => [0 => 'fixture.jpg'],
+            'error' => [1 => UPLOAD_ERR_NO_FILE],
+            'tmp_name' => [0 => ''],
+            'size' => [0 => 0],
+        ], []);
+    } catch (DomainException $error) {
+        $issueIndexMismatchRejected = $error->getMessage() === 'invalid_upload_structure';
+    }
+    expectUploadPolicy($issueIndexMismatchRejected, 'Issue media validator must reject mismatched upload field indexes.');
+
+    $helpIndexMismatchRejected = false;
+    try {
+        HelpRequestMediaService::validate([
+            'name' => [0 => 'fixture.jpg'],
+            'error' => [1 => UPLOAD_ERR_NO_FILE],
+            'tmp_name' => [0 => ''],
+            'size' => [0 => 0],
+        ]);
+    } catch (DomainException $error) {
+        $helpIndexMismatchRejected = $error->getMessage() === 'invalid_attachment_structure';
+    }
+    expectUploadPolicy($helpIndexMismatchRejected, 'Personal-help media validator must reject mismatched upload field indexes.');
+
     echo "Image pixel limits and malformed upload structure tests passed.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, "Upload policy test failed: " . $error::class . ' ' . $error->getMessage() . PHP_EOL);
