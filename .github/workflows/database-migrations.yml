@@ -152,10 +152,10 @@ jobs:
           fk_count="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.key_column_usage WHERE table_schema = '${DB_NAME}' AND referenced_table_name IS NOT NULL;")"
           test "${fk_count}" -ge 50
 
-          for constraint in fk_issue_replies_issue fk_issue_replies_parent fk_issue_attachments_issue
-                            fk_issue_history_issue fk_issue_results_issue fk_issue_diagnostic_updates_issue
-                            fk_help_requests_requester fk_help_messages_request fk_help_public_posts_request
-                            fk_post_drafts_user; do
+          for constraint in fk_016_issue_replies_issue fk_016_issue_replies_parent fk_016_issue_attachments_issue
+                            fk_016_issue_history_issue fk_016_issue_results_issue fk_016_issue_diagnostic_updates_issue
+                            fk_016_help_requests_requester fk_016_help_messages_request fk_016_help_public_posts_request
+                            fk_016_post_drafts_user; do
             delete_rule="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${DB_NAME}' AND CONSTRAINT_NAME = '${constraint}';")"
             test "${delete_rule}" = "RESTRICT" || { echo "Expected RESTRICT for ${constraint}, got ${delete_rule}"; exit 1; }
           done
