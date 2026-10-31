@@ -239,7 +239,7 @@ final class App
         $value = preg_replace('/\\b(cookie)\\b\\s*:\\s*[^\\r\\n]*/i', '$1=[REDACTED]', $value) ?? $value;
 
         // Also cover bearer values appearing outside a standard header line.
-        $value = preg_replace('/\\bBearer\\s+[^\\s,;]+/i', 'Bearer [REDACTED]', $value) ?? $value;
+        $value = preg_replace('/(?<![A-Za-z0-9_.-])Bearer\\s+[^\\s,;]+/i', 'Bearer [REDACTED]', $value) ?? $value;
 
         $pattern = "/\\b(password|passwd|access[_-]?token|refresh[_-]?token|id[_-]?token|session[_-]?id|token|secret|authorization|cookie|csrf|api[_-]?key)\\b\\s*[:=]\\s*(\"[^\"]*\"|'[^']*'|[^\\s,;&]+)/i";
         return preg_replace($pattern, '$1=[REDACTED]', $value) ?? $value;
