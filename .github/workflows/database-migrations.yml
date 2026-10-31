@@ -81,6 +81,7 @@ jobs:
             database/migrations/016_protect_technical_history.sql
             database/migrations/017_block_physical_content_delete.sql
             database/migrations/018_storage_recovery_tasks.sql
+            database/migrations/019_session_version_invalidation.sql
           )
 
           for migration in "${migrations[@]}"; do
@@ -107,6 +108,9 @@ jobs:
           test "${legacy_columns}" -eq 0
           final_profile_columns="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '${DB_NAME}' AND table_name = 'technician_profiles' AND column_name IN ('device_focus','tech_level','board_experience','level_verified','workshop_name','biography');")"
           test "${final_profile_columns}" -eq 6
+
+          auth_version_columns="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '${DB_NAME}' AND table_name = 'users' AND column_name = 'auth_version';")"
+          test "${auth_version_columns}" -eq 1
 
           mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "
             INSERT INTO users (username, display_name, email, password_hash)
@@ -229,6 +233,15 @@ jobs:
           DB_USER: root
           DB_PASS: root
         run: php tests/php/admin-roster-integration.php
+
+      - name: Verify password-reset session invalidation
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: zayan_fresh_install_test
+          DB_USER: root
+          DB_PASS: root
+        run: php tests/php/auth-session-version-integration.php
 
       - name: Verify model-level device catalog moderation and audit
         env:

@@ -39,7 +39,7 @@ final class RateLimiter
 
     /**
      * Run an authentication check while both failure buckets are locked.
-     * Only invalid credentials consume a hit; successful logins do not.
+     * Invalid credentials and blocked-account attempts consume a hit; successful logins do not.
      *
      * @return array{allowed:bool,result:?array}
      */
@@ -96,7 +96,7 @@ final class RateLimiter
             }
 
             $result = $attempt();
-            if (is_array($result) && ($result['error'] ?? null) === 'invalid') {
+            if (is_array($result) && in_array(($result['error'] ?? null), ['invalid', 'blocked'], true)) {
                 $reset = $pdo->prepare(
                     'UPDATE rate_limit_buckets
                      SET window_started_at = UTC_TIMESTAMP(), hit_count = 1
@@ -129,7 +129,11 @@ final class RateLimiter
                  WHERE updated_at < (UTC_TIMESTAMP() - INTERVAL 2 DAY)'
             );
         } catch (\Throwable $cleanupError) {
-            \App\Core\App::log('warning', 'Rate-limit bucket cleanup failed: ' . $cleanupError->getMessage());
+            \App\Core\App::logException(
+                'WARNING',
+                'rate_limit.bucket_cleanup_failed',
+                $cleanupError
+            );
         }
     }
 

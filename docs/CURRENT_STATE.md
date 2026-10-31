@@ -7,7 +7,7 @@
 The owner approved a **three-phase completion plan**. Complete the remaining stabilization work in controlled phases, report each phase gate, and avoid repeating a full review after every change.
 
 - **Phase 1 — Database, data integrity, and operational reliability:** CI gate passed; owner-machine acceptance checks remain open.
-- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** starts after Phase 1.
+- **Phase 2 — Security, account lifecycle, and Graphify/dependency integrity:** in progress on `phase2/security-graphify-20261031`.
 - **Phase 3 — UI, PWA, cross-device acceptance, and final readiness:** starts after Phase 2.
 
 The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PLAN.md).
@@ -18,8 +18,6 @@ The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PL
 - Merge commit: `098442813eb5a55e96d5fff27ce127f9b5f08591`.
 - This merge did **not** target `main` and is not evidence of deployment.
 - Current Phase 1 work is on `phase1/foundation-reliability-20261031`, based on that merge commit.
-- PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) is an open draft from the Phase 1 branch into `main`; it is not merged or deployed.
-- PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) is a separate Phase 2 draft based on the Phase 1 branch; do not merge it before Phase 1 owner-machine acceptance.
 - Do not assume the local Kali/XAMPP checkout, `main`, the merged audit branch, and any hosted deployment are synchronized.
 
 ## 3. Product boundaries and data preservation
@@ -36,7 +34,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 
 | Work item | Current evidence | Status |
 |---|---|---|
-| Ordered fresh-install migrations 000–018 | Full clean-install sequence passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 | CI verified on `c35c71f39d0702178d8dc9aad041d247b29c29b1` |
+| Ordered fresh-install migrations 000–018 | Full clean-install sequence passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 | CI verified on `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` |
 | MySQL/MariaDB matrix | All 3 matrix jobs completed successfully, including the complete integration suite | CI verified |
 | Core content write/media recovery | Issue/reply media writes, draft publish outcomes, symlink containment, personal-help media, authorization and reply tombstones passed | CI verified on all 3 engines |
 | Public/private route and upload checks | Public/private route policy, image upload policy and PHP/JS syntax suites passed | CI verified |
@@ -47,7 +45,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 | Private-media backup and sample restore | A separate archive/path and isolated restore of referenced private files have not been verified | Pending owner-machine verification |
 | Pending storage recovery reconciliation | Durable records exist; a read-only/manual triage runbook is now documented; no general automatic worker exists | Procedure documented; reconciliation pending |
 | Read-only schema comparator | CLI check plus full schema-object and row-count comparison during restore passed on all 3 engines | CI verified |
-| Phase 1 branch CI verification | PHP, Graphify, and 3-engine database workflows all passed on commit `c35c71f39d0702178d8dc9aad041d247b29c29b1` | All CI gates passed; local acceptance pending |
+| Phase 1 branch CI verification | PHP, Graphify, and 3-engine database workflows all passed on commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` | All CI gates passed; local acceptance pending |
 
 ## 5. Existing technical documentation
 
@@ -68,7 +66,7 @@ Documentation is a map, not proof. Inspect the actual code and live database sta
 
 ## 6. Verification boundaries and local work
 
-- Historical CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` covered migrations 000–017 only. The newer Phase 1 head `c35c71f39d0702178d8dc9aad041d247b29c29b1` passed the full 000–018 matrix and integration suite.
+- Historical CI baseline `55522a3cc204e961aaf9947773b15ff10321ad02` covered migrations 000–017 only. The newer Phase 1 commit `5723fb26f02d14a0d66cc5db43093a8fd1a08aab` passed the full 000–018 matrix and integration suite.
 - PR #16's earlier zero-step runs were caused by exhausted included Actions minutes. After the repository became public, PR #17 successfully executed all current Phase 1 workflows; the current public-repository run is the source of truth.
 - The owner database restore and private-media restore remain separate local tasks and must not be confused with the disposable CI restore.
 - The owner's local backup and local database work must be performed only on the real machine after checking the exact source/target DB and rollback path. Never restore into the source database.
@@ -86,7 +84,45 @@ On `phase1/foundation-reliability-20261031`, the Phase 1 automated gate passed o
 
 The owner database restore, private-media archive/sample restore, and real Apache (`daemon`) permissions/log-write checks remain unverified because they require the owner's local Kali/XAMPP environment. No live database or private media tree was modified by CI.
 
-## 8. Working rules for all three phases
+## 8. Phase 2 — current security work
+
+**Branch:** `phase2/security-graphify-20261031`  
+**Latest verified commit:** `889dd99c74824674789a138bfc7dd3b9dd30444e`
+
+Implemented and CI-verified on that exact commit:
+
+- Suspended-account login failures return the same public error as invalid credentials; blocked-account attempts consume the same IP/identifier failure buckets.
+- Migration 019 adds `users.auth_version`; password reset, account status/reactivation, role changes, deletion requests, and final identity anonymization revoke older sessions.
+- Login/session version binding and conditional password rehash prevent stale sessions and an in-flight old-password login from restoring an obsolete hash.
+- Regression coverage includes stale sessions, password-reset/login races, suspension/reactivation with an old cookie, generic login errors, and account lifecycle mutation policy.
+- Automated CSRF policy scans all 49 declared POST routes and enforces the public POST allow-list (`/login`, `/register`). This is not proof that all object-level authorization is correct.
+- Admin updater hardening includes CSRF, per-user rate limiting, active-admin revalidation, fixed command arguments, audit events, and a shared lifecycle lock.
+- Graphify generated 706 nodes and 1,646 edges; the review recorded 174 SQL queries, 21 migrations, 15 API call sites, and manual mapping of five dynamic API references.
+- The frontend sink review covered 13 JavaScript files and key issue/help/profile/auth/admin templates. Dynamic text is escaped; reviewed `innerHTML` sinks use fixed SVG fragments or fixed PWA guide copy.
+
+**Exact-head CI:** all three workflows completed successfully on `889dd99c74824674789a138bfc7dd3b9dd30444e`:
+- [PHP syntax/security tests](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933680) — passed.
+- [Graphify dependency graph](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933760) — passed.
+- [Database migration integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933686) — passed.
+
+**Still open:** full object-level authorization matrix for all routes; broader SQL/input validation review; complete XSS/output-encoding review; upload/private-file lifecycle and containment review; storage-recovery/notification retry behavior; and local updater/sudoers runtime inspection. The external updater script is not the same as the in-app updater controller.
+
+No Phase 2 completion is claimed. PR #18 remains a draft; no merge to `main`, production database migration, or deployment is claimed.
+
+## 9. Local runtime findings (2026-10-31)
+
+The owner checked the Kali/XAMPP host:
+
+- Apache workers run as `daemon`.
+- `storage/logs` is `root:root` mode `0775` with an access ACL granting `daemon` `rwx` and a default ACL for new entries. An initial `test -w` check returned false, but a later real create-file test executed as `daemon` succeeded and confirmed ACL inheritance. No chmod/chown change is required.
+- The observed default ACL currently includes `default:other::r-x`; the newly created test file inherited `other::r--`. This means newly created log files may be readable by local users outside the Apache account. Existing application/access/security/audit log files are `daemon:daemon` and normally have no `other` access; `permission-test.log` is an exception (`other::r--`). Tighten the directory's `other` and default-`other` ACL to `---`, and restrict `permission-test.log`, before treating local log confidentiality as closed.
+- The `daemon` sudo policy permits only `/usr/bin/bash /home/a/bin/zayan-hardware-update.sh` as user `a`; this is a narrow command rule, not unrestricted sudo.
+- The external update script is mode `0700`, owned by `a:a`. It requires branch `main`, a clean tracked worktree, and allows only a small untracked-file exception. The current local checkout is instead `local/audit-update-20261031`, has a modified `.htaccess`, and has untracked files. **Do not run the updater or clean/reset/checkout this worktree.**
+- Local HEAD `46960cf9efb33b2b0affa503d5e832725bdba4b4` differs from the Phase 2 CI-verified GitHub candidate. Preserve the local modifications and untracked files.
+
+**Verified local result:** the working `daemon` ACL is retained; unnecessary `other` read/traverse access was removed from the log directory's access/default ACL and `permission-test.log`. Two real create-file tests executed as `daemon` succeeded, and both new files inherited `other::---`. Apache write access remains functional. No broad chmod, recursive ownership change, or updater execution was used. Owner-database restore and private-media restore remain separate pending acceptance checks.
+
+## 9. Working rules for all three phases
 
 1. Follow the relevant scope and pass criteria in [COMPLETION_PLAN.md](COMPLETION_PLAN.md); do not broaden each phase into an unbounded audit.
 2. Inspect branch, commit, and `git status` before editing. Preserve modified and untracked local files.
