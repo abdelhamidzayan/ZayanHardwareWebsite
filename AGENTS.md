@@ -44,6 +44,8 @@ Documentation is part of feature delivery, not optional cleanup.
 - Use [the reusable AI start prompt](docs/AI_START_PROMPT.md) in a new conversation. It is only a short pointer to the repository's actual instructions and docs.
 
 ## GitHub Actions and usage budget
+Read the detailed operating procedure in [docs/github-actions-policy.md](docs/github-actions-policy.md); the rules below are mandatory summary requirements.
+
 - Keep the repository's GitHub Actions workflow files enabled and version-controlled. They are part of the project's verification system; do not delete them or permanently disable them to work around a quota limit.
 - Required CI coverage includes PHP/JavaScript syntax and focused tests, the fresh-install migration sequence across the supported MySQL/MariaDB versions, database integration tests, and Graphify generation/determinism checks.
 - Use pull-request events for branch verification and reserve automatic push-triggered runs for `main`, avoiding duplicate CI for the same PR update. Give each workflow a per-PR/ref concurrency group with `cancel-in-progress: true` so an older queued/running check is superseded by the newest commit.
