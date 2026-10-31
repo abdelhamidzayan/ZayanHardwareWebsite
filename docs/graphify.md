@@ -39,7 +39,7 @@ Generated local output is ignored by Git. GitHub Actions runs the tests, generat
 | PHP Models | Literal SQL fragments in model source | Model file to tables read by SELECT/FROM/JOIN and tables written by INSERT/REPLACE/UPDATE/DELETE/TRUNCATE |
 | JavaScript and PHP views | JS files, API-call sites, PHP form/data attributes | Relative JS imports, scripts loaded by PHP views, form actions and data-* endpoint values, fetch/XHR calls resolved through those view-provided URLs to matching HTTP routes |
 
-Node IDs are stable for the same node type and source key. Output ordering is deterministic, so graph diffs remain reviewable. The scanner also reports duplicate three-digit migration prefixes. This is important because this repository has alternative files with the 002 prefix.
+Node IDs are stable for the same node type and source key. Output ordering is deterministic, so graph diffs remain reviewable. The scanner also reports duplicate three-digit migration prefixes as a manual-review warning. In this repository, the two `002_` files are sequential in the documented fresh-install path, not alternatives; the exact sequence is in `database/FRESH_INSTALL.md` and is exercised by the disposable-database CI workflow. Graphify never decides migration order or applied state.
 
 ## Reading the result
 
