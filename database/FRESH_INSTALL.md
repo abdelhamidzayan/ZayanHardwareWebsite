@@ -34,6 +34,7 @@ The duplicate `002_` prefix is historical. These two files are **sequential**, n
 17. `015_deleted_accounts_without_contact.sql`
 18. `016_protect_technical_history.sql`
 19. `017_block_physical_content_delete.sql`
+20. `018_storage_recovery_tasks.sql`
 
 `013` intentionally uses `CREATE TABLE IF NOT EXISTS`: the terms table is created by the registration migration, and this later file also repairs installations where that table was absent.
 
