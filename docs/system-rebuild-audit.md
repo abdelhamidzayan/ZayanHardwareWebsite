@@ -167,3 +167,10 @@ The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minu
 | Production deployment or PR merge | Not performed |
 
 Do not describe the full system as complete until the remaining gaps are implemented or explicitly accepted, the current-head CI matrix passes, and the required local/browser/data checks have been separately executed.
+
+
+## 2026-10-31 follow-up — skill-test input and answer exposure
+
+The skill-test hardening follow-up was merged through PR #19 (`bf871bba8de078588a0d17778ed4520199188f96`). Admin-created question JSON is size-bounded, shape-validated, and normalized to a whitelist; correct-answer keys must match the option set. The public assessment payload is rebuilt from a strict DTO containing only question text, options, and index. Stored test data is revalidated before use, associated skill domains must remain active, and submitted answers are normalized to bounded valid option keys before scoring and persistence.
+
+The disposable database test `tests/php/skill-test-input-integration.php` covers public answer redaction, malformed question collections, oversized unknown answers, bounded attempt-history persistence, and inactive-domain rejection. Exact tested head `d58282608187d5cbd5af59c66c332b2a7394b20e` passed PHP syntax, Graphify, and the MySQL 8.0 / MariaDB 10.4.32 / MariaDB 10.11 integration matrix (runs 41239306080, 41239306068, 41239306049). No owner database, existing attempt, or skill rating was modified.
