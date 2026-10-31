@@ -87,8 +87,17 @@ final class HelpRequestController extends Controller
         $body = trim($this->string('body'));
         try {
             $uploads = HelpRequestMediaService::validate($_FILES['attachments'] ?? null);
-        } catch (\DomainException) {
-            return $this->fail($returnTo, 'راجع المرفقات؛ المسموح حتى 8 صور أو ملفات PDF، كل ملف حتى 8 ميجابايت.');
+        } catch (\DomainException $error) {
+            $message = match ($error->getMessage()) {
+                'too_many_attachments' => 'الحد الأقصى 8 مرفقات في الطلب.',
+                'invalid_attachment_size' => 'أحد المرفقات غير صالح أو أكبر من 8 ميجابايت.',
+                'invalid_attachment_type' => 'المسموح صور JPG/PNG/WEBP/GIF أو ملفات PDF فقط.',
+                'invalid_attachment_dimensions' => 'أبعاد إحدى الصور كبيرة جدًا. الحد الأقصى 8000 بكسل لكل بُعد و20 مليون بكسل إجماليًا.',
+                'invalid_attachment_structure' => 'بيانات المرفقات غير سليمة. اختار الملفات مرة أخرى.',
+                'invalid_attachment_dimensions' => 'أبعاد إحدى الصور كبيرة جدًا. الحد الأقصى 8000 بكسل لكل بُعد و20 مليون بكسل إجماليًا.',
+                default => 'تعذر قراءة المرفقات أو أن بيانات الرفع غير متوافقة.',
+            };
+            return $this->fail($returnTo, $message);
         }
         if (!$helperId || mb_strlen($subject) < 4 || mb_strlen($subject) > 180
             || (mb_strlen($body) < 10 && !$uploads) || mb_strlen($body) > 5000) {
