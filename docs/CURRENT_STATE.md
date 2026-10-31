@@ -85,22 +85,41 @@ The owner database restore, private-media archive/sample restore, and real Apach
 
 ## 8. Phase 2 — current security work
 
-**Branch:** `phase2/security-graphify-20261031` (based on the Phase 1 CI-verified candidate; not merged to `main`).
+**Branch:** `phase2/security-graphify-20261031`  
+**Latest verified commit:** `889dd99c74824674789a138bfc7dd3b9dd30444e`
 
-Implemented but awaiting CI verification:
+Implemented and CI-verified on that exact commit:
 
-- Suspended-account login failures now return the same public error as invalid credentials, avoiding disclosure of account status.
-- Blocked-account attempts consume the same IP/identifier failure buckets as invalid credentials.
-- Migration 019 adds `users.auth_version`; administrator password resets increment it.
-- Login sessions store the auth version. Every authenticated request checks the database version and clears stale sessions.
-- Login completion is bound to the version checked with the password, and password rehash updates are conditional on that same version to prevent a stale in-flight login from restoring an old password hash.
-- Added regression coverage for stale sessions, stale login attempts, and password-rehash races.
-- Added a route policy test that scans all 49 declared POST routes, verifies CSRF in the handler or an explicit same-controller delegate, and locks the public POST allow-list to `/login` and `/register`.
-- Added [POST route security matrix](SECURITY_POST_ROUTE_MATRIX.md).
+- Suspended-account login failures return the same public error as invalid credentials; blocked-account attempts consume the same IP/identifier failure buckets.
+- Migration 019 adds `users.auth_version`; password reset, account status/reactivation, role changes, deletion requests, and final identity anonymization revoke older sessions.
+- Login/session version binding and conditional password rehash prevent stale sessions and an in-flight old-password login from restoring an obsolete hash.
+- Regression coverage includes stale sessions, password-reset/login races, suspension/reactivation with an old cookie, generic login errors, and account lifecycle mutation policy.
+- Automated CSRF policy scans all 49 declared POST routes and enforces the public POST allow-list (`/login`, `/register`). This is not proof that all object-level authorization is correct.
+- Admin updater hardening includes CSRF, per-user rate limiting, active-admin revalidation, fixed command arguments, audit events, and a shared lifecycle lock.
+- Graphify generated 706 nodes and 1,646 edges; the review recorded 174 SQL queries, 21 migrations, 15 API call sites, and manual mapping of five dynamic API references.
+- The frontend sink review covered 13 JavaScript files and key issue/help/profile/auth/admin templates. Dynamic text is escaped; reviewed `innerHTML` sinks use fixed SVG fragments or fixed PWA guide copy.
 
-**CI status:** PHP and Graphify passed on Phase 2 commit `74c377cd3ca8f14b191ffa5af3e2fd6cb31d0c08`; the database matrix was running when these notes were last refreshed. A documentation-only update followed, so the latest branch head must receive its own final CI check.
+**Exact-head CI:** all three workflows completed successfully on `889dd99c74824674789a138bfc7dd3b9dd30444e`:
+- [PHP syntax/security tests](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933680) — passed.
+- [Graphify dependency graph](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933760) — passed.
+- [Database migration integration](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41222933686) — passed.
 
-**Remaining review:** finish object-level ownership/participant and model-boundary review; review upload/private-file paths, XSS/output encoding and SQL access beyond the reviewed templates/DOM sinks; inspect external updater/sudoers on the owner's machine. No Phase 2 completion is claimed.
+**Still open:** full object-level authorization matrix for all routes; broader SQL/input validation review; complete XSS/output-encoding review; upload/private-file lifecycle and containment review; storage-recovery/notification retry behavior; and local updater/sudoers runtime inspection. The external updater script is not the same as the in-app updater controller.
+
+No Phase 2 completion is claimed. PR #18 remains a draft; no merge to `main`, production database migration, or deployment is claimed.
+
+## 9. Local runtime findings (2026-10-31)
+
+The owner checked the Kali/XAMPP host:
+
+- Apache workers run as `daemon`.
+- `storage/logs` is `root:root` mode `0775`; `sudo -u daemon test -w storage/logs` failed. Apache therefore cannot create new log files or rotate logs in that directory.
+- Existing application/access/security/audit log files are `daemon:daemon` mode `0660`, so existing files are writable by their owner. `permission-test.log` is more permissive (`0664`) and should be reviewed for consistency.
+- The `daemon` sudo policy permits only `/usr/bin/bash /home/a/bin/zayan-hardware-update.sh` as user `a`; this is a narrow command rule, not unrestricted sudo.
+- The external update script is mode `0700`, owned by `a:a`. It requires branch `main`, a clean tracked worktree, and allows only a small untracked-file exception. The current local checkout is instead `local/audit-update-20261031`, has a modified `.htaccess`, and has untracked files. **Do not run the updater or clean/reset/checkout this worktree.**
+- Local HEAD `46960cf9efb33b2b0affa503d5e832725bdba4b4` differs from the Phase 2 CI-verified GitHub candidate. Preserve the local modifications and untracked files.
+
+**Safe next local action:** inspect current ACLs and the application logging/rotation implementation, then grant the Apache service account write access to this log directory only if that matches the deployment policy. Do not use broad `chmod 777`, recursive ownership changes, or run the updater as a workaround. Owner-database restore and private-media restore remain separate pending acceptance checks.
 
 ## 9. Working rules for all three phases
 
