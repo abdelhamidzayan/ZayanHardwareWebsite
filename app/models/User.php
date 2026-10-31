@@ -52,7 +52,7 @@ final class User extends Model
     public static function findById(int $id): ?array
     {
         $stmt = self::db()->prepare(
-            'SELECT id, username, display_name, email, role, account_status, created_at,
+            'SELECT id, username, display_name, email, role, account_status, auth_version, created_at,
                    avatar_key, avatar_path, accept_help_requests
              FROM users WHERE id = ? LIMIT 1'
         );
