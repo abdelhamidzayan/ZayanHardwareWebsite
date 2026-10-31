@@ -1,138 +1,148 @@
 # Zayan Hardware — System Rebuild Audit
 
-**Audit snapshot:** 2026-10-31  
+**Audit date:** 2026-10-31  
 **Working branch:** `audit/system-rebuild-20261031`  
-**Current verified CI head:** `55522a3cc204e961aaf9947773b15ff10321ad02`  
-**Working branch starts from:** `f5d872983fdd71da47ef1a61491d81efdc5b42e4`  
-**Status:** Several foundational fixes are implemented and CI-verified. This is not a full project sign-off.
+**Last observed PR head before this audit-log update:** `c015a8d751c17e1ffa3349786324eaf08e38609d`  
+**PR:** [#16 — Audit rebuild: fresh install, retention guards and route consistency](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/16)  
+**PR state:** Draft / open / unmerged; base `audit/content-retention-consistency`  
+**Status:** Foundational protection and several new content-write changes are implemented. The latest code is not yet CI-verified. This document is not a final sign-off.
 
-## Owner direction and data boundary
+## 1. Owner direction and data boundary
 
-The owner has confirmed that legacy/demo content is not a blocker and that the database will be renewed. This allows a deliberate fresh-database bootstrap plan. No database has been dropped, truncated, reset, or otherwise modified by this audit. The owner's Kali/XAMPP database and backup files have not been accessed by GitHub CI.
+The owner has confirmed that legacy/demo content is not a blocker and that the database will be renewed. This permits a deliberate fresh-install plan. No database has been dropped, truncated, reset, or otherwise modified by this audit. GitHub CI uses disposable synthetic databases only. The owner's Kali/XAMPP database, backup files, and private storage have not been accessed or modified by this review.
 
-The new application must still protect technical content created after launch. Published posts, replies, diagnosis updates, repair outcomes, edit history, attachments, reputation, approved help knowledge, identity attribution and consent/audit records must not be physically deleted by normal application paths.
+The live product must protect technical knowledge after launch. Technical posts, replies, diagnostic updates, repair results, schematics, attachments, edit history, reputation, approved help knowledge, attribution, and consent/audit records must not be physically deleted by ordinary application paths.
 
-## Exact GitHub state
+## 2. Exact GitHub and CI state
 
-- Default branch: `main` at `8732fd70e3a85ecfb2c8e94c69fd7f4a6ebfa932`.
-- PR #14 remains Draft/open/unmerged. Base `feature/profiles-help-media`; head `fix/audit-priority-issues` at `74ffd99bd0a884fb2b09e28559aa948321020fba`.
-- PR #15 remains Draft/open/unmerged. Base `fix/audit-priority-issues`; head `audit/content-retention-consistency` at `f5d872983fdd71da47ef1a61491d81efdc5b42e4`.
-- PR #16 is Draft/open/unmerged. Base `audit/content-retention-consistency`; head `audit/system-rebuild-20261031`.
-- PR #14 is not based on `main`. No PR was merged, retargeted or deployed.
-- The PR #16 base relationship is deliberate: this audit work is a child branch of the audit baseline, not a proposed direct merge to `main`.
+- Default branch `main` was last observed at `8732fd70e3a85ecfb2c8e94c69fd7f4a6ebfa932`.
+- PR #16 is a child of `audit/content-retention-consistency`; it is intentionally not based directly on `main`.
+- PR #16 remains Draft/open/unmerged. No PR was merged, retargeted, or deployed during this audit.
+- Always query the live PR head before making changes; the SHA above is a dated snapshot, not a permanent branch pointer.
 
-## Latest CI verification
+### Last confirmed green baseline
 
-All three latest workflow runs completed with conclusion `success` on head `55522a3cc204e961aaf9947773b15ff10321ad02`:
+The latest successful set inspected before the newest content-write changes was commit `55522a3cc204e961aaf9947773b15ff10321ad02`:
 
 | Workflow | Run | Result |
 |---|---:|---|
-| PHP syntax + CLI boot + RateLimiter API + draft rollback + route policy + exception log redaction + JS syntax | 41180453075 | Success |
-| Graphify unit tests + graph generation + deterministic `--check` + artifact upload | 41180453042 | Success |
-| Fresh install + migration integration on MySQL 8.0, MariaDB 10.4.32 and MariaDB 10.11 | 41180453039 | All three jobs success |
+| PHP syntax, CLI boot, RateLimiter API, draft rollback, public-route policy, exception redaction, JavaScript syntax | [41180453075](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453075) | Success |
+| Graphify tests, graph generation, deterministic check, artifact upload | [41180453042](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453042) | Success |
+| Fresh install and database integration | [41180453039](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41180453039) | MySQL 8.0, MariaDB 10.4.32, MariaDB 10.11 all successful |
 
-The database logs were inspected, not just the green status:
-- The full `000 → 017` migration sequence completed on all three engines.
-- Each engine created the first administrator for a synthetic owner account and refused a second bootstrap because an administrator already exists.
-- The full fresh-install smoke test passed with 73 foreign-key references.
-- The protected delete triggers/foreign keys were present, and attempts to physically delete a standalone technical post, reply, attachment, a post with dependent records, and a user were rejected.
-- Reply tombstone integration passed; parent-child ancestry remained intact after soft-deleting the parent.
-- Existing sequential 002 migration and database integration steps also completed in the workflow.
+The inspected DB logs confirmed:
+- The full `000 → 017` sequence completed on all three engines.
+- 73 foreign-key references were present in that verified schema.
+- First-admin bootstrap promoted the synthetic owner account and rejected a second bootstrap.
+- Standalone technical post, reply, attachment, dependent post, and user physical-delete attempts were rejected.
+- Reply tombstone integration preserved the parent-child relationship after soft-deleting the parent.
 
-## Verified implementation on this branch
+**This green baseline does not verify migration 018 or the latest ContentWriteService and failure-injection additions.** The current workflow file contains migration 018 and the content-write integration step, but those are not considered passed until a successful run executes them on the current head.
 
-### Guest access and route contracts
+### Latest attempts and Actions quota
 
-- Router guest access is now declared on the route itself using `getPublic()` / `postPublic()`; ordinary `get()` / `post()` routes remain private.
-- Public pages include the documented landing/help/policies, authentication screens, member profiles, public avatars and consent-approved help-library pages.
-- Drafts, feed/discussion pages, private attachments, personal inbox/messages, account actions and admin routes remain private to authenticated users.
-- `AvatarController::show()` now accepts the raw route parameter and validates the positive integer, avoiding the previous strict-types mismatch for `/avatar/{userId}`.
-- `tests/php/router-public-routes.php` checks the public/private policy and route parameter contract.
+On the latest observed head `c015a8d751c17e1ffa3349786324eaf08e38609d`, GitHub reported these runs as failed:
 
-### New database installation
+| Workflow | Run | Job execution |
+|---|---:|---|
+| PHP syntax check | 41184388274 | Job failed with `steps: null` |
+| Graphify dependency graph | 41184388393 | Job failed with `steps: null` |
+| Database migration integration | 41184388353 | All three DB matrix jobs failed with `steps: null` |
 
-- The repository was missing the source-controlled base schema for `users` and `technician_profiles`. `000_core_identity_schema.sql` now provides that baseline for a new empty database.
-- `database/FRESH_INSTALL.md` documents the exact supported order from 000 through 017.
-- The duplicate 002 prefix is historical. `002_final_registration_permissions.sql` and `002_registration_wizard.sql` are sequential in the verified fresh-install path, not alternatives. Never infer applied state from filenames or replay the sequence on an existing database.
-- `bin/bootstrap-first-admin.php` is a CLI-only, exact-database-confirmed, advisory-lock-protected operation. It promotes an existing active owner account only when no admin currently exists and writes a security audit record. CI verifies both the first promotion and rejection of a second active account.
-- The owner’s existing local migrations 014 and 015 remain untouched and must not be replayed there.
+No workflow steps executed in these runs. These statuses are **not** evidence of a PHP, Graphify, SQL, or migration test failure, and they are not successful verification either.
 
-### Protection of technical history
+The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minutes used**, with usage scheduled to reset on **2026-11-01**. The owner has not confirmed that an Actions spending budget of **$0** is configured. Follow [the mandatory GitHub Actions and usage-budget policy](../AGENTS.md#github-actions-and-usage-budget):
+- keep workflow YAML files enabled and version-controlled;
+- do not repeatedly rerun or dispatch jobs while quota is exhausted;
+- confirm the account's $0 spending budget applies to Actions before allowing overage;
+- resume the full relevant CI checks after the displayed reset date or explicit owner authorization;
+- do not report the latest code as CI-passing until those exact tests pass.
 
-- Migration 016 changes 43 content/attribution foreign keys to `ON DELETE RESTRICT`, preventing cascading loss of technical history and help records.
-- Migration 017 creates 23 `BEFORE DELETE` triggers for protected technical, identity, personal-help, consent, skill-evidence and audit tables. These guards also prevent deleting a standalone post/reply with no dependent rows.
-- These migrations only alter constraints/triggers; they contain no `DELETE`, `TRUNCATE` or content rewrite.
-- Draft deletion/media cleanup, reply vote toggles, and transient notification/push subscription cleanup remain separate explicit lifecycles. The CI verifies these protections against disposable synthetic data only.
-- Physical delete guards supplement application soft deletion and account anonymization; they do not replace them.
+## 3. Verified foundational implementation
 
-### Reply-tree retention
+### Routing and access policy
 
-- `Issue::deleteReply()` no longer sets child `parent_reply_id` to NULL.
-- A deleted parent remains in the query as a tombstone only when it still has active children. The view hides the deleted text but preserves the parent node and child relationship.
-- Integration test creates a synthetic post, parent reply and child reply; after deleting the parent, both rows remain, the child keeps its original parent id, and the query returns the tombstone and child. It also proves physical parent deletion is rejected.
+- Guest access is declared on individual route registrations through `getPublic()` / `postPublic()`; ordinary `get()` / `post()` routes remain private.
+- Public routes cover the documented landing/help/policies, authentication, member-profile, avatar, and consent-approved help-library surfaces.
+- Feed/discussion pages, drafts, private attachments, inboxes/messages, account actions, and administration remain authenticated.
+- The avatar route validates the raw positive integer before using it as a database identifier.
+- `tests/php/router-public-routes.php` checks public/private route behavior and the route parameter contract.
 
-### Logging privacy
+### Fresh database and first administrator
 
-- `App::exceptionContext()` / `App::logException()` provide a common safe exception representation. Arbitrary exception text is not copied; PDO diagnostics retain SQLSTATE/driver code only.
-- Personal-help attachment, Web Push and account-retention exception logging use the safe helper. The retention CLI no longer prints an arbitrary exception message.
-- `tests/php/logging-exception-redaction.php` injects synthetic bearer tokens, URL tokens and SQL secrets and confirms none appear in the temporary application log. The test passed in CI.
+- `000_core_identity_schema.sql` supplies the missing baseline `users` and `technician_profiles` tables for a genuinely empty database.
+- `database/FRESH_INSTALL.md` and `.github/workflows/database-migrations.yml` specify the ordered sequence from migration 000 through migration 018.
+- The two `002_` migrations are sequential historical files, not alternatives. Never infer the applied state from filenames or replay them blindly on an existing database.
+- `bin/bootstrap-first-admin.php` is CLI-only, requires exact database confirmation and an existing active owner account, uses an advisory lock, refuses a second bootstrap when an administrator exists, and writes an audit record.
+- The owner's already-applied local migrations 014/015 must not be replayed against that local database.
 
-## Graphify snapshot
+### Technical-history retention
 
-The successful Graphify run on this branch scanned:
-- 138 files
-- 72 routes
-- 160 literal SQL query fragments
-- 38 tables and 61 statically detected FK references
-- 15 JavaScript API sites: 10 linked and 5 unresolved
-- 652 nodes and 1,464 edges
-- 19 migration files
+- Migration 016 changes 43 content/attribution foreign keys to `ON DELETE RESTRICT`.
+- Migration 017 contains 28 `BEFORE DELETE` triggers protecting technical, identity, personal-help, consent, skill-evidence, catalog, and audit records, including standalone posts and replies.
+- Migration 018 adds the `storage_recovery_tasks` table and a further no-physical-delete trigger. It records path/hash/reason/status metadata only; it does not execute file operations or contain a cleanup worker.
+- The migrations add constraints, triggers, and the recovery table; they do not delete, truncate, or rewrite existing technical content.
+- The original successful CI baseline executed migrations 000–017. Migration 018 is included in the current workflow but awaits a new successful run.
 
-The duplicate 002 prefix warning remains intentionally visible. Documentation now explains the sequential 002 order and the CI test validates it. Graphify is static analysis only; the five unresolved JS API sites still require manual review. The generated graph is not proof of runtime behavior.
+### Reply-tree retention and logging
 
-## Confirmed gaps that still need work
+- `Issue::deleteReply()` preserves `parent_reply_id`. If active child replies remain, the deleted parent is returned as a tombstone with its text hidden.
+- Reply tombstone integration passed on the last successful fresh-install matrix and also checks physical-delete rejection.
+- `App::exceptionContext()` / `App::logException()` centralize safe exception logging. Arbitrary exception messages are not copied; PDO details are reduced to safe SQLSTATE/driver metadata.
+- `tests/php/logging-exception-redaction.php` checks that synthetic bearer tokens, URL tokens, and SQL secrets do not leak into logs. It passed in the earlier green CI baseline.
 
-1. **Content write orchestration:** issue creation, reply/diagnostic creation and edits still span DB and filesystem operations without one application-service transaction/compensation boundary. A failure between issue/reply row creation, file moves, attachment inserts and inline-token update can leave partial state.
-2. **Draft media lifecycle:** revision locking is present, but row deletion and file cleanup are not one recoverable operation; failed unlinks can leave orphaned files. Rendered-file replacement also needs a durable cleanup/reconciliation record.
-3. **Personal-help media:** the message/request transaction and attachment writes remain separate. The service currently attempts immediate unlink on DB failure instead of recording a retryable compensation.
-4. **Upload policy consistency:** regular issue and personal-help upload validation checks byte size and detected MIME but still lacks the common decoded-image width/height/pixel limit and a shared decompression-bomb policy. Malformed personal-help upload structures are not rejected consistently with ContentEditorService.
-5. **Ownership/auth review:** the initial pass found useful participant scoping and CSRF, but every POST route still needs a full systematic matrix covering auth, role, owner/participant, state transitions, CSRF, rate limit, validation and Model invariants.
-6. **JS API traceability:** five API calls remain unresolved in Graphify and require manual DOM/view/script review.
-7. **Browser/PWA:** no automated browser journeys yet for registration/login, post composer, mobile layout, offline transitions, Safari install behavior, push subscribe/delivery, or attachment streaming.
-8. **Backup/restore:** the latest owner backup `zayan_hardware_full_verified_20261031_023151.sql.gz` has not been re-restored in this session. The earlier separate-DB restore/count comparison is prior evidence only, not a new restore validation.
-9. **Live schema comparison:** fresh-install CI validates a clean database. The owner's current local schema and applied migration state have not been introspected in this turn; no migration 016/017 should be applied to it until an explicit comparison and backup plan exist.
-10. **Runtime/storage ACL:** no new Kali/XAMPP/Apache filesystem-permission test or live HTTP request was executed in this pass.
+## 4. Implemented after the last green baseline — awaiting CI
 
-## Next implementation order
+### Atomic technical-content writes
 
-1. Build a single content-write application service for issue/reply/diagnostic create/edit with DB transactions, staged file moves, explicit compensation and durable error reporting.
-2. Add failure-injection integration tests for each DB/filesystem boundary, including failure during compensation.
-3. Create shared UploadPolicy for MIME, byte limit, dimensions/pixel count, and consistent malformed upload rejection; test malicious and decompression-heavy samples.
-4. Make draft and personal-help media cleanup/replacement recoverable and observable.
-5. Finish route/controller/model authorization matrix and resolve the five JS API links.
-6. Add browser automation and PWA/mobile checks.
-7. Inspect the actual local database schema/history and validate the backup restore on a separate disposable database after owner runs one explicit local command sequence.
+- `app/services/ContentWriteService.php` now coordinates issue creation/editing, reply creation/editing, and diagnostic-update creation/editing.
+- The service owns the outer PDO transaction; the involved `Issue` model methods are transaction-aware.
+- Uploaded files are moved to private issue storage before commit and tracked immediately. If a later DB/file step fails, the service rolls back and compensates moved files in reverse order.
+- Confirmed rollback permits removal of newly moved files. Cleanup failures are written to `storage_recovery_tasks`.
+- If the commit response is ambiguous, moved files are preserved and a pending recovery task is recorded rather than risking deletion of a file referenced by committed DB rows.
+- A successful explicit rollback after a commit exception is now treated as confirmed rollback. The service injects the commit operation for deterministic failure testing.
+- `tests/php/content-write-integration.php` covers successful attachment writes, rollback after attachment failure, later file-move failure, duplicate tokens, reply/diagnostic failure, edit-history rollback, failed compensation, confirmed rollback after commit exception, and a commit that succeeds while its acknowledgement is lost.
+- The database workflow is configured to run this test against the disposable fresh-install schema on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11. This test has **not** passed on the current head yet.
 
-## Verification ledger
+### Shared image upload limits
+
+- `ImageUploadPolicy` enforces an 8,000-pixel maximum dimension and a 20-million-pixel ceiling to limit compressed-image decompression risk.
+- The shared check is used in the reviewed issue/content, personal-help, avatar, draft, and ContentWriteService paths; per-route byte-size and MIME validation remain required.
+- `tests/php/upload-policy.php` exercises valid images, dimension/pixel ceilings, malformed images, malformed upload shapes, and mismatched PHP upload indexes. Treat the latest version as awaiting current-head CI.
+
+## 5. Remaining gaps
+
+1. **Draft media lifecycle:** revision locking exists, but database row changes and filesystem cleanup/replacement are not yet one recoverable operation in all cases.
+2. **Personal-help transaction boundary:** message/request state and its attachment filesystem/database work still need the same complete transaction and durable compensation treatment.
+3. **Recovery operations:** migration 018 records pending tasks but no background worker or automatic file deletion exists. A future reconciliation command must inspect both the database references and file state and must never remove a referenced technical file.
+4. **POST authorization matrix:** complete every POST route across authentication, role, owner/participant, state transitions, CSRF, rate limits, validation, and model-level invariants.
+5. **Dynamic JavaScript API references:** five sites were unresolved in the last successful Graphify snapshot and require manual view/script tracing.
+6. **Browser/PWA:** automated registration/login, composer, mobile layout, offline transitions, Safari installation, push delivery, and private attachment journeys remain unverified.
+7. **Owner backup and live schema:** the latest owner backup has not been restored again during this audit, and the current local database's schema/applied migration history has not been re-introspected here. Do not apply migrations 016–018 locally until the actual schema/history, backup, and rollback plan are reviewed.
+8. **Runtime/storage:** no fresh Kali/XAMPP/Apache permission test or live HTTP/PWA verification was executed in this pass.
+9. **Notifications after writes:** notifications happen after the content transaction. Verify that notification failures cannot mislead the user into retrying a content write that already committed; consider an outbox or explicitly isolated notification error handling.
+
+## 6. Verification ledger
 
 | Area | State |
 |---|---|
-| PR/branch ancestry and status | Verified through GitHub API |
-| PR #16 route/public policy regression | CI passed |
-| PHP lint, CLI boot, RateLimiter API and existing draft rollback test | CI passed |
-| Exception log redaction regression | CI passed |
-| Graphify 10 unit tests, graph generation and deterministic check | CI passed |
-| Fresh install migrations 000–017 on MySQL 8.0 / MariaDB 10.4.32 / MariaDB 10.11 | CI passed |
-| First-admin bootstrap success and second-admin rejection | CI passed |
-| Physical delete guards and FK RESTRICT checks | CI passed on all three engines |
-| Reply tombstone / ancestry integration | CI passed on all three engines |
-| Full issue/reply/diagnostic DB+filesystem failure injection | Not implemented/tested |
-| Common image dimension/decompression limits | Not implemented/tested |
-| Full POST authorization matrix | Partial static review only |
-| Five unresolved JS API sites | Not resolved yet |
+| PR #16 ancestry/state and current branch reference | Verified through GitHub API; Draft/open/unmerged |
+| Guest/public route policy regression | Passed in prior CI baseline |
+| PHP syntax, CLI boot, RateLimiter API, previous draft rollback, JS syntax | Passed on commit 55522a3; latest head not verified |
+| Exception-log secret redaction | Passed on commit 55522a3 |
+| Graphify unit tests/generation/determinism | Passed on commit 55522a3; latest head not verified |
+| Fresh install 000–017 on MySQL 8.0 / MariaDB 10.4.32 / 10.11 | Passed on commit 55522a3 |
+| Migration 018 and latest fresh-install 000–018 sequence | Present/configured; awaiting current-head CI |
+| First-admin bootstrap and delete guards | Passed on the prior CI baseline through migration 017 |
+| Reply tombstone / thread ancestry integration | Passed on the prior CI baseline |
+| ContentWriteService create/edit and filesystem compensation | Implemented; current-head CI pending |
+| Confirmed-rollback and ambiguous-commit failure injection | Implemented in test; current-head CI pending |
+| Shared image dimension/pixel policy | Implemented; current-head CI pending |
+| Draft and personal-help media recovery | Incomplete |
+| Full POST authorization matrix | Partial review only |
+| Dynamic JavaScript API references | Five sites remain for manual review |
 | Browser/mobile Safari/PWA journeys | Not tested |
-| Latest owner backup restore | Not re-run in this audit |
-| Current local DB schema comparison / migration 016-017 | Not performed |
+| Owner backup restore and current local schema comparison | Not performed in this pass |
 | Production deployment or PR merge | Not performed |
 
-Do not describe the full project as complete until the remaining gaps are implemented or explicitly accepted and every required runtime/local check has been executed.
+Do not describe the full system as complete until the remaining gaps are implemented or explicitly accepted, the current-head CI matrix passes, and the required local/browser/data checks have been separately executed.
