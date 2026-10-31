@@ -284,7 +284,8 @@ final class Issue extends Model
     public static function editDiagnosticUpdate(int $issueId, int $updateId, int $userId, string $body): void
     {
         $pdo = self::db();
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
                 "SELECT d.body FROM issue_diagnostic_updates d
@@ -295,21 +296,21 @@ final class Issue extends Model
             );
             $stmt->execute([$updateId, $issueId, $userId, $userId]);
             $oldBody = $stmt->fetchColumn();
-            if (!is_string($oldBody)) throw new \DomainException('diagnostic_update_not_editable');
+            if (!is_string($oldBody)) throw new \\DomainException('diagnostic_update_not_editable');
 
             $pdo->prepare(
                 'INSERT INTO issue_diagnostic_update_edit_history (diagnostic_update_id, editor_id, previous_body) VALUES (?, ?, ?)'
             )->execute([$updateId, $userId, $oldBody]);
             $pdo->prepare('UPDATE issue_diagnostic_updates SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$body, $updateId]);
-            $pdo->commit();
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($ownsTransaction) $pdo->commit();
+        } catch (\\Throwable $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
     }
 
-    public static function deleteDiagnosticUpdate(int $issueId, int $updateId, int $userId): void
+        public static function deleteDiagnosticUpdate(int $issueId, int $updateId, int $userId): void
     {
         $stmt = self::db()->prepare(
             "UPDATE issue_diagnostic_updates d
@@ -326,34 +327,36 @@ final class Issue extends Model
     public static function addDiagnosticUpdate(int $issueId, int $userId, string $body): int
     {
         $pdo = self::db();
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                "SELECT status FROM issues WHERE id = ? AND user_id = ?
+                "SELECT status, content_type FROM issues WHERE id = ? AND user_id = ?
                  AND status IN ('open','in_progress','awaiting_confirmation') AND deleted_at IS NULL FOR UPDATE"
             );
             $stmt->execute([$issueId, $userId]);
-            $status = $stmt->fetchColumn();
-            if ($status === false) throw new \DomainException('not_owner_or_closed');
+            $issue = $stmt->fetch();
+            if (!$issue) throw new \\DomainException('not_owner_or_closed');
+            if ($issue['content_type'] !== 'help_request') throw new \\DomainException('diagnostic_only_for_help_request');
 
             $pdo->prepare('INSERT INTO issue_diagnostic_updates (issue_id, user_id, body) VALUES (?, ?, ?)')
                 ->execute([$issueId, $userId, $body]);
             $updateId = (int) $pdo->lastInsertId();
-            if ($status === 'open') {
+            if ($issue['status'] === 'open') {
                 $pdo->prepare("UPDATE issues SET status = 'in_progress', updated_at = UTC_TIMESTAMP() WHERE id = ?")
                     ->execute([$issueId]);
             } else {
                 $pdo->prepare('UPDATE issues SET updated_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$issueId]);
             }
-            $pdo->commit();
+            if ($ownsTransaction) $pdo->commit();
             return $updateId;
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+        } catch (\\Throwable $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
     }
 
-    public static function history(int $issueId): array
+        public static function history(int $issueId): array
     {
         $stmt = self::db()->prepare(
             'SELECT h.previous_title, h.previous_description, h.previous_measurements, h.created_at,
@@ -394,7 +397,8 @@ final class Issue extends Model
     public static function editReply(int $replyId, int $userId, string $body): void
     {
         $pdo = self::db();
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
                 "SELECT r.body FROM issue_replies r
@@ -404,20 +408,20 @@ final class Issue extends Model
             );
             $stmt->execute([$replyId, $userId]);
             $oldBody = $stmt->fetchColumn();
-            if (!is_string($oldBody)) throw new \DomainException('reply_not_editable');
+            if (!is_string($oldBody)) throw new \\DomainException('reply_not_editable');
 
             $pdo->prepare('INSERT INTO issue_reply_edit_history (issue_reply_id, editor_id, previous_body) VALUES (?, ?, ?)')
                 ->execute([$replyId, $userId, $oldBody]);
             $pdo->prepare('UPDATE issue_replies SET body = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')
                 ->execute([$body, $replyId]);
-            $pdo->commit();
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($ownsTransaction) $pdo->commit();
+        } catch (\\Throwable $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
     }
 
-    public static function deleteReply(int $replyId, int $userId): int
+        public static function deleteReply(int $replyId, int $userId): int
     {
         $pdo = self::db();
         $pdo->beginTransaction();
@@ -455,28 +459,33 @@ final class Issue extends Model
     public static function edit(int $issueId, int $userId, string $title, string $description, string $measurements): void
     {
         $pdo = self::db();
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("SELECT title, description, measurements FROM issues WHERE id = ? AND user_id = ? AND status IN ('open','in_progress') AND deleted_at IS NULL FOR UPDATE");
+            $stmt = $pdo->prepare(
+                "SELECT title, description, measurements FROM issues
+                 WHERE id = ? AND user_id = ? AND status IN ('open','in_progress')
+                   AND deleted_at IS NULL FOR UPDATE"
+            );
             $stmt->execute([$issueId, $userId]);
             $old = $stmt->fetch();
-            if (!$old) {
-                throw new \DomainException('not_editable');
-            }
+            if (!$old) throw new \\DomainException('not_editable');
+
             $pdo->prepare(
                 'INSERT INTO issue_edit_history (issue_id, editor_id, previous_title, previous_description, previous_measurements)
                  VALUES (?, ?, ?, ?, ?)'
             )->execute([$issueId, $userId, $old['title'], $old['description'], $old['measurements']]);
-            $pdo->prepare('UPDATE issues SET title = ?, description = ?, measurements = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')
-                ->execute([$title, $description, $measurements !== '' ? $measurements : null, $issueId]);
-            $pdo->commit();
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            $pdo->prepare(
+                'UPDATE issues SET title = ?, description = ?, measurements = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?'
+            )->execute([$title, $description, $measurements !== '' ? $measurements : null, $issueId]);
+            if ($ownsTransaction) $pdo->commit();
+        } catch (\\Throwable $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
     }
 
-    public static function vote(int $replyId, int $userId): void
+        public static function vote(int $replyId, int $userId): void
     {
         $pdo = self::db();
         $pdo->beginTransaction();
