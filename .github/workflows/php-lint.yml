@@ -26,6 +26,8 @@ jobs:
         run: php tests/php/router-public-routes.php
       - name: Verify exception logs redact secrets
         run: php tests/php/logging-exception-redaction.php
+      - name: Verify image upload pixel limits and malformed input rejection
+        run: php tests/php/upload-policy.php
       - name: Check JavaScript syntax
         run: |
           find public/js -type f -name '*.js' -print0 | xargs -0 -n1 node --check
