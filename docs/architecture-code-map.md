@@ -38,7 +38,7 @@ The repeatable source scanner is maintained in `tools/graphify/graphify.py`. It 
 | Route family | Entry controller | Main downstream dependencies |
 |---|---|---|
 | Home, feed, workbench, my posts | `HomeController`, `FeedController`, `WorkbenchController`, `MyPostsController` | `Issue`, `User`, view templates |
-| Technical issue lifecycle | `IssueController` | `Issue`, `ContentEditorService`, `RateLimiter`, `NotificationService`, `DraftPublishingService` |
+| Technical issue lifecycle | `IssueController` | `Issue`, `ContentEditorService`, `ContentWriteService`, `RateLimiter`, `NotificationService`, `DraftPublishingService` |
 | Draft composer and media | `DraftController` | `PostDraft`, `RateLimiter`, private file storage |
 | Device catalog and suggestions | `DeviceCatalogController` | `DeviceCatalog`, `RateLimiter`, admin authorization |
 | Login, registration, logout | `AuthController` | `AuthService`, `User`, `PhoneNumber` |
@@ -70,6 +70,8 @@ flowchart TD
 ```
 
 - New posts and discussion actions enter through `IssueController`.
+- `ContentWriteService` owns a single PDO transaction for issue, reply and diagnostic create/edit operations. It stages private media moves, inserts attachment rows, resolves inline tokens, then commits once. Before a confirmed commit, any failure rolls back DB writes and compensates moved files.
+- If filesystem compensation fails, or the database commit outcome is ambiguous, the service preserves the moved file and records a `pending` row in `storage_recovery_tasks` (migration 018). This is audit/reconciliation metadata only; no automatic cleanup worker is started.
 - Attachments are validated and stored by `ContentEditorService`; inline tokens are resolved to persisted attachment IDs before rendering.
 - `Issue` owns issue, reply, diagnostic update, repair-result, vote, and edit-history persistence.
 - Notifications are emitted through `NotificationService` after successful domain actions.
@@ -157,10 +159,11 @@ flowchart TD
 | Users, profiles, skills, registration consent | `User`, `AuthService`, `SkillTestService` | `users`, `technician_profiles`, related skill tables, `terms_acceptances` |
 | Technical posts, replies, diagnosis, repair results, history | `Issue`, `IssueController` | `issues` and related issue tables |
 | Composer drafts and staged media | `PostDraft`, `DraftController` | `post_drafts`, `post_draft_media`, `storage/private/drafts` |
-| Permanent media and schematics | `ContentEditorService`, `DraftPublishingService` | `issue_attachments`, issue audio fields, `storage/private/issues` |
+| Permanent media and schematics | `ContentWriteService`, `ContentEditorService`, `DraftPublishingService` | `issue_attachments`, issue audio fields, `storage/private/issues`, `storage_recovery_tasks` |
 | Personal help and publication | `HelpRequest`, `HelpRequestMediaService` | help-request/publication tables, `storage/private/help-requests` |
 | Notifications and push | `Notification`, `PushSubscription`, `WebPushService` | `notifications`, `push_subscriptions` |
 | Runtime and security logs | `App` | `storage/logs/{app,access,security,audit}-YYYY-MM-DD.log` |
+| Filesystem compensation recovery | `ContentWriteService` | `storage_recovery_tasks` (manual/controlled reconciliation; no worker) |
 | Rate limits | `RateLimiter` | `rate_limit_buckets` |
 
 ## Review and test boundaries
