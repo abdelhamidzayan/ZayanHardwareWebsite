@@ -294,18 +294,9 @@ final class DraftPublishingService
                 throw new \DomainException('draft_publish_committed_media_incomplete', 0, $error);
             }
 
-            if ($state === 'rolled_back') {
-                $restoreFailures = self::restoreMovedFiles($moved);
-                if ($restoreFailures !== []) {
-                    foreach ($moved as $move) {
-                        self::recordRecoveryForAbsolutePath($move['from'], 'draft', null, 'draft_publish_restore_failed');
-                        self::recordRecoveryForAbsolutePath($move['to'], 'issue', $issueId, 'draft_publish_orphan_after_rollback');
-                    }
-                    throw new \DomainException('draft_publish_restore_incomplete', 0, $error);
-                }
-                self::removeEmptyIssueDirectory($createdDirectory);
-                throw $error;
-            }
+            // A snapshot showing the draft but not the issue is not sufficient
+            // to prove rollback after a lost COMMIT acknowledgement; the server
+            // may still be completing that commit. Treat it as unknown below.
 
             // If the commit outcome cannot be resolved, retain the issue-side
             // files and copy them back to the draft side. Reconciliation can
@@ -347,7 +338,6 @@ final class DraftPublishingService
             $draftExists = $draft->fetchColumn() !== false;
 
             if ($issueExists && !$draftExists) return 'committed';
-            if (!$issueExists && $draftExists) return 'rolled_back';
         } catch (Throwable $error) {
             App::logException('CRITICAL', 'draft.publish_state_inspection_failed', $error, [
                 'draft_id' => $draftId,
@@ -387,11 +377,12 @@ final class DraftPublishingService
         }
 
         try {
+            $lastErrorCode = str_contains($reason, 'commit_outcome_unknown') ? 'commit_unknown' : 'restore_failed';
             Database::newConnection()->prepare(
                 "INSERT INTO storage_recovery_tasks
                     (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code,
                      status, attempts, last_attempt_at, last_error_code)
-                 VALUES (?, ?, ?, ?, ?, 'pending', 1, UTC_TIMESTAMP(), 'commit_unknown')
+                 VALUES (?, ?, ?, ?, ?, 'pending', 1, UTC_TIMESTAMP(), ?)
                  ON DUPLICATE KEY UPDATE
                     aggregate_type = VALUES(aggregate_type),
                     aggregate_id = VALUES(aggregate_id),
@@ -399,7 +390,7 @@ final class DraftPublishingService
                     status = 'pending',
                     attempts = attempts + 1,
                     last_attempt_at = UTC_TIMESTAMP(),
-                    last_error_code = 'commit_unknown',
+                    last_error_code = VALUES(last_error_code),
                     completed_at = NULL"
             )->execute([
                 $aggregateType,
@@ -407,6 +398,7 @@ final class DraftPublishingService
                 $relative,
                 hash('sha256', $relative),
                 $reason,
+                $lastErrorCode,
             ]);
         } catch (Throwable $error) {
             App::logException('CRITICAL', 'draft.publish_recovery_task_write_failed', $error, [
