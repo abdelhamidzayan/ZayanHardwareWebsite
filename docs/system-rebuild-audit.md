@@ -51,7 +51,7 @@ On the latest observed head `c015a8d751c17e1ffa3349786324eaf08e38609d`, GitHub r
 
 No workflow steps executed in these runs. These statuses are **not** evidence of a PHP, Graphify, SQL, or migration test failure, and they are not successful verification either.
 
-The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minutes used**, with usage scheduled to reset on **2026-11-01**. The owner has not confirmed that an Actions spending budget of **$0** is configured. Follow [the mandatory GitHub Actions and usage-budget policy](../AGENTS.md#github-actions-and-usage-budget):
+The owner supplied a GitHub notice showing **2,000 / 2,000 included Actions minutes used**, with usage scheduled to reset on **2026-11-01**. The owner has not confirmed that an Actions spending budget of **$0** is configured. Repeated branch commits were also triggering duplicate `push` and `pull_request` runs for the same PR update. The three workflows now use `push` on `main` plus `pull_request` for branch review, and each has a per-PR/ref concurrency group with `cancel-in-progress: true`; this reduces duplicate and stale work without disabling any workflow or removing its tests. Follow [the mandatory GitHub Actions and usage-budget policy](../AGENTS.md#github-actions-and-usage-budget):
 - keep workflow YAML files enabled and version-controlled;
 - do not repeatedly rerun or dispatch jobs while quota is exhausted;
 - confirm the account's $0 spending budget applies to Actions before allowing overage;
