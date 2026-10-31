@@ -3,7 +3,7 @@ name: PHP syntax check
 on:
   pull_request:
   push:
-    branches: [main, feat/registration-permissions-final-spec, feature/profiles-help-media, fix/audit-priority-issues]
+    branches: [main, feat/registration-permissions-final-spec, feature/profiles-help-media, fix/audit-priority-issues, audit/system-rebuild-20261031]
 
 jobs:
   lint:
@@ -22,6 +22,8 @@ jobs:
         run: php tests/php/rate-limiter-api.php
       - name: Verify draft media rollback preserves files
         run: php tests/php/draft-publish-rollback.php
+      - name: Verify public route access policy
+        run: php tests/php/router-public-routes.php
       - name: Check JavaScript syntax
         run: |
           find public/js -type f -name '*.js' -print0 | xargs -0 -n1 node --check
