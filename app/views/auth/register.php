@@ -7,7 +7,7 @@ $val = static fn (string $key): string => $e(is_string($old[$key] ?? null) ? $ol
 $err = static fn (string $key): string => $e(is_string($errors[$key] ?? null) ? $errors[$key] : '');
 $contactType = in_array(($old['contact_type'] ?? ''), ['phone', 'email'], true)
     ? $old['contact_type']
-    : ((string) ($old['phone_number'] ?? '') !== '' ? 'phone' : 'phone');
+    : (((string) ($old['email_local'] ?? '') !== '' || (string) ($old['email_domain'] ?? '') !== '') ? 'email' : 'phone');
 $selectedCountry = isset($countries[$old['country'] ?? 'EG']) ? (string) ($old['country'] ?? 'EG') : 'EG';
 $emailLocal = (string) ($old['email_local'] ?? '');
 $emailDomain = (string) ($old['email_domain'] ?? '');
@@ -216,7 +216,6 @@ $selectedExperience = (string) ($old['board_experience'] ?? '');
             </section>
         </form>
 
-        <p class="wizard__terms">بإنشاء الحساب فإنك توافق على <a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">قواعد المنصة</a> و <a class="policy-text-link" href="<?= $e($baseUrl) ?>/policies">سياسة الخصوصية</a>.</p>
         <p class="auth__switch">لديك حساب؟ <a href="<?= $e($baseUrl) ?>/login">تسجيل الدخول</a></p>
     </div>
 </section>
