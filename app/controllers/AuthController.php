@@ -69,14 +69,26 @@ final class AuthController extends Controller
         }
 
         $user = $result['user'];
-        if (!AuthService::login((int) $user['id'])) {
+        $verifiedAuthVersion = (int) ($user['auth_version'] ?? 0);
+        if ($verifiedAuthVersion < 1 || !AuthService::login((int) $user['id'], $verifiedAuthVersion)) {
             App::security('auth.login.account_changed_during_attempt', [
                 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
             ]);
             $this->flash('error', 'بيانات الدخول غير صحيحة أو الحساب غير متاح.');
             return $this->redirect('/login');
         }
-        User::markLoggedIn((int) $user['id'], $user['new_hash'] ?? null);
+        if (!User::markLoggedIn(
+            (int) $user['id'],
+            $user['new_hash'] ?? null,
+            $verifiedAuthVersion
+        )) {
+            AuthService::logout();
+            App::security('auth.login.account_changed_during_attempt', [
+                'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
+            ]);
+            $this->flash('error', 'بيانات الدخول غير صحيحة أو الحساب غير متاح.');
+            return $this->redirect('/login');
+        }
         App::security('auth.login.succeeded', ['user_id' => (int) $user['id'], 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
 
         $this->flash('success', 'تم تسجيل الدخول بنجاح.');
