@@ -25,14 +25,16 @@ Scope:
 7. Add a read-only schema comparator covering tables, views, columns, indexes, foreign keys, CHECK constraints, triggers, routines, events, and optional table row counts.
 8. Add a disposable CI backup → gzip/checksum → restore-to-new-schema → schema/row-count comparison gate across the database matrix.
 9. Document safe triage for `storage_recovery_tasks` without deleting any referenced file; do not add an automatic worker until its reference checks and failure behavior are covered by tests.
-10. Complete the owner's existing local database backup restore and live-schema/row-count comparison only on a separate, explicitly named restore-test database.\n11. Separately inventory and sample-restore the private media backup, then verify that representative restored attachment/audio paths referenced by the database exist under the private storage root. This requires the owner's local machine and must not overwrite the live storage tree.
+10. Complete the owner's existing local database backup restore and live-schema/row-count comparison only on a separate, explicitly named restore-test database.
+11. Separately inventory and sample-restore the private media backup, then verify that representative restored attachment/audio paths referenced by the database exist under the private storage root. This requires the owner's local machine and must not overwrite the live storage tree.
 
 Exit criteria:
 - The complete 000–018 migration sequence and selected integration suites pass on the supported CI database matrix.
 - The disposable backup/restore cycle passes and schema objects plus row counts match.
 - Core write/media failure tests pass.
 - Logging channels, redaction, and retention tests pass; local Apache write access is separately verified.
-- The local owner database backup has a recorded restore result and schema/data comparison, or is explicitly marked blocked pending the owner running the documented local command sequence.\n- The private media backup is separately verified and representative DB-referenced files resolve in an isolated restore tree, or that check is explicitly blocked because no media backup is available.
+- The local owner database backup has a recorded restore result and schema/data comparison, or is explicitly marked blocked pending the owner running the documented local command sequence.
+- The private media backup is separately verified and representative DB-referenced files resolve in an isolated restore tree, or that check is explicitly blocked because no media backup is available.
 - No data-loss or destructive-operation risk remains unaddressed.
 
 **Implementation checkpoint (2026-10-31):** A read-only comparator is now present at `bin/compare-database-schema.php`; the database workflow now includes an isolated backup/restore/checksum/metadata-and-row-count check; the logging redaction test now covers raw Authorization/Cookie headers, Bearer/query tokens, all four log channels, JSON records, and retention. A local owner backup/restore runbook was added at `docs/DATABASE_BACKUP_RESTORE.md`; a safe read-only storage recovery triage guide was added at `docs/STORAGE_RECOVERY_RUNBOOK.md`. These changes are implemented in the Phase 1 branch, but the tests have not yet executed on this branch. The owner-machine restore and Apache/browser runtime checks remain pending.
