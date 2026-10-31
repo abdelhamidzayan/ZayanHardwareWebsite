@@ -13,7 +13,7 @@ final class SkillTestService
             'SELECT t.id, t.title, t.pass_score, t.max_attempts, t.cooldown_minutes,
                     d.name_ar AS skill_name
              FROM skill_tests t
-             JOIN skill_domains d ON d.id = t.skill_domain_id
+             JOIN skill_domains d ON d.id = t.skill_domain_id AND d.is_active = 1
              WHERE t.is_active = 1
              ORDER BY d.sort_order, t.title'
         );
@@ -26,25 +26,58 @@ final class SkillTestService
             'SELECT t.id, t.skill_domain_id, t.title, t.version, t.questions_json,
                     t.pass_score, t.max_attempts, t.cooldown_minutes, d.name_ar AS skill_name
              FROM skill_tests t
-             JOIN skill_domains d ON d.id = t.skill_domain_id
+             JOIN skill_domains d ON d.id = t.skill_domain_id AND d.is_active = 1
              WHERE t.id = ? AND t.is_active = 1 LIMIT 1'
         );
         $stmt->execute([$testId]);
         $test = $stmt->fetch();
         if (!$test) return null;
 
-        $questions = json_decode((string) $test['questions_json'], true);
-        if (!is_array($questions) || !$questions) return null;
+        $questionsJson = (string) $test['questions_json'];
+        if (strlen($questionsJson) > 262144) return null;
+        $questions = json_decode($questionsJson, true);
+        if (!is_array($questions) || !array_is_list($questions) || !$questions
+            || count($questions) > 100) {
+            return null;
+        }
 
-        foreach ($questions as $index => &$question) {
-            if (!is_array($question) || !isset($question['question'], $question['options']) || !is_array($question['options'])) {
+        // Build a strict public DTO. Never return answer keys, explanations,
+        // or any arbitrary admin-supplied fields to the browser.
+        $publicQuestions = [];
+        foreach ($questions as $index => $question) {
+            if (!is_array($question)
+                || !isset($question['question'], $question['correct'], $question['options'])
+                || !is_string($question['question'])
+                || trim($question['question']) === ''
+                || mb_strlen($question['question']) > 2000
+                || !is_string($question['correct'])
+                || strlen($question['correct']) < 1
+                || strlen($question['correct']) > 80
+                || !is_array($question['options'])
+                || count($question['options']) < 2
+                || count($question['options']) > 10
+                || !array_key_exists($question['correct'], $question['options'])) {
                 return null;
             }
-            unset($question['correct'], $question['answer'], $question['explanation']);
-            $question['index'] = $index;
+
+            $publicOptions = [];
+            foreach ($question['options'] as $optionKey => $optionLabel) {
+                $key = (string) $optionKey;
+                if ($key === '' || strlen($key) > 80
+                    || !is_string($optionLabel) || trim($optionLabel) === ''
+                    || mb_strlen($optionLabel) > 300) {
+                    return null;
+                }
+                $publicOptions[$key] = trim($optionLabel);
+            }
+
+            $publicQuestions[] = [
+                'question' => trim($question['question']),
+                'options' => $publicOptions,
+                'index' => $index,
+            ];
         }
-        unset($question);
-        $test['questions'] = $questions;
+        $test['questions'] = $publicQuestions;
         unset($test['questions_json']);
 
         return $test;
@@ -83,8 +116,10 @@ final class SkillTestService
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                'SELECT id, skill_domain_id, questions_json, pass_score, max_attempts, cooldown_minutes
-                 FROM skill_tests WHERE id = ? AND is_active = 1 FOR UPDATE'
+                'SELECT t.id, t.skill_domain_id, t.questions_json, t.pass_score, t.max_attempts, t.cooldown_minutes
+                 FROM skill_tests t
+                 INNER JOIN skill_domains d ON d.id = t.skill_domain_id AND d.is_active = 1
+                 WHERE t.id = ? AND t.is_active = 1 FOR UPDATE'
             );
             $stmt->execute([$testId]);
             $test = $stmt->fetch();
@@ -94,18 +129,51 @@ final class SkillTestService
             if ($state['attempts_remaining'] < 1) throw new \DomainException('max_attempts');
             if ($state['wait_minutes'] > 0) throw new \DomainException('cooldown');
 
-            $questions = json_decode((string) $test['questions_json'], true);
-            if (!is_array($questions) || !$questions) throw new \DomainException('invalid_test');
+            $questionsJson = (string) $test['questions_json'];
+            if (strlen($questionsJson) > 262144) throw new \DomainException('invalid_test');
+            $questions = json_decode($questionsJson, true);
+            if (!is_array($questions) || !array_is_list($questions) || !$questions
+                || count($questions) > 100) {
+                throw new \DomainException('invalid_test');
+            }
 
             $correctCount = 0;
             $total = count($questions);
             $safeAnswers = [];
             foreach ($questions as $index => $question) {
-                if (!is_array($question) || !isset($question['correct'])) throw new \DomainException('invalid_test');
+                if (!is_array($question)
+                    || !isset($question['question'], $question['correct'], $question['options'])
+                    || !is_string($question['question'])
+                    || trim($question['question']) === ''
+                    || mb_strlen($question['question']) > 2000
+                    || !is_string($question['correct'])
+                    || strlen($question['correct']) < 1
+                    || strlen($question['correct']) > 80
+                    || !is_array($question['options'])
+                    || count($question['options']) < 2
+                    || count($question['options']) > 10
+                    || !array_key_exists($question['correct'], $question['options'])) {
+                    throw new \DomainException('invalid_test');
+                }
+
+                foreach ($question['options'] as $optionKey => $optionLabel) {
+                    $key = (string) $optionKey;
+                    if ($key === '' || strlen($key) > 80
+                        || !is_string($optionLabel) || trim($optionLabel) === ''
+                        || mb_strlen($optionLabel) > 300) {
+                        throw new \DomainException('invalid_test');
+                    }
+                }
+
                 $answer = $answers[(string) $index] ?? $answers[$index] ?? '';
-                if (!is_string($answer)) $answer = '';
+                // Accept only a bounded key that belongs to this question's
+                // option set. Arbitrary POST strings must not be persisted.
+                if (!is_string($answer) || strlen($answer) > 80
+                    || !array_key_exists($answer, $question['options'])) {
+                    $answer = '';
+                }
                 $safeAnswers[(string) $index] = $answer;
-                if ($answer !== '' && hash_equals((string) $question['correct'], $answer)) $correctCount++;
+                if ($answer !== '' && hash_equals($question['correct'], $answer)) $correctCount++;
             }
 
             $score = round(($correctCount / $total) * 100, 2);

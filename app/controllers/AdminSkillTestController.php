@@ -48,6 +48,9 @@ final class AdminSkillTestController extends Controller
         $passScore = filter_var($this->request->input('pass_score'), FILTER_VALIDATE_FLOAT);
         $maxAttempts = filter_var($this->request->input('max_attempts'), FILTER_VALIDATE_INT);
         $cooldown = filter_var($this->request->input('cooldown_minutes'), FILTER_VALIDATE_INT);
+        if (strlen($questionsJson) > 262144) {
+            return $this->fail('/admin/skill-tests', 'حجم ملف الأسئلة كبير جدًا. الحد الأقصى 256 كيلوبايت.');
+        }
         $questions = json_decode($questionsJson, true);
 
         if (mb_strlen($title) < 3 || mb_strlen($title) > 160
@@ -55,18 +58,43 @@ final class AdminSkillTestController extends Controller
             || $passScore === false || $passScore < 1 || $passScore > 100
             || $maxAttempts === false || $maxAttempts < 1 || $maxAttempts > 10
             || $cooldown === false || $cooldown < 1 || $cooldown > 10080
-            || !is_array($questions) || count($questions) < 1 || count($questions) > 100) {
+            || !is_array($questions) || !array_is_list($questions) || count($questions) < 1 || count($questions) > 100) {
             return $this->fail('/admin/skill-tests', 'راجع العنوان والمجال ودرجة النجاح والمحاولات والانتظار وبنية الأسئلة.');
         }
 
+        $normalizedQuestions = [];
         foreach ($questions as $question) {
             if (!is_array($question) || !isset($question['question'], $question['options'], $question['correct'])
                 || !is_string($question['question']) || trim($question['question']) === ''
+                || mb_strlen($question['question']) > 2000
                 || !is_array($question['options']) || count($question['options']) < 2
-                || !is_string($question['correct'])
-                || !array_key_exists($question['correct'], $question['options'])) {
-                return $this->fail('/admin/skill-tests', 'كل سؤال يجب أن يحتوي question و options وخيار correct مطابقًا لأحد المفاتيح.');
+                || count($question['options']) > 10
+                || !is_string($question['correct']) || strlen($question['correct']) < 1
+                || strlen($question['correct']) > 80) {
+                return $this->fail('/admin/skill-tests', 'كل سؤال يجب أن يحتوي نصًا صالحًا واختيارين إلى 10 اختيارات ومفتاح إجابة صالحًا.');
             }
+
+            $normalizedOptions = [];
+            foreach ($question['options'] as $optionKey => $optionLabel) {
+                $key = (string) $optionKey;
+                if ($key === '' || strlen($key) > 80
+                    || !is_string($optionLabel) || trim($optionLabel) === ''
+                    || mb_strlen($optionLabel) > 300) {
+                    return $this->fail('/admin/skill-tests', 'مفاتيح الاختيارات من 1 إلى 80 بايت، ونص كل اختيار من 1 إلى 300 حرف.');
+                }
+                $normalizedOptions[$key] = trim($optionLabel);
+            }
+
+            if (!array_key_exists($question['correct'], $normalizedOptions)) {
+                return $this->fail('/admin/skill-tests', 'مفتاح الإجابة الصحيحة يجب أن يطابق أحد الاختيارات.');
+            }
+
+            // Persist only the fields used by the assessment engine.
+            $normalizedQuestions[] = [
+                'question' => trim($question['question']),
+                'options' => $normalizedOptions,
+                'correct' => $question['correct'],
+            ];
         }
 
         $pdo = Database::connection();
@@ -82,7 +110,7 @@ final class AdminSkillTestController extends Controller
                  VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)'
             )->execute([
                 $domainId, $title, $version,
-                json_encode($questions, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                json_encode($normalizedQuestions, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 $passScore, $maxAttempts, $cooldown, (int) $admin['id'],
             ]);
             $testId = (int) $pdo->lastInsertId();
