@@ -74,7 +74,6 @@ try {
     echo "Exception logging redaction test passed.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, "Exception logging redaction test failed: " . $error::class . "\n");
-    exitCode:
     $removeTree($tempRoot);
     exit(1);
 }
