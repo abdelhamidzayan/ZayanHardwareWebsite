@@ -233,7 +233,15 @@ final class App
 
     private static function redact(string $value): string
     {
-        $pattern = "/\\b(password|passwd|token|secret|authorization|cookie|csrf|api[_-]?key)\\b\\s*[:=]\\s*(\"[^\"]*\"|'[^']*'|[^\\s,;]+)/i";
+        // Redact complete HTTP header values; partial redaction can leave a
+        // bearer token or the rest of a Cookie header visible in the log.
+        $value = preg_replace('/\\b(authorization)\\b\\s*:\\s*[^\\r\\n]*/i', '$1=[REDACTED]', $value) ?? $value;
+        $value = preg_replace('/\\b(cookie)\\b\\s*:\\s*[^\\r\\n]*/i', '$1=[REDACTED]', $value) ?? $value;
+
+        // Also cover bearer values appearing outside a standard header line.
+        $value = preg_replace('/\\bBearer\\s+[^\\s,;]+/i', 'Bearer [REDACTED]', $value) ?? $value;
+
+        $pattern = "/\\b(password|passwd|access[_-]?token|refresh[_-]?token|id[_-]?token|token|secret|authorization|cookie|csrf|api[_-]?key)\\b\\s*[:=]\\s*(\\"[^\\"]*\\"|'[^']*'|[^\\s,;&]+)/i";
         return preg_replace($pattern, '$1=[REDACTED]', $value) ?? $value;
     }
 
