@@ -63,8 +63,10 @@ final class AccountController extends Controller
                  VALUES (?, 'pending', DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY))"
             );
             $stmt->execute([(int) $user['id']]);
-            $pdo->prepare("UPDATE users SET account_status = 'deletion_pending' WHERE id = ?")
-                ->execute([(int) $user['id']]);
+            $pdo->prepare(
+                "UPDATE users SET account_status = 'deletion_pending', auth_version = auth_version + 1
+                 WHERE id = ? AND account_status = 'active'"
+            )->execute([(int) $user['id']]);
             $pdo->prepare(
                 "INSERT INTO security_audit_logs (actor_user_id, target_user_id, action, details_json, ip_hash)
                  VALUES (?, ?, 'account.deletion_requested', ?, ?)"

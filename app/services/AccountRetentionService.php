@@ -80,7 +80,7 @@ final class AccountRetentionService
         $required = [
             'users' => [
                 'id', 'username', 'display_name', 'email', 'phone', 'password_hash',
-                'role', 'account_status', 'avatar_key', 'avatar_path',
+                'role', 'account_status', 'auth_version', 'avatar_key', 'avatar_path',
                 'accept_help_requests', 'last_login_at',
             ],
             'technician_profiles' => [
@@ -512,8 +512,10 @@ final class AccountRetentionService
             $sets[] = $field . ' = ?';
             $params[] = $value;
         }
+        // Revoke every remaining session as the identity is anonymized.
+        if (isset($columns['auth_version'])) $sets[] = 'auth_version = auth_version + 1';
         if (isset($columns['updated_at'])) $sets[] = 'updated_at = UTC_TIMESTAMP()';
-        if (!isset($columns['username']) || !isset($columns['account_status'])) {
+        if (!isset($columns['username']) || !isset($columns['account_status']) || !isset($columns['auth_version'])) {
             throw new RuntimeException('The users table is missing required retention columns.');
         }
 
