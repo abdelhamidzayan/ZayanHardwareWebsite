@@ -127,11 +127,11 @@ final class AuthController extends Controller
             return $this->redirect('/register');
         }
 
-        if (!RateLimiter::allowForIp('auth.register', 5, 3600)) {
+        if (!RateLimiter::allowForIp('auth.register', 20, 900)) {
             App::security('auth.register.rate_limited', [
                 'ip_hash' => hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown')),
             ]);
-            $this->flash('error', 'محاولات كثيرة. حاول مرة أخرى بعد قليل.');
+            $this->flash('error', 'وصلت للحد المؤقت لمحاولات التسجيل. حاول مرة أخرى بعد 15 دقيقة.');
             return $this->redirect('/register');
         }
 
