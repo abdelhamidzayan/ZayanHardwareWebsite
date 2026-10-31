@@ -467,7 +467,7 @@ final class PostDraft extends Model
     private static function recordStorageRecoveryTask(string $relativePath, string $reason): void
     {
         try {
-            self::db()->prepare(
+            Database::newConnection()->prepare(
                 "INSERT INTO storage_recovery_tasks
                     (aggregate_type, aggregate_id, file_path, file_path_hash, reason_code,
                      status, attempts, last_attempt_at, last_error_code)
