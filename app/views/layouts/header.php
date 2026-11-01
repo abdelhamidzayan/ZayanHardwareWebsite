@@ -34,7 +34,7 @@ foreach ($accountActivePrefixes as $prefix) {
 
         <div class="header-actions">
         <a class="icon-btn header-page-link help-request-menu__trigger<?= $helpRequestsActive ? ' is-active' : '' ?>" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة<?= $unreadHelpCount > 0 ? ' (' . $unreadHelpCount . ' غير مقروءة)' : '' ?>" <?= $helpRequestsActive ? 'aria-current="page"' : '' ?>>
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 12h8M12 8v8"/></svg>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.98 3 3 6.66 3 11.25c0 1.73.58 3.33 1.58 4.63L3.5 21l5.32-2.25c1 .37 2.08.56 3.18.56 5.02 0 9-3.66 9-8.06S17.02 3 12 3Z" fill="currentColor" stroke="none"/><circle cx="8" cy="11.5" r="1.15" fill="#fff"/><circle cx="12" cy="11.5" r="1.15" fill="#fff"/><circle cx="16" cy="11.5" r="1.15" fill="#fff"/></svg>
             <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
         </a>
 
