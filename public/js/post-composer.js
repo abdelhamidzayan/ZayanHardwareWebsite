@@ -293,7 +293,7 @@
         });
     }
 
-    function addStep(value) {
+    function addStep(value, afterRow) {
         const row = document.createElement('div');
         row.className = 'post-composer__step-row';
         row.dataset.stepRow = '';
@@ -311,7 +311,7 @@
         remove.setAttribute('aria-label', 'حذف الخطوة');
         remove.textContent = '×';
         row.append(number, textarea, remove);
-        stepList.appendChild(row);
+        stepList.insertBefore(row, afterRow ? afterRow.nextElementSibling : null);
         renderSteps();
         textarea.focus();
         markDirty();
@@ -1002,7 +1002,7 @@
     stepList.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter' || !event.target.matches('[data-step-input]')) return;
         event.preventDefault();
-        addStep('');
+        addStep('', event.target.closest('[data-step-row]'));
     });
     mediaInput.addEventListener('change', async function () {
         const incoming = Array.from(mediaInput.files || []);
