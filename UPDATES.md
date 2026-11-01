@@ -1,3 +1,13 @@
+## 2026-11-01 — Establish Zayan Hardware cream-and-green brand identity
+
+- **Type:** UI / Design system / PWA / Documentation
+- **Summary:** Introduced the warm cream and ivory foundation with workshop green as the primary brand color, orange for the strongest calls to action, and cyan/yellow/purple as restrained category accents.
+- **Implementation:** Centralized semantic palette tokens in `public/css/tokens.css`; migrated primary page, component, technical discussion, responsive focus, and PWA guide accents away from the legacy blue theme. Updated browser/PWA theme colors and launcher icons.
+- **Documentation:** Added [Brand Identity](docs/BRAND_IDENTITY.md) and linked it from README and the AI handoff.
+- **Scope:** Styling, browser theme metadata, and PWA artwork only. No routes, database schema, technical posts, attachments, or application behavior intentionally changed.
+- **Verification:** Source edits committed on `brand/cream-green-identity`. Static source review remains in progress; PHP/JS tests, CI, browser/mobile runtime, and deployment have not been run or claimed.
+- **Status:** Implemented on an isolated branch; not merged or deployed.
+
 ## 2026-11-01 — Establish managed migration ledger baseline for fresh installs
 
 - **Type:** Database / Migration safety / CI / Documentation
