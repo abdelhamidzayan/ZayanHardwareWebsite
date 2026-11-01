@@ -91,7 +91,7 @@ return static function (Router $router): void {
     $router->post('/skills/tests/{id}/submit', [SkillTestController::class, 'submit']);
     $router->get('/admin', [AdminFeaturedPostsController::class, 'index']);
     $router->get('/admin/update', [AdminUpdateController::class, 'index']);
-    $router->post('/admin/update', [AdminUpdateController::class, 'run']);
+    $router->post('/admin/update', [AdminUpdateController::class, 'run']);\n    $router->get('/admin/terminal', [AdminTerminalController::class, 'index']);\n    $router->post('/admin/terminal', [AdminTerminalController::class, 'run']);
     $router->post('/admin/featured-posts/{id}', [AdminFeaturedPostsController::class, 'update']);
     $router->get('/admin/users', [AdminUserController::class, 'index']);
     $router->post('/admin/users/{id}/password-reset', [AdminUserController::class, 'resetPassword']);
