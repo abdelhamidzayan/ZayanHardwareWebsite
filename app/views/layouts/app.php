@@ -3,7 +3,7 @@
  * app/views/layouts/app.php — app shell for logged-in pages (header, nav, content).
  *
  * Passed by the controller:  $content (set by View), $title, $active, $showHeader, $aside
- * Passed by View::shared():  $e, $appName, $baseUrl, $lang, $dir, $flash, $asset
+ * Passed by View::shared():  $e, $appName, $baseUrl, $lang, $dir, $flash
  */
 $active     = $active ?? 'home';
 $showHeader = $showHeader ?? true;
