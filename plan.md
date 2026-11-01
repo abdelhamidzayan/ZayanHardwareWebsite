@@ -18,7 +18,7 @@
 
 ## Stage 1 — Modern technical details editor
 
-**Status: IN PROGRESS — implementation not yet started; build-environment blocker identified.**
+**Status: BLOCKED — implementation not started; build-environment blocker must be resolved first.**
 
 ### Goal
 Replace the basic textarea experience with a modern Arabic-first RTL CodeMirror 6 Live Preview editor inspired by Obsidian, aligned with the current Zayan Hardware cream/ivory and workshop-green brand identity.
