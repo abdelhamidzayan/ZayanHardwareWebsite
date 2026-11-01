@@ -1,3 +1,10 @@
+## 2026-11-02 — Global mobile pinch-to-zoom restriction
+
+- Added `maximum-scale=1` and `user-scalable=no` to the shared viewport declaration in `app/views/layouts/head.php`; both authenticated and guest layouts include it, covering all application pages.
+- This is a browser viewport hint, not an absolute guarantee: some browsers or accessibility settings may still permit zoom. Mobile browser runtime verification is pending.
+- No JavaScript gesture interception, CSS touch-action lockout, routes, database, or technical content changed.
+- Implemented on `feat/disable-mobile-pinch-zoom`; not merged or deployed. GitHub Actions were not triggered.
+
 ## 2026-11-01 — Bounded admin terminal batches
 
 - New branch: `feat/admin-terminal-batch-safe`, based on the live `main` head inspected for this task.
