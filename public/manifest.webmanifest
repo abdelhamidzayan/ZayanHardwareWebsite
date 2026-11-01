@@ -13,8 +13,8 @@
     "minimal-ui"
   ],
   "orientation": "any",
-  "background_color": "#f3f4f6",
-  "theme_color": "#2563eb",
+  "background_color": "#fffcf3",
+  "theme_color": "#105023",
   "categories": [
     "education",
     "utilities",

@@ -1,3 +1,13 @@
+## 2026-11-01 — Establish Zayan Hardware cream-and-green brand identity
+
+- **Type:** UI / Design system / PWA / Documentation
+- **Summary:** Introduced the warm cream and ivory foundation with workshop green as the primary brand color, orange for the strongest calls to action, and cyan/yellow/purple as restrained category accents.
+- **Implementation:** Centralized semantic palette tokens in `public/css/tokens.css`; migrated primary page, component, technical discussion, responsive focus, and PWA guide accents away from the legacy blue theme. Updated browser/PWA theme colors and launcher icons.
+- **Documentation:** Added [Brand Identity](docs/BRAND_IDENTITY.md) and linked it from README and the AI handoff.
+- **Scope:** Styling, browser theme metadata, and PWA artwork only. No routes, database schema, technical posts, attachments, or application behavior intentionally changed.
+- **Verification:** Source edits committed on `brand/cream-green-identity`. Static source review remains in progress; PHP/JS tests, CI, browser/mobile runtime, and deployment have not been run or claimed.
+- **Status:** Implemented on an isolated branch; not merged or deployed.
+
 ## 2026-11-01 — Establish managed migration ledger baseline for fresh installs
 
 - **Type:** Database / Migration safety / CI / Documentation
@@ -47,6 +57,15 @@
 - **Status:** Implemented on `main`; branch cleanup completed and live verification shows only `main`. The complete single-file fresh-install and integration matrix passed on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11 (run [41240801466](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41240801466)). PHP and Graphify also passed on the same exact `main` head.
   
 # Zayan Hardware — Update Log
+## 2026-11-01 — Brand identity self-review and accessibility pass
+
+- **Type:** UI / Brand system / Accessibility
+- **Review:** Rechecked the complete stylesheet set loaded by the shared layout, including the post composer, discussion view, PWA guide, registration wizard, public header, and shared components.
+- **Corrections:** Migrated remaining legacy blue/gray fallbacks and status colors to semantic brand tokens; aligned composer warnings and media overlays; fixed the sign-in action so its hover state remains legible; centralized success, warning, danger, and neutral surfaces.
+- **Contrast:** Added accessible CTA foreground and orange-text variants. The supplied orange #D75421 uses near-black text on the CTA surface; the darker hover orange #B94418 uses white text. Muted text now uses #6B6D65 while the supplied decorative gray remains available as --color-brand-gray.
+- **Static checks:** Reviewed all eight CSS files loaded by the shared layout; brace counts balance and the targeted legacy palette values are absent from those files. No PHP/JS test suite, CI workflow, browser rendering, mobile/PWA acceptance, or deployment was run in this review.
+- **Status:** Changes remain isolated on brand/cream-green-identity; no PR was opened and main was not changed.
+
 
 ## 2026-10-31 — Skill-test input and answer-exposure hardening
 

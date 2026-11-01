@@ -1,4 +1,4 @@
-/* One-time PWA guide — follows the shared blue design tokens. */
+/* One-time PWA guide — follows the shared cream and workshop-green identity. */
 .pwa-guide-overlay {
   position: fixed;
   z-index: 10000;
@@ -7,7 +7,7 @@
   place-items: center;
   padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   overflow-y: auto;
-  background: rgba(15, 23, 42, .58);
+  background: var(--color-overlay);
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
   animation: pwa-guide-fade-in .18s ease-out;
@@ -22,7 +22,7 @@
   border-radius: 1.5rem;
   background: var(--color-surface);
   color: var(--color-ink);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, .24);
+  box-shadow: 0 24px 70px rgba(51, 60, 55, .18);
   text-align: center;
   animation: pwa-guide-rise-in .22s ease-out;
 }
@@ -47,7 +47,7 @@
   width: 4.25rem;
   height: 4.25rem;
   margin: 0 auto .75rem;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--color-primary-soft);
   border-radius: 1.25rem;
   background: var(--color-primary-soft);
   color: var(--color-primary);
@@ -88,7 +88,7 @@
   padding: .7rem .4rem;
   border: 1px solid var(--color-border);
   border-radius: .9rem;
-  background: #fff;
+  background: var(--color-surface);
   font-size: .78rem;
   line-height: 1.5;
 }
@@ -98,15 +98,15 @@
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 50%;
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--color-success-soft);
+  color: var(--color-success-ink);
   font-weight: 800;
 }
 .pwa-guide__instructions {
   padding: 1rem;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-primary-border);
   border-radius: 1rem;
-  background: #f8fbff;
+  background: var(--color-primary-soft);
   text-align: start;
 }
 .pwa-guide__device {
@@ -118,7 +118,7 @@
 }
 .pwa-guide__device-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--color-primary); }
 .pwa-guide__instructions p { margin-bottom: .45rem; font-weight: 600; }
-.pwa-guide__instructions ol { margin: 0; padding-inline-start: 1.35rem; color: #374151; }
+.pwa-guide__instructions ol { margin: 0; padding-inline-start: 1.35rem; color: var(--color-ink); }
 .pwa-guide__instructions li { padding-inline-start: .2rem; margin-block: .35rem; line-height: 1.65; }
 .pwa-guide__instructions li::marker { color: var(--color-primary); font-weight: 700; }
 .pwa-guide__note { margin: .8rem 0 1rem; color: var(--color-muted); font-size: .82rem; line-height: 1.6; }
@@ -140,7 +140,7 @@
 .pwa-guide__done { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-ink); }
 .pwa-guide__done:hover, .pwa-guide__skip:hover { background: var(--color-field); }
 .pwa-guide__skip { min-height: 2.5rem; color: var(--color-muted); font-size: .9rem; }
-.pwa-guide button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+.pwa-guide button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .pwa-guide button:disabled { opacity: .65; cursor: wait; }
 @keyframes pwa-guide-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pwa-guide-rise-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }

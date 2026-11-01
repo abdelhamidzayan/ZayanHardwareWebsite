@@ -1,27 +1,52 @@
 /* ==========================================================
-   tokens.css — design tokens + base (from Figma)
+   tokens.css — design tokens + base
    Place at: public/css/tokens.css
-   Colors are estimated from the Figma PDFs; edit them here only.
+   Brand colors and accessible semantic variants are defined here.
    Uses logical properties so RTL (Arabic) and LTR both work.
    ========================================================== */
 
 :root {
-  /* Color */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-soft: #eaf1fd;
-  --color-brand: #0f172a;
-  --color-ink: #111827;
-  --color-muted: #6b7280;
-  --color-subtle: #9ca3af;
-  --color-wave: #cbd5e1;
-  --color-bg: #f3f4f6;
-  --color-surface: #ffffff;
-  --color-field: #f4f5f7;
-  --color-border: #e5e7eb;
-  --color-success: #16a34a;
-  --color-danger: #dc2626;
-  --color-overlay: rgba(17, 24, 39, 0.72);
+  /* Brand palette — Zayan Hardware */
+  --color-primary: #105023;
+  --color-primary-hover: #0b3d1a;
+  --color-primary-deep: #0b3d1a;
+  --color-primary-soft: #eaf1e8;
+  --color-primary-border: #c8d9c8;
+  --color-brand: #105023;
+  --color-cta: #d75421;
+  --color-cta-hover: #b94418;
+  --color-cta-soft: #fbeae2;
+  --color-cta-text: #a83d18;
+  --color-cta-ink: #111111;
+  --color-accent-yellow: #e0b718;
+  --color-accent-orange: #d75421;
+  --color-accent-purple: #887f9e;
+  --color-accent-cyan: #98d7df;
+  --color-accent-green: #105023;
+  --color-ink: #333c37;
+  --color-muted: #6b6d65;
+  --color-brand-gray: #74766e;
+  --color-subtle: #9a9b91;
+  --color-wave: #d9ded4;
+  --color-bg: #fffcf3;
+  --color-surface: #fffefa;
+  --color-field: #f8f3e0;
+  --color-border: #e8e2d2;
+  --color-success: #105023;
+  --color-success-soft: #eaf1e8;
+  --color-success-border: #c8d9c8;
+  --color-success-ink: #105023;
+  --color-warning: #e0b718;
+  --color-warning-soft: #fbf5df;
+  --color-warning-border: #e9d88b;
+  --color-warning-ink: #735900;
+  --color-danger: #b9382a;
+  --color-danger-soft: #fcebea;
+  --color-danger-border: #efc6c1;
+  --color-danger-ink: #b9382a;
+  --color-neutral-soft: #f2f1eb;
+  --color-neutral-ink: #4d554f;
+  --color-overlay: rgba(51, 60, 55, 0.72);
 
   /* Type */
   --font-sans: "Inter", "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
@@ -50,8 +75,8 @@
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
   --radius-pill: 999px;
-  --shadow-card: 0 1px 2px rgba(17, 24, 39, 0.04);
-  --shadow-float: 0 8px 24px rgba(17, 24, 39, 0.12);
+  --shadow-card: 0 1px 2px rgba(51, 60, 55, 0.05);
+  --shadow-float: 0 8px 24px rgba(51, 60, 55, 0.12);
 
   /* Layout */
   --app-width: 30rem;     /* mobile column */
