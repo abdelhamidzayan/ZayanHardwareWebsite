@@ -898,20 +898,53 @@
             detailsEditor.applyFormat(format);
             return;
         }
+        const value = detailsInput.value;
         const start = detailsInput.selectionStart;
         const end = detailsInput.selectionEnd;
-        const selected = detailsInput.value.slice(start, end);
-        const wrappers = {
-            bold: ['**', '**'],
-            heading: ['### ', ''],
-            numbered: ['1. ', ''],
-            bulleted: ['• ', ''],
-            divider: ['\n────────────\n', '']
-        };
-        const pair = wrappers[format];
-        if (!pair) return;
-        const replacement = pair[0] + (selected || 'نص') + pair[1];
-        detailsInput.setRangeText(replacement, start, end, 'end');
+        const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+        const nextBreak = value.indexOf('\n', start);
+        const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+        const selected = start !== end ? value.slice(start, end) : value.slice(lineStart, lineEnd);
+        let replacement = selected;
+        let cursor = lineStart;
+
+        if (format === 'bold' || format === 'inline_code') {
+            const marker = format === 'bold' ? '**' : '`';
+            if (selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= marker.length * 2) {
+                replacement = selected.slice(marker.length, -marker.length);
+                cursor = lineStart + Math.max(0, start - lineStart - marker.length);
+            } else if (!selected && format === 'bold') {
+                replacement = '****';
+                cursor = lineStart + 2;
+            } else if (!selected) {
+                replacement = '``';
+                cursor = lineStart + 1;
+            } else {
+                replacement = marker + selected + marker;
+                cursor = lineStart + marker.length + selected.length;
+            }
+        } else {
+            const prefixes = { heading: '### ', numbered: '1. ', bulleted: '- ', quote: '> ' };
+            if (format === 'divider') {
+                replacement = /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(selected) ? '' : '---';
+            } else if (format === 'code_block') {
+                replacement = '\\`\\`\\`\n' + selected + '\n\\`\\`\\`';
+            } else if (prefixes[format]) {
+                const prefix = prefixes[format];
+                const match = format === 'heading' ? /^#{1,6}\s+/.exec(selected)
+                    : format === 'numbered' ? /^\d+[.)]\s+/.exec(selected)
+                    : format === 'bulleted' ? /^[-*+]\s+/.exec(selected)
+                    : /^>\s?/.exec(selected);
+                replacement = match ? selected.slice(match[0].length) : prefix + selected;
+            } else {
+                return;
+            }
+            cursor = lineStart + replacement.length;
+        }
+        const replaceStart = start !== end ? start : lineStart;
+        const replaceEnd = start !== end ? end : lineEnd;
+        detailsInput.setRangeText(replacement, replaceStart, replaceEnd, 'preserve');
+        detailsInput.setSelectionRange(Math.min(cursor, detailsInput.value.length), Math.min(cursor, detailsInput.value.length));
         detailsInput.focus();
         markDirty();
     }
