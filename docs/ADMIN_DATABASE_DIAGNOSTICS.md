@@ -2,7 +2,7 @@
 
 The administrator diagnostic console includes a read-only database inspection path:
 
-- `db status`: reports the connected database name and server version, enumerates numbered SQL files under `database/migrations/`, and checks for a `app_migration_ledger` ledger.
+- `db status`: reports the connected database name and server version, enumerates historical SQL files separately from managed files under `database/managed_migrations/`, and checks the `app_migration_ledger`.
 - `db tables`: lists table and view names from the selected database.
 - `db migration 019_session_version_invalidation.sql`: displays a bounded migration file for review.
 
@@ -10,7 +10,7 @@ The administrator diagnostic console includes a read-only database inspection pa
 
 The current project keeps numbered incremental SQL files as historical upgrade artifacts and uses `database/fresh_install.sql` for a new empty database. The existing deployed databases may not have a migration ledger. If `app_migration_ledger` is absent, the console explicitly reports the applied state as **UNKNOWN**. It must not infer that a migration ran from its filename, current Git commit, or presence of expected tables.
 
-A ledger, if present, is read only when it has the expected `migration` column. A recorded filename is evidence of a recorded operation, not proof that the live schema still matches the migration. The console does not create, repair, or backfill the ledger.
+The managed ledger is accepted only when all required metadata columns exist and the fresh-install baseline identity is valid. A recorded filename is evidence of a recorded operation, not proof that the live schema still matches the migration. `db status` compares each managed file's SHA-256 with its recorded checksum and reports drift. The console does not create, repair, or backfill the ledger.
 
 ## Safe operational sequence
 
