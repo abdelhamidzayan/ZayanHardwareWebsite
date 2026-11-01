@@ -201,7 +201,7 @@
   inline-size: 3.5rem;
   block-size: 2.75rem;
   border-radius: var(--radius-md);
-  background: var(--color-primary);
+  background: var(--color-cta);
   color: #fff;
 }
 
