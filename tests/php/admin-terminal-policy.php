@@ -6,8 +6,8 @@ $view = file_get_contents($root . '/app/views/admin/terminal.php');
 if (!is_string($controller) || !is_string($view)) { fwrite(STDERR, "Unable to read admin terminal source.\\n"); exit(1); }
 $required = [
     "$"."this->request->input('commands')", 'preg_split(', 'count($commands)>8',
-    'strlen($command)>300', "RateLimiter::allowForUser('admin.diagnostic_terminal',$id,10,60,30)",
-    "in_array($cmd,['sudo','su'],true)", 'proc_open($args,', "App::audit('admin.terminal.command'",
+    'strlen($command)>300', 'RateLimiter::allowForUser(\'admin.diagnostic_terminal\',$id,10,60,30)',
+    'in_array($cmd,[\'sudo\',\'su\'],true)', 'proc_open($args,', "App::audit('admin.terminal.command'",
 ];
 $missing = [];
 foreach ($required as $marker) if (!str_contains($controller, $marker)) $missing[] = 'controller: ' . $marker;
