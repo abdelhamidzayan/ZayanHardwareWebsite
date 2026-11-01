@@ -111,6 +111,7 @@ function positionToolbar(toolbar) {
 }
 
 function create({ textarea, host, onChange }) {
+  let applyingExternalValue = false;
   const view = new EditorView({
     state: EditorState.create({
       doc: textarea.value || '',
@@ -123,7 +124,7 @@ function create({ textarea, host, onChange }) {
         EditorView.updateListener.of(update => {
           if (update.docChanged) {
             textarea.value = update.state.doc.toString();
-            if (typeof onChange === 'function') onChange(textarea.value);
+            if (!applyingExternalValue && typeof onChange === 'function') onChange(textarea.value);
           }
         }),
         EditorView.theme({
@@ -151,7 +152,11 @@ function create({ textarea, host, onChange }) {
   return {
     setValue(value) {
       const next = String(value || '');
-      if (view.state.doc.toString() !== next) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+      if (view.state.doc.toString() !== next) {
+        applyingExternalValue = true;
+        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+        applyingExternalValue = false;
+      }
       textarea.value = next;
     },
     focus() { view.focus(); },
