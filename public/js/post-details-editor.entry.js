@@ -34,7 +34,7 @@ function decorationsFor(view) {
       ranges.push(Decoration.line({ class: 'cm-live-preview-code-line' }).range(line.from));
       continue;
     }
-    const heading = /^(#{1,6})\s+(.+)$/.exec(value);
+    const heading = /^(#{1,6})\s+(.*)$/.exec(value);
     const quote = /^>\s?/.exec(value);
     const bullet = /^\s*[-*+]\s+/.exec(value);
     const ordered = /^\s*\d+[.)]\s+/.exec(value);
@@ -54,7 +54,7 @@ function decorationsFor(view) {
       ranges.push(Decoration.replace({}).range(line.from, line.from + prefix[0].length));
       ranges.push(Decoration.line({ class: 'cm-live-preview-list' }).range(line.from));
     }
-    const inline = /\*\*(.+?)\*\*|`([^`]+)`/g;
+    const inline = /\*\*(.*?)\*\*|`([^`]+)`/g;
     let match;
     while ((match = inline.exec(value)) !== null) {
       const token = match[0];
@@ -77,29 +77,83 @@ const livePreview = ViewPlugin.fromClass(class {
 
 function applyFormat(view, format) {
   const selection = view.state.selection.main;
-  const selected = view.state.sliceDoc(selection.from, selection.to);
-  const line = view.state.doc.lineAt(selection.from);
-  const pairs = {
-    bold: ['**', '**', 'نص'],
-    inline_code: ['`', '`', 'code'],
-    heading: ['### ', '', 'عنوان'],
-    numbered: ['1. ', '', 'عنصر'],
-    bulleted: ['- ', '', 'عنصر'],
-    quote: ['> ', '', 'ملاحظة'],
-    divider: ['\n---\n', '', ''],
-    code_block: ['\n```\n', '\n```', 'code']
-  };
-  const pair = pairs[format];
-  if (!pair) return;
-  let from = selection.from;
-  let to = selection.to;
-  let insert = pair[0] + (selected || pair[2]) + pair[1];
-  if (['heading', 'numbered', 'bulleted', 'quote'].includes(format)) {
-    from = line.from;
-    to = line.from;
-    insert = pair[0];
+  const hasSelection = !selection.empty;
+  const line = view.state.doc.lineAt(selection.head);
+  const from = hasSelection ? selection.from : line.from;
+  const to = hasSelection ? selection.to : line.to;
+  const selected = view.state.sliceDoc(from, to);
+  let insert = selected;
+  let anchor = from;
+
+  if (format === 'divider') {
+    const divider = /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(line.text);
+    const value = divider ? '' : '---';
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert: value },
+      selection: { anchor: line.from + value.length },
+      scrollIntoView: true
+    });
+    view.focus();
+    return;
   }
-  view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length }, scrollIntoView: true });
+
+  if (format === 'bold' || format === 'inline_code') {
+    const marker = format === 'bold' ? '**' : '`';
+    const alreadyWrapped = selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= marker.length * 2;
+    if (alreadyWrapped) {
+      insert = selected.slice(marker.length, selected.length - marker.length);
+      anchor = from + Math.max(0, Math.min(selected.length - marker.length * 2, selection.head - from - marker.length));
+    } else if (selected.length === 0 && format === 'bold') {
+      insert = '****';
+      anchor = from + 2;
+    } else if (selected.length === 0) {
+      insert = '``';
+      anchor = from + 1;
+    } else {
+      insert = marker + selected + marker;
+      anchor = from + marker.length + (hasSelection ? selected.length : selected.length);
+    }
+  } else if (format === 'heading' || format === 'numbered' || format === 'bulleted' || format === 'quote') {
+    const prefixes = { heading: '### ', numbered: '1. ', bulleted: '- ', quote: '> ' };
+    const prefix = prefixes[format];
+    const current = line.text;
+    const existing = format === 'heading' ? /^#{1,6}\s+/.exec(current)
+      : format === 'numbered' ? /^\d+[.)]\s+/.exec(current)
+      : format === 'bulleted' ? /^[-*+]\s+/.exec(current)
+      : /^>\s?/.exec(current);
+    if (existing && (format !== 'heading' || existing[0] === prefix)) {
+      insert = current.slice(existing[0].length);
+      anchor = line.from + Math.max(0, selection.head - line.from - existing[0].length);
+    } else {
+      insert = prefix + current;
+      anchor = line.from + prefix.length + Math.max(0, selection.head - line.from);
+    }
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert },
+      selection: { anchor },
+      scrollIntoView: true
+    });
+    view.focus();
+    return;
+  } else if (format === 'code_block') {
+    const fence = /^\s*```/.test(line.text);
+    if (fence) {
+      view.dispatch({ changes: { from: line.from, to: line.to, insert: '' }, selection: { anchor: line.from }, scrollIntoView: true });
+    } else {
+      const block = '```\n' + (line.text || '') + '\n```';
+      view.dispatch({ changes: { from: line.from, to: line.to, insert: block }, selection: { anchor: line.from + 4 + line.text.length }, scrollIntoView: true });
+    }
+    view.focus();
+    return;
+  } else {
+    return;
+  }
+
+  view.dispatch({
+    changes: { from, to, insert },
+    selection: { anchor },
+    scrollIntoView: true
+  });
   view.focus();
 }
 
