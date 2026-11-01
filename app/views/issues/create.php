@@ -147,16 +147,6 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
             </div>
 
             <div class="post-composer__text-mode" data-text-mode <?= $detailsMode !== 'text' ? 'hidden' : '' ?>>
-                <div class="post-composer__format-tools" data-details-toolbar role="toolbar" aria-label="تنسيق النص">
-                    <button type="button" data-format="bold" aria-label="خط عريض" title="خط عريض"><strong>B</strong></button>
-                    <button type="button" data-format="heading" aria-label="عنوان فرعي" title="عنوان">H</button>
-                    <button type="button" data-format="bulleted" aria-label="قائمة نقطية" title="قائمة نقطية">•</button>
-                    <button type="button" data-format="numbered" aria-label="قائمة مرقمة" title="قائمة مرقمة">1.</button>
-                    <button type="button" data-format="quote" aria-label="ملاحظة" title="ملاحظة">❝</button>
-                    <button type="button" data-format="inline_code" aria-label="كود داخل السطر" title="كود">`</button>
-                    <button type="button" data-format="code_block" aria-label="كتلة كود" title="كتلة كود">{ }</button>
-                    <button type="button" data-format="divider" aria-label="فاصل" title="فاصل">―</button>
-                </div>
                 <div class="field post-composer__details-field" role="group" aria-label="تفاصيل المنشور">
                     <span class="sr-only" id="post-details-label">تفاصيل المنشور</span>
                     <div class="post-composer__details-editor" data-details-editor role="textbox" aria-multiline="true" aria-labelledby="post-details-label"></div>
@@ -201,7 +191,7 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
                     <?php if (!is_string($step)) continue; ?>
                     <div class="post-composer__step-row" data-step-row>
                         <span class="post-composer__step-number"><?= (int) $index + 1 ?></span>
-                        <textarea rows="1" maxlength="2000" data-step-input placeholder="اكتب الفحص أو التجربة..."><?= $e($step) ?></textarea>
+                        <input type="text" maxlength="2000" data-step-input placeholder="اكتب الفحص أو التجربة..." value="<?= $e($step) ?>">
                         <button type="button" data-remove-step aria-label="حذف الخطوة">×</button>
                     </div>
                 <?php endforeach; ?>

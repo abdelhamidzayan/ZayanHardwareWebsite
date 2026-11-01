@@ -293,14 +293,14 @@
         });
     }
 
-    function addStep(value) {
+    function addStep(value, afterRow) {
         const row = document.createElement('div');
         row.className = 'post-composer__step-row';
         row.dataset.stepRow = '';
         const number = document.createElement('span');
         number.className = 'post-composer__step-number';
-        const textarea = document.createElement('textarea');
-        textarea.rows = 1;
+        const textarea = document.createElement('input');
+        textarea.type = 'text';
         textarea.maxLength = 2000;
         textarea.dataset.stepInput = '';
         textarea.placeholder = 'اكتب الفحص أو التجربة...';
@@ -311,7 +311,7 @@
         remove.setAttribute('aria-label', 'حذف الخطوة');
         remove.textContent = '×';
         row.append(number, textarea, remove);
-        stepList.appendChild(row);
+        stepList.insertBefore(row, afterRow ? afterRow.nextElementSibling : null);
         renderSteps();
         textarea.focus();
         markDirty();
@@ -857,8 +857,8 @@
         row.dataset.stepRow = '';
         const number = document.createElement('span');
         number.className = 'post-composer__step-number';
-        const textarea = document.createElement('textarea');
-        textarea.rows = 1;
+        const textarea = document.createElement('input');
+        textarea.type = 'text';
         textarea.maxLength = 2000;
         textarea.dataset.stepInput = '';
         textarea.placeholder = 'اكتب الفحص أو التجربة...';
@@ -891,62 +891,6 @@
     function updateTitleCount() {
         const count = form.querySelector('[data-title-count]');
         if (count) count.textContent = String(titleInput.value.length);
-    }
-
-    function applyFormat(format) {
-        if (detailsEditor) {
-            detailsEditor.applyFormat(format);
-            return;
-        }
-        const value = detailsInput.value;
-        const start = detailsInput.selectionStart;
-        const end = detailsInput.selectionEnd;
-        const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
-        const nextBreak = value.indexOf('\n', start);
-        const lineEnd = nextBreak === -1 ? value.length : nextBreak;
-        const selected = start !== end ? value.slice(start, end) : value.slice(lineStart, lineEnd);
-        let replacement = selected;
-        let cursor = lineStart;
-
-        if (format === 'bold' || format === 'inline_code') {
-            const marker = format === 'bold' ? '**' : '`';
-            if (selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= marker.length * 2) {
-                replacement = selected.slice(marker.length, -marker.length);
-                cursor = lineStart + Math.max(0, start - lineStart - marker.length);
-            } else if (!selected && format === 'bold') {
-                replacement = '****';
-                cursor = lineStart + 2;
-            } else if (!selected) {
-                replacement = '``';
-                cursor = lineStart + 1;
-            } else {
-                replacement = marker + selected + marker;
-                cursor = lineStart + marker.length + selected.length;
-            }
-        } else {
-            const prefixes = { heading: '### ', numbered: '1. ', bulleted: '- ', quote: '> ' };
-            if (format === 'divider') {
-                replacement = /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(selected) ? '' : '---';
-            } else if (format === 'code_block') {
-                replacement = '```\n' + selected + '\n```';
-            } else if (prefixes[format]) {
-                const prefix = prefixes[format];
-                const match = format === 'heading' ? /^#{1,6}\s+/.exec(selected)
-                    : format === 'numbered' ? /^\d+[.)]\s+/.exec(selected)
-                    : format === 'bulleted' ? /^[-*+]\s+/.exec(selected)
-                    : /^>\s?/.exec(selected);
-                replacement = match ? selected.slice(match[0].length) : prefix + selected;
-            } else {
-                return;
-            }
-            cursor = lineStart + replacement.length;
-        }
-        const replaceStart = start !== end ? start : lineStart;
-        const replaceEnd = start !== end ? end : lineEnd;
-        detailsInput.setRangeText(replacement, replaceStart, replaceEnd, 'preserve');
-        detailsInput.setSelectionRange(Math.min(cursor, detailsInput.value.length), Math.min(cursor, detailsInput.value.length));
-        detailsInput.focus();
-        markDirty();
     }
 
     brandTrigger.addEventListener('click', function () {
@@ -1012,10 +956,6 @@
         }
     });
 
-    form.addEventListener('click', function (event) {
-        const formatButton = event.target.closest('[data-format]');
-        if (formatButton) applyFormat(formatButton.dataset.format);
-    });
     titleInput.addEventListener('input', function () { updateTitleCount(); markDirty(); });
     detailsInput.addEventListener('input', markDirty);
     categoryInput?.addEventListener('change', markDirty);
@@ -1059,6 +999,11 @@
         }
     });
     stepList.addEventListener('input', markDirty);
+    stepList.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' || !event.target.matches('[data-step-input]')) return;
+        event.preventDefault();
+        addStep('', event.target.closest('[data-step-row]'));
+    });
     mediaInput.addEventListener('change', async function () {
         const incoming = Array.from(mediaInput.files || []);
         mediaInput.value = '';

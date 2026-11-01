@@ -49,7 +49,7 @@ function decorationsFor(view) {
       ranges.push(Decoration.replace({}).range(line.from, line.from + prefix[0].length));
       ranges.push(Decoration.line({ class: 'cm-live-preview-list' }).range(line.from));
     }
-    const inline = /\*\*(.*?)\*\*|`(.*?)`/g;
+    const inline = /\*\*(.*?)\*\*|\*([^*\n]+?)\*|`(.*?)`/g;
     let match;
     while ((match = inline.exec(value)) !== null) {
       const token = match[0];
@@ -57,7 +57,7 @@ function decorationsFor(view) {
       const from = line.from + match.index;
       ranges.push(Decoration.replace({}).range(from, from + width));
       ranges.push(Decoration.replace({}).range(from + token.length - width, from + token.length));
-      if (token.length > width * 2) ranges.push(Decoration.mark({ class: width === 2 ? 'cm-live-preview-bold' : 'cm-live-preview-inline-code' }).range(from + width, from + token.length - width));
+      if (token.length > width * 2) ranges.push(Decoration.mark({ class: match[3] !== undefined ? 'cm-live-preview-inline-code' : 'cm-live-preview-bold' }).range(from + width, from + token.length - width));
     }
   }
   return Decoration.set(ranges, true);
@@ -69,31 +69,6 @@ const livePreview = ViewPlugin.fromClass(class {
     if (update.docChanged || update.selectionSet || update.viewportChanged) this.decorations = decorationsFor(update.view);
   }
 }, { decorations: value => value.decorations });
-
-function syncToolbar(view, toolbar) {
-  if (!toolbar) return;
-  const line = view.state.doc.lineAt(view.state.selection.main.head);
-  const value = line.text;
-  let inFence = false;
-  for (let n = 1; n <= line.number; n += 1) {
-    if (/^\s*\x60{3}/.test(view.state.doc.line(n).text)) inFence = !inFence;
-  }
-  const states = {
-    bold: /^(?:\s*(?:[-*+]|\d+[.)])\s+|>\s?|#{1,6}\s+)?\*\*.*\*\*$/.test(value),
-    heading: /^#{1,6}\s+/.test(value),
-    bulleted: /^\s*[-*+]\s+/.test(value),
-    numbered: /^\s*\d+[.)]\s+/.test(value),
-    quote: /^>\s?/.test(value),
-    inline_code: /^(?:\s*(?:[-*+]|\d+[.)])\s+|>\s?|#{1,6}\s+)?\x60.*\x60$/.test(value),
-    code_block: inFence,
-    divider: /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(value)
-  };
-  toolbar.querySelectorAll('[data-format]').forEach(button => {
-    const active = Boolean(states[button.dataset.format]);
-    button.classList.toggle('is-active', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-}
 
 function continueList(view) {
   const selection = view.state.selection.main;
@@ -119,14 +94,14 @@ function continueList(view) {
 
     const contentStart = line.text.length - list[3].length;
     const contentOffset = selection.head - line.from - contentStart;
-    const bold = /^\*\*(.*)\*\*$/.exec(list[3]);
+    const bold = /^(\*\*|\*)(.*)\1$/.exec(list[3]);
     const inlineCode = list[3].length >= 2 && list[3].charAt(0) === tick && list[3].charAt(list[3].length - 1) === tick;
     const nextPrefix = list[1] + marker + ' ';
 
-    if (bold && contentOffset > 2 && contentOffset < list[3].length - 2) {
-      const left = list[3].slice(2, contentOffset);
-      const right = list[3].slice(contentOffset, -2);
-      const insert = line.text.slice(0, contentStart) + '**' + left + '**\n' + nextPrefix + right;
+    if (bold && contentOffset > bold[1].length && contentOffset < list[3].length - bold[1].length) {
+      const left = list[3].slice(bold[1].length, contentOffset);
+      const right = list[3].slice(contentOffset, -bold[1].length);
+      const insert = line.text.slice(0, contentStart) + bold[1] + left + bold[1] + '\n' + nextPrefix + right;
       view.dispatch({
         changes: { from: line.from, to: line.to, insert },
         selection: { anchor: line.from + insert.indexOf('\n') + 1 + nextPrefix.length },
@@ -160,13 +135,13 @@ function continueList(view) {
   const contentStart = blockPrefix ? blockPrefix[0].length : 0;
   const content = line.text.slice(contentStart);
   const offset = selection.head - line.from - contentStart;
-  const bold = /^\*\*(.*)\*\*$/.exec(content);
+  const bold = /^(\*\*|\*)(.*)\1$/.exec(content);
   const inlineCode = content.length >= 2 && content.charAt(0) === tick && content.charAt(content.length - 1) === tick;
 
-  if (bold && offset > 2 && offset < content.length - 2) {
-    const left = content.slice(2, offset);
-    const right = content.slice(offset, -2);
-    const insert = line.text.slice(0, contentStart) + '**' + left + '**\n' + right;
+  if (bold && offset > bold[1].length && offset < content.length - bold[1].length) {
+    const left = content.slice(bold[1].length, offset);
+    const right = content.slice(offset, -bold[1].length);
+    const insert = line.text.slice(0, contentStart) + bold[1] + left + bold[1] + '\n' + right;
     view.dispatch({
       changes: { from: line.from, to: line.to, insert },
       selection: { anchor: line.from + insert.indexOf('\n') + 1 },
@@ -190,93 +165,8 @@ function continueList(view) {
   return false;
 }
 
-function applyFormat(view, format) {
-  const selection = view.state.selection.main;
-  const hasSelection = !selection.empty;
-  const line = view.state.doc.lineAt(selection.head);
-  const blockPrefix = !hasSelection ? /^(?:\s*(?:#{1,6}|[-*+]|\d+[.)])\s+|>\s?)/.exec(line.text) : null;
-  const from = hasSelection ? selection.from : line.from + (blockPrefix ? blockPrefix[0].length : 0);
-  const to = hasSelection ? selection.to : line.to;
-  const selected = view.state.sliceDoc(from, to);
-  let insert = selected;
-  let anchor = from;
-
-  if (format === 'divider') {
-    const divider = /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(line.text);
-    const value = divider ? '' : '---';
-    view.dispatch({
-      changes: { from: line.from, to: line.to, insert: value },
-      selection: { anchor: line.from + value.length },
-      scrollIntoView: true
-    });
-    view.focus();
-    return;
-  }
-
-  if (format === 'bold' || format === 'inline_code') {
-    const marker = format === 'bold' ? '**' : '`';
-    const alreadyWrapped = selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= marker.length * 2;
-    if (alreadyWrapped) {
-      insert = selected.slice(marker.length, selected.length - marker.length);
-      anchor = from + Math.max(0, Math.min(selected.length - marker.length * 2, selection.head - from - marker.length));
-    } else if (selected.length === 0 && format === 'bold') {
-      insert = '****';
-      anchor = from + 2;
-    } else if (selected.length === 0) {
-      insert = '``';
-      anchor = from + 1;
-    } else {
-      insert = marker + selected + marker;
-      anchor = from + marker.length + (hasSelection ? selected.length : selected.length);
-    }
-  } else if (format === 'heading' || format === 'numbered' || format === 'bulleted' || format === 'quote') {
-    const prefixes = { heading: '### ', numbered: '1. ', bulleted: '- ', quote: '> ' };
-    const prefix = prefixes[format];
-    const current = line.text;
-    const existing = format === 'heading' ? /^#{1,6}\s+/.exec(current)
-      : format === 'numbered' ? /^\d+[.)]\s+/.exec(current)
-      : format === 'bulleted' ? /^[-*+]\s+/.exec(current)
-      : /^>\s?/.exec(current);
-    if (existing && (format !== 'heading' || existing[0] === prefix)) {
-      insert = current.slice(existing[0].length);
-      anchor = line.from + Math.max(0, selection.head - line.from - existing[0].length);
-    } else {
-      insert = prefix + current;
-      anchor = line.from + prefix.length + Math.max(0, selection.head - line.from);
-    }
-    view.dispatch({
-      changes: { from: line.from, to: line.to, insert },
-      selection: { anchor },
-      scrollIntoView: true
-    });
-    view.focus();
-    return;
-  } else if (format === 'code_block') {
-    const fence = /^\s*```/.test(line.text);
-    if (fence) {
-      view.dispatch({ changes: { from: line.from, to: line.to, insert: '' }, selection: { anchor: line.from }, scrollIntoView: true });
-    } else {
-      const block = '```\n' + (line.text || '') + '\n```';
-      view.dispatch({ changes: { from: line.from, to: line.to, insert: block }, selection: { anchor: line.from + 4 + line.text.length }, scrollIntoView: true });
-    }
-    view.focus();
-    return;
-  } else {
-    return;
-  }
-
-  view.dispatch({
-    changes: { from, to, insert },
-    selection: { anchor },
-    scrollIntoView: true
-  });
-  view.focus();
-}
-
-
 function create({ textarea, host, onChange }) {
   let applyingExternalValue = false;
-  const toolbar = textarea.closest('[data-text-mode]')?.querySelector('[data-details-toolbar]');
   const view = new EditorView({
     state: EditorState.create({
       doc: textarea.value || '',
@@ -291,7 +181,6 @@ function create({ textarea, host, onChange }) {
             textarea.value = update.state.doc.toString();
             if (!applyingExternalValue && typeof onChange === 'function') onChange(textarea.value);
           }
-          if (update.docChanged || update.selectionSet) syncToolbar(update.view, toolbar);
         }),
         EditorView.theme({
           '&': { direction: 'auto' },
@@ -303,12 +192,6 @@ function create({ textarea, host, onChange }) {
     }),
     parent: host
   });
-  syncToolbar(view, toolbar);
-  if (toolbar) {
-    toolbar.addEventListener('mousedown', event => {
-      if (event.target.closest('button')) event.preventDefault();
-    });
-  }
   textarea.classList.add('is-code-editor-enhanced');
   return {
     setValue(value) {
@@ -323,8 +206,7 @@ function create({ textarea, host, onChange }) {
       }
       textarea.value = next;
     },
-    focus() { view.focus(); },
-    applyFormat(format) { applyFormat(view, format); }
+    focus() { view.focus(); }
   };
 }
 
