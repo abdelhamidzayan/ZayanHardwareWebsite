@@ -928,7 +928,7 @@
             if (format === 'divider') {
                 replacement = /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(selected) ? '' : '---';
             } else if (format === 'code_block') {
-                replacement = '\\`\\`\\`\n' + selected + '\n\\`\\`\\`';
+                replacement = '```\n' + selected + '\n```';
             } else if (prefixes[format]) {
                 const prefix = prefixes[format];
                 const match = format === 'heading' ? /^#{1,6}\s+/.exec(selected)
