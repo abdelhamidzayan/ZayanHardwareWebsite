@@ -123,6 +123,13 @@
   font-size: var(--text-xs);
 }
 
+
+.tag--green { border-color: var(--color-primary-border); background: var(--color-primary-soft); color: var(--color-primary); }
+.tag--cyan { border-color: color-mix(in srgb, var(--color-accent-cyan) 60%, var(--color-border)); background: color-mix(in srgb, var(--color-accent-cyan) 24%, var(--color-surface)); color: #315b60; }
+.tag--yellow { border-color: color-mix(in srgb, var(--color-accent-yellow) 55%, var(--color-border)); background: color-mix(in srgb, var(--color-accent-yellow) 18%, var(--color-surface)); color: #735900; }
+.tag--orange { border-color: color-mix(in srgb, var(--color-cta) 35%, var(--color-border)); background: var(--color-cta-soft); color: var(--color-cta); }
+.tag--purple { border-color: color-mix(in srgb, var(--color-accent-purple) 45%, var(--color-border)); background: color-mix(in srgb, var(--color-accent-purple) 16%, var(--color-surface)); color: #625a76; }
+
 /* ---------- Issue card ---------- */
 .issue-card { display: grid; gap: var(--space-4); }
 
