@@ -64,8 +64,8 @@
 .guest-header__actions .guest-header__login,
 .guest-header__actions .guest-header__login:hover,
 .guest-header__actions .guest-header__login:focus-visible {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: var(--color-cta);
+  background: var(--color-cta);
   color: #fff;
 }
 
