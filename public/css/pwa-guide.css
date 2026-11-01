@@ -7,7 +7,7 @@
   place-items: center;
   padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   overflow-y: auto;
-  background: rgba(15, 23, 42, .58);
+  background: var(--color-overlay);
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
   animation: pwa-guide-fade-in .18s ease-out;
@@ -22,7 +22,7 @@
   border-radius: 1.5rem;
   background: var(--color-surface);
   color: var(--color-ink);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, .24);
+  box-shadow: 0 24px 70px rgba(51, 60, 55, .18);
   text-align: center;
   animation: pwa-guide-rise-in .22s ease-out;
 }
@@ -88,7 +88,7 @@
   padding: .7rem .4rem;
   border: 1px solid var(--color-border);
   border-radius: .9rem;
-  background: #fff;
+  background: var(--color-surface);
   font-size: .78rem;
   line-height: 1.5;
 }
