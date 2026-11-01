@@ -291,6 +291,6 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
     </div>
 </dialog>
 
-<script src="<?= $e($baseUrl) ?>/js/post-composer.js" defer></script>
-<script src="<?= $e($baseUrl) ?>/js/image-editor.js" defer></script>
-<script src="<?= $e($baseUrl) ?>/js/audio-recorder.js" defer></script>
+<script src="<?= $e($asset('/js/post-composer.js')) ?>" defer></script>
+<script src="<?= $e($asset('/js/image-editor.js')) ?>" defer></script>
+<script src="<?= $e($asset('/js/audio-recorder.js')) ?>" defer></script>
