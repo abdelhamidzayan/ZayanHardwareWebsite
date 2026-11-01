@@ -23,11 +23,12 @@ The interface uses a warm cream canvas, deep workshop green for identity and nav
 ## Semantic roles
 
 - **Primary green:** identity, links, navigation, focus and selected states.
-- **Orange CTA:** the strongest action on a screen, such as account creation or publishing. Do not use orange for every button.
+- **Orange CTA:** the strongest action on a screen, such as account creation or publishing. Keep the supplied orange as the button surface and use a near-black label for WCAG AA text contrast; use a deeper orange for orange-colored text.
 - **Cyan:** informational or measurement-related accents.
 - **Yellow:** caution/attention and selected category indicators; do not use it for body text on cream.
 - **Purple:** secondary labels or category accents.
 - **Success and danger:** retain clear semantic meaning and sufficient contrast; do not recolor status meaning just to use the palette.
+- **Accessibility variants:** muted text uses a darker gray than the decorative palette gray; semantic soft surfaces and ink colors are centralized in tokens.
 
 ## Surface and component rules
 
@@ -49,12 +50,15 @@ The canonical CSS tokens live in `public/css/tokens.css`. Components should cons
 | `--color-primary-soft` | `#EAF1E8` |
 | `--color-cta` | `#D75421` |
 | `--color-cta-hover` | `#B94418` |
+| `--color-cta-ink` | `#111111` |
+| `--color-cta-text` | `#A83D18` |
 | `--color-accent-cyan` | `#98D7DF` |
 | `--color-accent-yellow` | `#E0B718` |
 | `--color-accent-purple` | `#887F9E` |
 | `--color-bg` | `#FFFCF3` |
 | `--color-field` | `#F8F3E0` |
 | `--color-ink` | `#333C37` |
-| `--color-muted` | `#74766E` |
+| `--color-muted` | `#6B6D65` |
+| `--color-brand-gray` | `#74766E` |
 
 This guide describes the intended system. It does not claim that every legacy hard-coded color or every screen has already been migrated.
