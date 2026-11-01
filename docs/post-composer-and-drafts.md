@@ -9,11 +9,18 @@ This specification applies to the Zayan Hardware post-creation flow. It is inten
 3. If no result exists, the user can suggest a model. Suggestions are pending until an administrator approves them; they do not become selectable models before approval.
 4. The two existing public types “معلومة فنية” and “نقاش عام” are presented as one type, “معلومة فنية”. Existing `discussion` rows remain readable and are displayed with the unified label. The separate “طلب مساعدة” workflow remains separate.
 5. The title is the visual hero of the post. The body is either written text or one audio recording; both are never active at the same time. Existing legacy posts remain readable.
-6. Steps and tested checks are optional, compact, sequential, editable single-line/multiline entries. The UI displays only a numbered circle and the text; adding an entry creates the next number. Deleting an entry renumbers the remaining list.
+6. Steps and tested checks are optional, compact, sequential, editable single-line inputs. Pressing Enter creates and focuses the next input; deleting an entry renumbers the remaining list. The UI displays only a numbered circle and the text; adding an entry creates the next number. Deleting an entry renumbers the remaining list.
 7. A single audio recording supports pause/resume, stop, preview, waveform display and trim points. The audio UI uses the same visual treatment as the home-feed voice player.
 8. Attachments are added from one paperclip control at the bottom of the form. Images and videos are previewed in a small ordered gallery. Image editing supports crop, free text, pen, arrows, circles, rectangles and other basic shapes, color/size controls, selecting/moving/resizing/deleting individual objects, undo/redo and clearing edits.
 9. Image edit data remains editable until the user confirms the edit. The original image and normalized editor state are preserved separately from any rendered preview.
 10. In the published post, text and title retain visual priority. Images remain small thumbnails; clicking opens a contained viewer with previous/next navigation, zoom and an explicit full-screen mode.
+
+## Post-details editor behavior
+
+- The post-details editor keeps CodeMirror 6, its live preview, undo/redo history, keyboard navigation and textarea synchronization for form submission and draft persistence.
+- The formatting toolbar is intentionally removed. Markdown is typed directly: `**text**` and `*text*` render bold in the live preview while the raw Markdown remains in the stored description.
+- Bulleted (`- `) and numbered (`1. `) lists continue on Enter. Pressing Enter on an empty list item exits the list.
+- Tested steps are single-line inputs. Enter appends and focuses the next input; numbering is derived from current order and updates after deletion.
 
 ## Draft and storage architecture
 
