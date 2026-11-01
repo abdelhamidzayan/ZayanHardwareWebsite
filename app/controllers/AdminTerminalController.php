@@ -26,7 +26,7 @@ final class AdminTerminalController extends Controller
         if (!Csrf::verify($this->request->input('_token'))) return $this->result(false,'رمز الحماية غير صالح.');
         $input=$this->request->input('commands');
         if (!is_string($input)||trim($input)===''||strlen($input)>1800) return $this->result(false,'الحد الأقصى للمجموعة 1800 حرف.');
-        $commands=array_values(array_filter(array_map('trim',preg_split('/\\R/',$input)?:[]),static fn(string $line): bool=>$line!==''));
+        $commands=array_values(array_filter(array_map('trim',preg_split('/\R/',$input)?:[]),static fn(string $line): bool=>$line!==''));
         if (!$commands||count($commands)>8) return $this->result(false,'المسموح من أمر إلى 8 أوامر منفصلة.');
         foreach($commands as $command) if(strlen($command)>300) return $this->result(false,'الحد الأقصى لكل أمر 300 حرف.');
         $id=(int)$admin['id'];
@@ -38,19 +38,19 @@ final class AdminTerminalController extends Controller
                 try {
                     [$label,$result]=$this->execute($command);
                     App::audit('admin.terminal.command',['user_id'=>$id,'command'=>$label,'success'=>true]);
-                    $output[]='$ '.$label."\\n".$result;
-                } catch (\\InvalidArgumentException $e) {
+                    $output[]='$ '.$label."\n".$result;
+                } catch (\InvalidArgumentException $e) {
                     $allSucceeded=false;
                     App::audit('admin.terminal.command_rejected',['user_id'=>$id]);
-                    $output[]='$ [command '.($index+1).']\\n'.$e->getMessage();
+                    $output[]='$ [command '.($index+1)."]\n".$e->getMessage();
                 }
             }
-            $combined=implode("\\n\\n",$output);
-            if(strlen($combined)>30000) $combined=substr($combined,0,30000)."\\n[output truncated]";
+            $combined=implode("\n\n",$output);
+            if(strlen($combined)>30000) $combined=substr($combined,0,30000)."\n[output truncated]";
             return $this->result($allSucceeded,$combined);
-        } catch (\\DomainException $e) {
+        } catch (\DomainException $e) {
             return $this->result(false,'صلاحية المدير لم تعد نشطة.');
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             App::logException('ERROR','admin.terminal.command_failed',$e,['user_id'=>$id]);
             return $this->result(false,'حدث خطأ. راجع سجل التطبيق.');
         }
@@ -59,7 +59,8 @@ final class AdminTerminalController extends Controller
     {
         if (preg_match('/[;&|<>$(){}\x00-\x1F]/',$input)) throw new \InvalidArgumentException('رموز shell المركبة غير مسموحة.');
         $p=preg_split('/\s+/',$input) ?: []; $cmd=array_shift($p) ?? '';
-        if (in_array($cmd,['sudo','su'],true)) throw new \\InvalidArgumentException('sudo متاح من جلسة SSH موثوقة فقط. لا تدخل كلمة المرور داخل الموقع.');\n        $root=realpath(App::root()); if (!$root) throw new \RuntimeException('Project root unavailable.');
+        if (in_array($cmd,['sudo','su'],true)) throw new \InvalidArgumentException('sudo متاح من جلسة SSH موثوقة فقط. لا تدخل كلمة المرور داخل الموقع.');
+        $root=realpath(App::root()); if (!$root) throw new \RuntimeException('Project root unavailable.');
         if ($cmd==='help'&&!$p) return ['help',"help\npwd\nls [path]\ncat <file>\nphp -v\nphp -l <file.php>\ngit status\ngit log\ngit diff --stat\nlogs [app|access|security|audit]\ndb status\ndb tables\ndb migration <filename.sql>\ndb preflight"];
         if ($cmd==='pwd'&&!$p) return ['pwd',$root];
         if ($cmd==='ls'&&count($p)<=1) {
