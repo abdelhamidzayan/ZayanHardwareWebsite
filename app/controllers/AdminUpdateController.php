@@ -46,11 +46,6 @@ final class AdminUpdateController extends Controller
         $admin = AuthService::user();
         if (!$admin) return $this->redirect('/login');
         $adminId = (int) $admin['id'];
-        if (!RateLimiter::allowForUser('admin.site_update', $adminId, 1, 3600, 3)) {
-            App::security('admin.site_update.rate_limited', ['user_id' => $adminId]);
-            return $this->fail('تم تشغيل التحديث مؤخرًا. انتظر قبل محاولة تشغيله مرة أخرى.');
-        }
-
         $pdo = Database::connection();
         // Serialize the update with admin suspension, role changes, deletion
         // requests, and retention anonymization, which use this same lock.
@@ -60,6 +55,14 @@ final class AdminUpdateController extends Controller
         if (!$lockAcquired) {
             App::security('admin.site_update.coordination_lock_unavailable', ['user_id' => $adminId]);
             return $this->fail('هناك عملية إدارية أخرى قيد التنفيذ. حاول مرة أخرى بعد انتهائها.');
+        }
+
+        // Apply a short cooldown only after acquiring the shared admin lock.
+        // A busy lock must not consume the administrator's update attempt.
+        if (!RateLimiter::allowForUser('admin.site_update', $adminId, 1, 60, 3)) {
+            App::security('admin.site_update.rate_limited', ['user_id' => $adminId]);
+            $pdo->query("SELECT RELEASE_LOCK('zayan_hardware_admin_deletion_request')");
+            return $this->fail('تم إرسال طلب تحديث خلال آخر دقيقة. انتظر دقيقة ثم حاول مرة واحدة.');
         }
 
         try {
