@@ -33,13 +33,6 @@ foreach ($accountActivePrefixes as $prefix) {
         </a>
 
         <div class="header-actions">
-        <?php
-        $headerAvatar = static function (array $person) use ($baseUrl): string {
-            return !empty($person['avatar_path'])
-                ? $baseUrl . '/avatar/' . (int) ($person['actor_user_id'] ?? $person['user_id'] ?? 0)
-                : $baseUrl . '/assets/avatars/' . rawurlencode((string) ($person['avatar_key'] ?? 'technician-blue')) . '.svg';
-        };
-        ?>
         <a class="icon-btn header-mobile-only" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.98 3 3 6.66 3 11.25c0 1.73.58 3.33 1.58 4.63L3.5 21l5.32-2.25c1 .37 2.08.56 3.18.56 5.02 0 9-3.66 9-8.06S17.02 3 12 3Z" fill="currentColor" stroke="none"/><circle cx="8" cy="11.5" r="1.15" fill="#fff"/><circle cx="12" cy="11.5" r="1.15" fill="#fff"/><circle cx="16" cy="11.5" r="1.15" fill="#fff"/></svg>
             <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
