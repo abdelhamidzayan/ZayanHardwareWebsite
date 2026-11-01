@@ -154,8 +154,11 @@ function create({ textarea, host, onChange }) {
       const next = String(value || '');
       if (view.state.doc.toString() !== next) {
         applyingExternalValue = true;
-        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
-        applyingExternalValue = false;
+        try {
+          view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+        } finally {
+          applyingExternalValue = false;
+        }
       }
       textarea.value = next;
     },
