@@ -36,6 +36,8 @@ jobs:
         run: php tests/php/account-session-revocation-policy.php
       - name: Verify admin site update command hardening
         run: php tests/php/admin-update-hardening.php
+      - name: Verify admin terminal batch and safety policy
+        run: php tests/php/admin-terminal-policy.php
       - name: Verify read-only database schema comparator CLI help
         run: php bin/compare-database-schema.php --help
 

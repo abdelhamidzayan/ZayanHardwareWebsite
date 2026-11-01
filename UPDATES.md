@@ -1,3 +1,11 @@
+## 2026-11-01 — Bounded multi-command admin diagnostics and SSH privilege boundary
+
+- Added up to 8 separate allowlisted commands per batch (300 characters per line, 1,800 total), 10 batches/minute, bounded output, CSRF, active-admin revalidation, and audit events.
+- No shell interpreter, arbitrary command execution, file mutation, package installation, `sudo`, or `su` is available in the web console.
+- Documented direct SSH over Tailscale for sudo operations; the password remains in the SSH TTY and never enters PHP.
+- Added `tests/php/admin-terminal-policy.php` and wired it into PHP CI. After fixing PHP exception-name escaping, terminal output newlines, and literal test markers, exact implementation commit `bf6950a395adc33849f5cff2237050e7246d9bcf` passed PHP syntax + focused policy tests, Graphify, and the full MySQL 8.0 / MariaDB 10.4.32 / MariaDB 10.11 integration matrix. Browser/mobile runtime and host SSH setup remain unverified.
+- No schema, routes, user content, uploads, or host SSH/Tailscale/sudoers settings changed. Implemented on `feat/admin-terminal-batch-safe`; not merged or deployed.
+
 ## 2026-11-01 — Establish Zayan Hardware cream-and-green brand identity
 
 - **Type:** UI / Design system / PWA / Documentation

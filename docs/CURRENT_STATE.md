@@ -1,3 +1,11 @@
+## 2026-11-01 — Bounded admin terminal batches
+
+- New branch: `feat/admin-terminal-batch-safe`, based on the live `main` head inspected for this task.
+- The browser diagnostic console accepts at most 8 separate allowlisted commands per batch (300 characters each, 1,800 total), limits usage to 10 batches per minute, bounds combined output, and retains CSRF, active-admin revalidation, audit logging, and existing path/secret protections.
+- No shell interpreter or arbitrary command execution is introduced. `sudo` and `su` are rejected by the web endpoint.
+- Privileged operations are documented for direct SSH TTY sessions over Tailscale; sudo passwords never pass through the PHP app. Host SSH, Tailscale ACL, firewall, account, and sudoers configuration are unchanged.
+- Added a focused source-policy test and wired it into the PHP workflow. Exact implementation commit `bf6950a395adc33849f5cff2237050e7246d9bcf` passed the PHP workflow (including the terminal policy test), Graphify, and all three disposable database engines. Browser/mobile runtime, direct SSH/Tailscale host configuration, merge, and deployment remain unverified.
+
 ## 2026-11-01 — Brand identity implementation and self-review
 
 - Created isolated branch `brand/cream-green-identity` from the authoritative `main`.

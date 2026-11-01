@@ -46,7 +46,7 @@ The repeatable source scanner is maintained in `tools/graphify/graphify.py`. It 
 | Personal help and public help library | `HelpRequestController` | `HelpRequest`, `HelpRequestMediaService`, `NotificationService`, `RateLimiter` |
 | Notifications and Web Push | `NotificationController`, `PushController` | `Notification`, `PushSubscription`, `NotificationService`, `WebPushService` |
 | Skill assessments | `SkillTestController`, `AdminSkillTestController` | `SkillTestService`, `User` |
-| Administration | `AdminUserController`, `AdminFeaturedPostsController`, `AdminUpdateController` | user, featured-content, and update models/services |
+| Administration | `AdminUserController`, `AdminFeaturedPostsController`, `AdminUpdateController`, `AdminTerminalController` | user, featured-content, update, and bounded diagnostic-command handling; see [Admin terminal and SSH operations](ADMIN_TERMINAL_AND_SSH.md) |
 | Static help, policies, settings | `PageController` | `User`, views |
 
 The authoritative route declarations and guest exposure are both in `config/routes.php`: public routes use `getPublic()` or `postPublic()`; every route registered with `get()` or `post()` is private to authenticated members. This keeps the guest allowlist synchronized with the route table.

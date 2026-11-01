@@ -75,3 +75,10 @@ The configured script itself (`/home/a/bin/zayan-hardware-update.sh`) and the ma
 The repository contains an account-retention service designed to anonymize account identity while preserving technical history, but **there is no approved CLI entry point, scheduler, or automatic worker** in the release candidate. The earlier `bin/anonymize-deleted-accounts.php` command was intentionally removed. A 30-day deletion deadline therefore does not mean the account has been anonymized; pending requests remain `deletion_pending` until a separately reviewed and approved execution mechanism exists.
 
 The intended service behavior is to retain the stable user ID and all technical posts, replies, diagnostic updates, repair results, schematics, attachments, edit history, reputation, help-library content, private-help messages, notifications, and drafts. It must not physically delete technical rows or files. Do not add a cron job or invoke the service through an ad-hoc runner. See `docs/account-retention.md`.
+
+
+## Administrator diagnostic console and privileged host access
+
+The browser diagnostic console accepts bounded batches of at most eight independent allowlisted commands. Every line is dispatched internally; request text is never interpreted by a shell. The endpoint retains CSRF validation, per-admin rate limiting, active-admin revalidation, audit events, output bounds, path restrictions, and secret redaction. It does not provide arbitrary command execution, file mutation, package installation, `sudo`, or `su`.
+
+Privileged host operations must use a direct SSH TTY over the trusted Tailscale network. The sudo password is entered into the SSH client's interactive prompt and must never transit the PHP application. See [Admin terminal and SSH operations](ADMIN_TERMINAL_AND_SSH.md).
