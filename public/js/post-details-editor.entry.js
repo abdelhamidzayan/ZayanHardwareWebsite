@@ -14,16 +14,11 @@ class RuleWidget extends WidgetType {
 
 function decorationsFor(view) {
   const ranges = [];
-  const activeLine = view.state.doc.lineAt(view.state.selection.main.head).number;
   let inFence = false;
   for (let n = 1; n <= view.state.doc.lines; n += 1) {
     const line = view.state.doc.line(n);
     const value = line.text;
     const fence = /^\s*```/.test(value);
-    if (n === activeLine) {
-      if (fence) inFence = !inFence;
-      continue;
-    }
     if (fence) {
       ranges.push(Decoration.replace({}).range(line.from, line.to));
       ranges.push(Decoration.line({ class: 'cm-live-preview-fence' }).range(line.from));
@@ -74,6 +69,58 @@ const livePreview = ViewPlugin.fromClass(class {
     if (update.docChanged || update.selectionSet || update.viewportChanged) this.decorations = decorationsFor(update.view);
   }
 }, { decorations: value => value.decorations });
+
+function syncToolbar(view, toolbar) {
+  if (!toolbar) return;
+  const line = view.state.doc.lineAt(view.state.selection.main.head);
+  const value = line.text;
+  let inFence = false;
+  for (let n = 1; n <= line.number; n += 1) {
+    if (/^\s*\x60{3}/.test(view.state.doc.line(n).text)) inFence = !inFence;
+  }
+  const states = {
+    bold: /^\*\*.*\*\*$/.test(value),
+    heading: /^#{1,6}\s+/.test(value),
+    bulleted: /^\s*[-*+]\s+/.test(value),
+    numbered: /^\s*\d+[.)]\s+/.test(value),
+    quote: /^>\s?/.test(value),
+    inline_code: /^\x60.*\x60$/.test(value),
+    code_block: inFence,
+    divider: /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(value)
+  };
+  toolbar.querySelectorAll('[data-format]').forEach(button => {
+    const active = Boolean(states[button.dataset.format]);
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function continueList(view) {
+  const selection = view.state.selection.main;
+  if (!selection.empty) return false;
+  const line = view.state.doc.lineAt(selection.head);
+  const list = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line.text);
+  if (!list) return false;
+  if (!list[3].trim()) {
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert: '' },
+      selection: { anchor: line.from },
+      scrollIntoView: true
+    });
+    return true;
+  }
+  let marker = list[2];
+  if (/^\d+[.)]$/.test(marker)) {
+    marker = String(Number.parseInt(marker, 10) + 1) + marker.slice(-1);
+  }
+  const prefix = '\n' + list[1] + marker + ' ';
+  view.dispatch({
+    changes: { from: selection.head, insert: prefix },
+    selection: { anchor: selection.head + prefix.length },
+    scrollIntoView: true
+  });
+  return true;
+}
 
 function applyFormat(view, format) {
   const selection = view.state.selection.main;
@@ -160,13 +207,14 @@ function applyFormat(view, format) {
 
 function create({ textarea, host, onChange }) {
   let applyingExternalValue = false;
+  const toolbar = textarea.closest('[data-text-mode]')?.querySelector('[data-details-toolbar]');
   const view = new EditorView({
     state: EditorState.create({
       doc: textarea.value || '',
       extensions: [
         history(),
         markdown(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        keymap.of([{ key: 'Enter', run: continueList }, ...defaultKeymap, ...historyKeymap]),
         EditorView.perLineTextDirection.of(true),
         livePreview,
         EditorView.updateListener.of(update => {
@@ -174,6 +222,7 @@ function create({ textarea, host, onChange }) {
             textarea.value = update.state.doc.toString();
             if (!applyingExternalValue && typeof onChange === 'function') onChange(textarea.value);
           }
+          if (update.docChanged || update.selectionSet) syncToolbar(update.view, toolbar);
         }),
         EditorView.theme({
           '&': { direction: 'auto' },
@@ -185,7 +234,7 @@ function create({ textarea, host, onChange }) {
     }),
     parent: host
   });
-  const toolbar = textarea.closest('[data-text-mode]')?.querySelector('[data-details-toolbar]');
+  syncToolbar(view, toolbar);
   if (toolbar) {
     toolbar.addEventListener('mousedown', event => {
       if (event.target.closest('button')) event.preventDefault();
