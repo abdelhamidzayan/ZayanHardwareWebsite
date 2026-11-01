@@ -755,24 +755,7 @@ textarea { max-inline-size: 100%; }
 }
 
 
-/* The profile avatar always navigates directly; it is never a dropdown. */
-.app-header .header-actions > .account-menu__mobile-profile {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 2.55rem;
-  inline-size: 2.55rem;
-  min-inline-size: 2.55rem;
-  block-size: 2.55rem;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background: var(--color-surface);
-  text-decoration: none;
-}
-.app-header .account-menu__mobile-profile .account-menu__avatar {
-  inline-size: 2.2rem;
-  block-size: 2.2rem;
-}
+/* On mobile the avatar links directly to the profile; desktop uses the full account menu. */
 
 
 /* Header icon alignment and consistent outline icons on every viewport. */
