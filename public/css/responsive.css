@@ -625,13 +625,13 @@ textarea { max-inline-size: 100%; }
 }
 
 
-/* Header selection: solid blue fill only, without decorative borders or outer rings. */
+/* Match the guest header: soft blue background with blue foreground. */
 .app-header .header-actions > a.header-page-link.is-active,
 .app-header .header-actions > .account-menu > .account-menu__trigger.is-active,
 .app-header .header-actions > .account-menu[open] > .account-menu__trigger {
   border: 0 !important;
-  background: var(--color-primary) !important;
-  color: #fff !important;
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
   box-shadow: none !important;
 }
 .app-header .header-actions > .account-menu > .account-menu__trigger {
@@ -640,14 +640,14 @@ textarea { max-inline-size: 100%; }
 .app-header .header-actions > a.header-page-link.is-active > .icon,
 .app-header .header-actions > .account-menu > .account-menu__trigger.is-active > .icon,
 .app-header .header-actions > .account-menu[open] > .account-menu__trigger > .icon {
-  color: #fff !important;
+  color: var(--color-primary) !important;
   stroke: currentColor !important;
 }
 
-/* Guest header follows the same blue active-background treatment. */
+/* Guest header uses the same soft-blue active treatment. */
 .guest-header__actions .guest-header__link.is-active {
   border: 0 !important;
-  background: var(--color-primary) !important;
-  color: #fff !important;
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
   box-shadow: none !important;
 }
