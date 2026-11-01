@@ -191,7 +191,8 @@ function applyFormat(view, format) {
   const selection = view.state.selection.main;
   const hasSelection = !selection.empty;
   const line = view.state.doc.lineAt(selection.head);
-  const from = hasSelection ? selection.from : line.from;
+  const blockPrefix = !hasSelection ? /^(?:\s*(?:#{1,6}|[-*+]|\d+[.)])\s+|>\s?)/.exec(line.text) : null;
+  const from = hasSelection ? selection.from : line.from + (blockPrefix ? blockPrefix[0].length : 0);
   const to = hasSelection ? selection.to : line.to;
   const selected = view.state.sliceDoc(from, to);
   let insert = selected;
