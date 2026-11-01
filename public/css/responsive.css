@@ -73,7 +73,7 @@
   --ui-tap-target: 2.75rem;
   --ui-page-gutter: clamp(1rem, 3.5vw, 1.5rem);
   --ui-content-width: 72rem;
-  --ui-focus-ring: 0 0 0 3px rgb(37 99 235 / 18%);
+  --ui-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 /* Consistent page sizing and prevent accidental horizontal overflow. */
