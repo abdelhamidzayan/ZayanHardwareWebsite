@@ -147,15 +147,19 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
             </div>
 
             <div class="post-composer__text-mode" data-text-mode <?= $detailsMode !== 'text' ? 'hidden' : '' ?>>
-                <div class="post-composer__format-tools" role="toolbar" aria-label="تنسيق النص">
-                    <button type="button" data-format="bold" aria-label="خط عريض"><strong>B</strong></button>
-                    <button type="button" data-format="heading" aria-label="عنوان فرعي">H</button>
-                    <button type="button" data-format="numbered" aria-label="قائمة مرقمة">1.</button>
-                    <button type="button" data-format="bulleted" aria-label="قائمة نقطية">•</button>
-                    <button type="button" data-format="divider" aria-label="فاصل">―</button>
+                <div class="post-composer__format-tools" data-details-toolbar role="toolbar" aria-label="تنسيق النص">
+                    <button type="button" data-format="bold" aria-label="خط عريض" title="خط عريض"><strong>B</strong></button>
+                    <button type="button" data-format="heading" aria-label="عنوان فرعي" title="عنوان">H</button>
+                    <button type="button" data-format="bulleted" aria-label="قائمة نقطية" title="قائمة نقطية">•</button>
+                    <button type="button" data-format="numbered" aria-label="قائمة مرقمة" title="قائمة مرقمة">1.</button>
+                    <button type="button" data-format="quote" aria-label="ملاحظة" title="ملاحظة">❝</button>
+                    <button type="button" data-format="inline_code" aria-label="كود داخل السطر" title="كود">`</button>
+                    <button type="button" data-format="code_block" aria-label="كتلة كود" title="كتلة كود">{ }</button>
+                    <button type="button" data-format="divider" aria-label="فاصل" title="فاصل">―</button>
                 </div>
-                <label class="field">
+                <label class="field post-composer__details-field">
                     <span class="sr-only">تفاصيل المنشور</span>
+                    <div class="post-composer__details-editor" data-details-editor></div>
                     <textarea class="field__input post-composer__details" name="description" data-details rows="7" maxlength="10000"
                         placeholder="اشرح المشكلة أو المعلومة الفنية، واذكر القياسات والنتيجة..."><?= $e((string) ($draftPayload['description'] ?? '')) ?></textarea>
                 </label>
@@ -291,6 +295,7 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
     </div>
 </dialog>
 
+<script src="<?= $e($baseUrl) ?>/js/post-details-editor.bundle.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/post-composer.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/image-editor.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/audio-recorder.js" defer></script>
