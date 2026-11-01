@@ -181,11 +181,14 @@
 
 
 /* CodeMirror 6 post-details Live Preview */
-.post-composer__text-mode [data-details-editor] { inline-size: 100%; block-size: 12rem; min-block-size: 12rem; max-block-size: 12rem; border: 1px solid var(--color-border); border-radius: 0 0 var(--radius-md) var(--radius-md); background: var(--color-field); overflow: hidden; }
+.post-composer__text-mode [data-details-editor] { inline-size: 100%; block-size: 12rem; min-block-size: 12rem; max-block-size: 12rem; border: 1px solid var(--color-border); border-radius: 0 0 var(--radius-md) var(--radius-md); background: var(--color-field); overflow: hidden; cursor: text; }
 .post-composer__text-mode.is-editor-ready .post-composer__details { position: absolute !important; inline-size: 1px !important; block-size: 1px !important; min-height: 1px !important; padding: 0 !important; opacity: 0 !important; pointer-events: none !important; }
-.post-composer__text-mode .cm-editor { inline-size: 100%; min-inline-size: 0; block-size: 100%; min-block-size: 0; max-block-size: 100%; color: var(--color-ink); background: transparent; font-size: 1rem; }
+.post-composer__text-mode .cm-editor { inline-size: 100%; min-inline-size: 0; block-size: 100%; min-block-size: 0; max-block-size: 100%; border-radius: 0 0 calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px); overflow: hidden; color: var(--color-ink); background: transparent; font-size: 1rem; cursor: text; }
 .post-composer__text-mode .cm-scroller { block-size: 100%; max-block-size: none; overflow: auto; }
-.post-composer__text-mode .cm-content { min-block-size: 0; }
+.post-composer__text-mode .cm-content { min-block-size: 0; cursor: text; caret-color: var(--color-primary); }
+.post-composer__text-mode .cm-cursor { border-inline-start: 2px solid var(--color-primary); margin-inline-start: -1px; }
+.post-composer__text-mode .cm-focused .cm-cursor { visibility: visible; }
+.post-composer__text-mode .cm-selectionBackground { border-radius: 2px; }
 .post-composer__text-mode .cm-editor.cm-focused { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 .post-composer__text-mode .cm-gutters { display: none; }
 .post-composer__text-mode .cm-live-preview-bold { font-weight: 800; }
