@@ -45,6 +45,9 @@ foreach ($accountActivePrefixes as $prefix) {
             </svg>
             <?php if ($unreadCount > 0) : ?><span class="notification-btn__count" aria-label="<?= $e((string) $unreadCount) ?> إشعارات غير مقروءة"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span><?php endif; ?>
         </a>
+        <a class="account-menu__mobile-profile<?= $accountActive ? ' is-active' : '' ?>" href="<?= $e($profileHref) ?>" aria-label="الملف الشخصي">
+            <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="38" height="38">
+        </a>
         <details class="account-menu">
             <summary class="account-menu__trigger<?= $accountActive ? ' is-active' : '' ?>" aria-label="قائمة الحساب">
                 <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="38" height="38">
@@ -59,59 +62,30 @@ foreach ($accountActivePrefixes as $prefix) {
                         <?php if ($username !== '') : ?><span dir="ltr">@<?= $e($username) ?></span><?php endif; ?>
                     </div>
                 </div>
-                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/workbench">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg>
-                    <span>طاولتي</span>
-                </a>
-                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/drafts">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg>
-                    <span>مسوداتي</span>
+                <a class="account-menu__item" href="<?= $e($profileHref) ?>">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                    <span>الملف الشخصي</span>
                 </a>
                 <a class="account-menu__item" href="<?= $e($baseUrl) ?>/my-posts">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
                     <span>مشاركاتي</span>
                 </a>
+                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/workbench">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg>
+                    <span>طاولتي</span>
+                </a>
                 <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help-requests">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg>
-                    <span>طلبات المساعدة الشخصية</span>
+                    <span>طلبات المساعدة</span>
                 </a>
-                <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help-library">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z"/><path d="M4 6h16M8 10h8M8 14h6"/></svg>
-                    <span>مكتبة المساعدات</span>
-                </a>
-                <details class="account-menu__group">
-                    <summary class="account-menu__item account-menu__group-trigger">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.2-1.8 2.7M12 17h.01"/></svg>
-                        <span>مساعدة</span>
-                        <svg class="icon account-menu__group-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                    </summary>
-                    <div class="account-menu__submenu">
-                        <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help">
-                            <span>مركز المساعدة</span>
-                        </a>
-                        <a class="account-menu__item" href="<?= $e($baseUrl) ?>/help#report-error">
-                            <span>بلاغ عن خطأ</span>
-                        </a>
-                        <a class="account-menu__item" href="<?= $e($baseUrl) ?>/policies">
-                            <span>الخصوصية والقوانين</span>
-                        </a>
-                        <button class="account-menu__item" type="button" data-pwa-open-guide>
-                            <span>تثبيت الموقع</span>
-                        </button>
-                    </div>
-                </details>
                 <a class="account-menu__item" href="<?= $e($baseUrl) ?>/settings">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.5.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.5-.9l-1.7.6-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.8L6.3 12l1.4-2.4 1.7.6a8 8 0 0 1 1.5-.9l.3-1.8H14l.3 1.8a8 8 0 0 1 1.5.9l1.7-.6 1.4 2.4-1.4 1.1a7 7 0 0 1-.1 1.9Z"/></svg>
                     <span>الإعدادات</span>
                 </a>
                 <?php if (($currentUser['role'] ?? '') === 'admin') : ?>
-                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin/device-model-suggestions">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5M8 17h8"/></svg>
-                        <span>مراجعة موديلات الأجهزة</span>
-                    </a>
                     <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
-                        <span>الإدارة</span>
+                        <span>لوحة الإدارة</span>
                     </a>
                 <?php endif; ?>
                 <form class="account-menu__logout" method="post" action="<?= $e($baseUrl) ?>/logout">

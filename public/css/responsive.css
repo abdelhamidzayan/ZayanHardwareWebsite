@@ -651,3 +651,36 @@ textarea { max-inline-size: 100%; }
   color: var(--color-primary) !important;
   box-shadow: none !important;
 }
+
+
+/* Account avatar behavior: direct profile navigation on small screens, compact shortcuts on desktop. */
+.account-menu__mobile-profile { display: none; }
+@media (max-width: 1023px) {
+  .app-header .header-actions > .account-menu { display: none !important; }
+  .app-header .header-actions > .account-menu__mobile-profile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 2.55rem;
+    inline-size: 2.55rem;
+    min-inline-size: 2.55rem;
+    block-size: 2.55rem;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-surface);
+    text-decoration: none;
+  }
+  .app-header .header-actions > .account-menu__mobile-profile.is-active {
+    border-color: transparent;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+  .app-header .account-menu__mobile-profile .account-menu__avatar {
+    inline-size: 2.2rem;
+    block-size: 2.2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .app-header .header-actions > .account-menu__mobile-profile { display: none; }
+  .account-menu__panel { inline-size: min(17rem, calc(100vw - 2rem)); }
+}
