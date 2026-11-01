@@ -69,7 +69,7 @@
   color: var(--color-cta-ink);
 }
 
-.guest-header__actions .guest-header__login:hover { background: var(--color-cta-hover); border-color: var(--color-cta-hover); }
+.guest-header__actions .guest-header__login:hover { background: var(--color-cta-hover); border-color: var(--color-cta-hover); color: #fff; }
 .guest-header__actions .guest-header__login:focus-visible,
 .guest-header__actions .guest-header__link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
@@ -642,7 +642,7 @@
 }
 .guest-header__login:hover {
   background: var(--color-cta-hover);
-  color: var(--color-cta-ink);
+  color: #fff;
 }
 .guest-header__login:active { transform: translateY(1px); }
 .guest-header__login:focus-visible {
