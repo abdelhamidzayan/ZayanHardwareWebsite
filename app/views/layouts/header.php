@@ -26,20 +26,17 @@ foreach ($accountActivePrefixes as $prefix) {
 <header class="app-header">
     <div class="topbar">
         <a class="brand" href="<?= $e($baseUrl) ?>/feed" aria-label="<?= $e($appName) ?> - الرئيسية">
-            <span class="brand__logo" aria-hidden="true">
-                <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
-            </span>
             <span class="brand__name"><?= $e($appName) ?></span>
         </a>
 
         <div class="header-actions">
         <a class="icon-btn header-mobile-only" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.98 3 3 6.66 3 11.25c0 1.73.58 3.33 1.58 4.63L3.5 21l5.32-2.25c1 .37 2.08.56 3.18.56 5.02 0 9-3.66 9-8.06S17.02 3 12 3Z" fill="currentColor" stroke="none"/><circle cx="8" cy="11.5" r="1.15" fill="#fff"/><circle cx="12" cy="11.5" r="1.15" fill="#fff"/><circle cx="16" cy="11.5" r="1.15" fill="#fff"/></svg>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.25c-5.02 0-9 3.56-9 8s3.98 8 9 8c1.1 0 2.18-.19 3.18-.56L20.5 21l-1.08-5.12A7.4 7.4 0 0 0 21 11.25c0-4.44-3.98-8-9-8Z"/><circle cx="8" cy="11.25" r=".8" fill="currentColor" stroke="none"/><circle cx="12" cy="11.25" r=".8" fill="currentColor" stroke="none"/><circle cx="16" cy="11.25" r=".8" fill="currentColor" stroke="none"/></svg>
             <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
         </a>
         <details class="help-request-menu header-desktop-only">
             <summary class="icon-btn help-request-menu__trigger<?= $helpRequestsActive ? ' is-active' : '' ?>" aria-label="الرسائل والمحادثات<?= $unreadHelpCount > 0 ? ' (' . $unreadHelpCount . ' غير مقروءة)' : '' ?>">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.98 3 3 6.66 3 11.25c0 1.73.58 3.33 1.58 4.63L3.5 21l5.32-2.25c1 .37 2.08.56 3.18.56 5.02 0 9-3.66 9-8.06S17.02 3 12 3Z" fill="currentColor" stroke="none"/><circle cx="8" cy="11.5" r="1.15" fill="#fff"/><circle cx="12" cy="11.5" r="1.15" fill="#fff"/><circle cx="16" cy="11.5" r="1.15" fill="#fff"/></svg>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.25c-5.02 0-9 3.56-9 8s3.98 8 9 8c1.1 0 2.18-.19 3.18-.56L20.5 21l-1.08-5.12A7.4 7.4 0 0 0 21 11.25c0-4.44-3.98-8-9-8Z"/><circle cx="8" cy="11.25" r=".8" fill="currentColor" stroke="none"/><circle cx="12" cy="11.25" r=".8" fill="currentColor" stroke="none"/><circle cx="16" cy="11.25" r=".8" fill="currentColor" stroke="none"/></svg>
                 <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
             </summary>
             <div class="help-request-menu__panel header-dropdown-panel">
@@ -66,12 +63,12 @@ foreach ($accountActivePrefixes as $prefix) {
         </details>
 
         <a class="icon-btn header-mobile-only<?= $notificationsActive ? ' is-active' : '' ?>" href="<?= $e($baseUrl) ?>/notifications" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/><path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/></svg>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>
             <?php if ($unreadCount > 0) : ?><span class="notification-btn__count"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span><?php endif; ?>
         </a>
         <details class="notification-menu header-desktop-only">
             <summary class="icon-btn notification-menu__trigger<?= $notificationsActive ? ' is-active' : '' ?>" aria-label="الإشعارات<?= $unreadCount > 0 ? ' (' . $unreadCount . ' غير مقروء)' : '' ?>">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25v3.05c0 1.12-.38 2.2-1.08 3.07L3.4 16.7c-.54.67-.06 1.68.8 1.68h15.6c.86 0 1.34-1.01.8-1.68l-1.27-1.58a4.9 4.9 0 0 1-1.08-3.07V9A6.25 6.25 0 0 0 12 2.75Z"/><path d="M9.5 20a2.65 2.65 0 0 0 5 0Z"/></svg>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>
                 <?php if ($unreadCount > 0) : ?><span class="notification-btn__count"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span><?php endif; ?>
             </summary>
             <div class="notification-menu__panel header-dropdown-panel">
