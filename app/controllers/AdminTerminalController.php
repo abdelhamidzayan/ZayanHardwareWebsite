@@ -123,14 +123,15 @@ final class AdminTerminalController extends Controller
         foreach($rows as $row) $byName[(string)$row['migration_name']]=$row;
         $baseline=$byName['__baseline_fresh_install_1_0_0__']??null;
         $expectedBaseline=hash('sha256','zayan-hardware:fresh-install:1.0.0');
+        $baselineCount=count(array_filter($rows,static fn(array $row): bool => (int)$row['is_baseline']===1));
         $baselineValid=is_array($baseline)
+            && $baselineCount===1
             && hash_equals($expectedBaseline,(string)$baseline['checksum'])
             && $baseline['execution_status']==='applied'
             && $baseline['application_version']==='1.0.0'
             && (int)$baseline['is_baseline']===1
             && $baseline['baseline_marker']==='fresh_install:1.0.0'
             && $baseline['applied_at']!==null;
-        $baselineCount=count(array_filter($rows,static fn(array $row): bool => (int)$row['is_baseline']===1));
         $lines[]=$baselineValid&&$baselineCount===1
             ? 'Fresh-install baseline: VERIFIED (1.0.0).'
             : 'BLOCKER — fresh-install baseline is missing, duplicated, or does not match the approved identity.';
