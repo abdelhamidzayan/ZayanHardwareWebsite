@@ -625,16 +625,29 @@ textarea { max-inline-size: 100%; }
 }
 
 
-/* Active state is last in the stylesheet cascade so component rules cannot mask it. */
+/* Header selection: solid blue fill only, without decorative borders or outer rings. */
 .app-header .header-actions > a.header-page-link.is-active,
-.app-header .header-actions > .account-menu > .account-menu__trigger.is-active {
-  border: 1px solid var(--color-primary) !important;
-  background: var(--color-primary-soft) !important;
-  color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 20%) !important;
+.app-header .header-actions > .account-menu > .account-menu__trigger.is-active,
+.app-header .header-actions > .account-menu[open] > .account-menu__trigger {
+  border: 0 !important;
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  box-shadow: none !important;
 }
-.app-header .header-actions > a.header-page-link.is-active > .icon,
-.app-header .header-actions > .account-menu > .account-menu__trigger.is-active > .icon {
-  color: var(--color-primary) !important;
+.app-header .header-actions > .account-menu > .account-menu__trigger {
+  transition: background-color .18s ease, color .18s ease;
+}
+.app-header .header-actions > .a.header-page-link.is-active > .icon,
+.app-header .header-actions > .account-menu > .account-menu__trigger.is-active > .icon,
+.app-header .header-actions > .account-menu[open] > .account-menu__trigger > .icon {
+  color: #fff !important;
   stroke: currentColor !important;
+}
+
+/* Guest header follows the same blue active-background treatment. */
+.guest-header__actions .guest-header__link.is-active {
+  border: 0 !important;
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  box-shadow: none !important;
 }
