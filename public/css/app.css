@@ -202,7 +202,7 @@
   block-size: 2.75rem;
   border-radius: var(--radius-md);
   background: var(--color-cta);
-  color: #fff;
+  color: var(--color-cta-ink);
 }
 
 /* ---------- Header additions (links as chips / filter) ---------- */
