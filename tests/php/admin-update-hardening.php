@@ -15,7 +15,7 @@ $required = [
     'AdminRosterService::assertActorActive(',
     "GET_LOCK('zayan_hardware_admin_deletion_request', 5)",
     "RELEASE_LOCK('zayan_hardware_admin_deletion_request')",
-    "private const UPDATE_SCRIPT = '/opt/lampp/htdocs/zayan_hardware/tools/update_local.py';",
+    "private const UPDATE_SCRIPT = '/home/a/bin/zayan-hardware-update.sh';",
     "private const PROJECT_DIR = '/opt/lampp/htdocs/zayan_hardware';",
     'proc_open($command, $descriptors, $pipes, self::PROJECT_DIR)',
     "App::audit('admin.site_update.started'",
