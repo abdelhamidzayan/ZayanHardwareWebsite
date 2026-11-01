@@ -11,6 +11,12 @@
 - Required architecture: Core → Controllers → Services / Models → Views; route definitions in `config/routes.php`; public document root is `public/`.
 - Explicitly out of scope: CRM/customer management and mobile software-repair features, unless the owner explicitly changes the scope.
 
+## Brand identity
+
+- Canonical visual guide: [docs/BRAND_IDENTITY.md](docs/BRAND_IDENTITY.md).
+- Primary palette: workshop green `#105023` with cream `#FFFCF3` and ivory `#F8F3E0`; orange `#D75421` is reserved for the strongest CTA.
+- CSS source of truth: `public/css/tokens.css`. Preserve the Arabic-first RTL layout and existing responsive/accessibility behavior when extending the UI.
+
 ## 2. Mandatory reading order
 
 1. [Contributor rules](AGENTS.md) — non-negotiable safety, architecture, documentation, and Git rules.
