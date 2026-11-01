@@ -429,5 +429,5 @@ foreach ($replies as $reply) {
             <button type="button" class="image-viewer__nav image-viewer__nav--next" data-image-next aria-label="الصورة التالية">›</button>
         </div>
     </dialog>
-    <script src="<?= $e($baseUrl) ?>/js/image-viewer.js" defer></script>
+    <script src="<?= $e($asset('/js/image-viewer.js')) ?>" defer></script>
 </div>
