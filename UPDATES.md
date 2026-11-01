@@ -1,3 +1,12 @@
+## 2026-11-01 — Read-only migration readiness preflight
+
+- **Type:** Database / Admin diagnostics / Safety / Documentation
+- **Implementation:** Added `db preflight` to the restricted admin console. It reports the selected database and server, detects duplicate three-digit historical migration prefixes, checks for a supported ledger, and distinguishes an empty database from an existing database with unknown migration history.
+- **Safety:** Preflight is read-only. It does not execute SQL, create/backfill a ledger, infer applied migrations, or authorize replaying historical SQL. The browser console remains non-executing.
+- **Historical finding:** The legacy migration directory contains duplicate `002` filenames. The consolidated `database/fresh_install.sql` is for a newly created empty database only; historical files 000–019 are not an automatic execution queue.
+- **Documentation:** [Migration readiness and safe upgrade policy](docs/MIGRATION_READINESS.md).
+- **Verification:** Source review only; PHP lint, automated tests, CI, and browser/runtime checks are pending. No owner database or private media was accessed or modified.
+
 ## 2026-11-01 — Read-only database and migration diagnostics in admin console
 
 - **Type:** Database / Admin diagnostics / Security / Documentation
