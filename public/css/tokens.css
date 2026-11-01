@@ -6,22 +6,33 @@
    ========================================================== */
 
 :root {
-  /* Color */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-soft: #eaf1fd;
-  --color-brand: #0f172a;
-  --color-ink: #111827;
-  --color-muted: #6b7280;
-  --color-subtle: #9ca3af;
-  --color-wave: #cbd5e1;
-  --color-bg: #f3f4f6;
-  --color-surface: #ffffff;
-  --color-field: #f4f5f7;
-  --color-border: #e5e7eb;
-  --color-success: #16a34a;
-  --color-danger: #dc2626;
-  --color-overlay: rgba(17, 24, 39, 0.72);
+  /* Brand palette — Zayan Hardware */
+  --color-primary: #105023;
+  --color-primary-hover: #0b3d1a;
+  --color-primary-deep: #0b3d1a;
+  --color-primary-soft: #eaf1e8;
+  --color-primary-border: #c8d9c8;
+  --color-brand: #105023;
+  --color-cta: #d75421;
+  --color-cta-hover: #b94418;
+  --color-cta-soft: #fbeae2;
+  --color-accent-yellow: #e0b718;
+  --color-accent-orange: #d75421;
+  --color-accent-purple: #887f9e;
+  --color-accent-cyan: #98d7df;
+  --color-accent-green: #105023;
+  --color-ink: #333c37;
+  --color-muted: #74766e;
+  --color-subtle: #9a9b91;
+  --color-wave: #d9ded4;
+  --color-bg: #fffcf3;
+  --color-surface: #fffefa;
+  --color-field: #f8f3e0;
+  --color-border: #e8e2d2;
+  --color-success: #105023;
+  --color-warning: #e0b718;
+  --color-danger: #b9382a;
+  --color-overlay: rgba(51, 60, 55, 0.72);
 
   /* Type */
   --font-sans: "Inter", "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
