@@ -151,33 +151,64 @@ final class AdminTerminalController extends Controller
         } else {
             $lines[]='Sequence numbers: no duplicate three-digit prefixes found.';
         }
-        $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='schema_migrations'");
+
+        $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='app_migration_ledger' AND table_type='BASE TABLE'");
         $q->execute();
         if((int)$q->fetchColumn()===0) {
             $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE'");
             $q->execute();
             $count=(int)$q->fetchColumn();
-            $lines[]='Migration ledger: NOT FOUND.';
+            $lines[]='Managed migration ledger: NOT FOUND.';
             $lines[]='Applied history: UNKNOWN — never infer it from current schema or Git history.';
             $lines[]='Base tables currently present: '.$count;
             $lines[]=$count===0
                 ? 'Empty database: use the separately reviewed fresh-install procedure.'
-                : 'BLOCKER — existing database without a ledger. Prove its baseline before any migration.';
+                : 'BLOCKER — existing database without a managed ledger. Prove its baseline before any migration.';
             $lines[]='Historical files 000–019 are not a safe automatic execution queue.';
             return implode("\n",$lines);
         }
-        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='schema_migrations'")->fetchAll(\PDO::FETCH_COLUMN);
-        if(!in_array('migration',$columns,true)) {
-            $lines[]='BLOCKER — schema_migrations exists but has no supported migration column.';
+
+        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='app_migration_ledger'")->fetchAll(\PDO::FETCH_COLUMN);
+        $required=['migration_name','checksum','applied_at','execution_status','application_version','execution_duration_ms','failure_details','is_baseline','baseline_marker'];
+        $missing=array_values(array_diff($required,$columns));
+        if($missing) {
+            $lines[]='BLOCKER — managed migration ledger has an unsupported schema; missing: '.implode(', ',$missing);
             return implode("\n",$lines);
         }
-        $applied=$pdo->query('SELECT migration FROM schema_migrations ORDER BY migration')->fetchAll(\PDO::FETCH_COLUMN);
-        $lines[]='Ledger rows: '.count($applied);
-        $lines[]='Ledger format: filename-only history does not prove schema equivalence or file integrity.';
-        $lines[] = in_array('checksum',$columns,true)
-            ? 'Checksum column exists; this preflight does not yet verify checksums.'
-            : 'BLOCKER — no checksum column; historical file drift cannot be detected.';
-        $lines[]='This preflight does not authorize replaying unrecorded historical SQL.';
+
+        $baseline=$pdo->query("SELECT migration_name, checksum, execution_status, application_version, is_baseline, baseline_marker, applied_at FROM app_migration_ledger WHERE is_baseline=1")->fetchAll();
+        if(count($baseline)!==1) {
+            $lines[]='BLOCKER — expected exactly one verified baseline marker; found '.count($baseline).'.';
+            return implode("\n",$lines);
+        }
+
+        $marker=$baseline[0];
+        $expectedChecksum=hash('sha256','zayan-hardware:fresh-install:1.0.0');
+        $valid=$marker['migration_name']==='__baseline_fresh_install_1_0_0__'
+            && hash_equals($expectedChecksum,(string)$marker['checksum'])
+            && $marker['execution_status']==='applied'
+            && $marker['application_version']==='1.0.0'
+            && (int)$marker['is_baseline']===1
+            && $marker['baseline_marker']==='fresh_install:1.0.0'
+            && $marker['applied_at']!==null;
+        if(!$valid) {
+            $lines[]='BLOCKER — baseline marker does not match the approved fresh-install identity.';
+            return implode("\n",$lines);
+        }
+
+        $summary=$pdo->query("SELECT COUNT(*) AS total, SUM(execution_status='failed') AS failed, SUM(execution_status='interrupted') AS interrupted, SUM(execution_status='applying') AS applying FROM app_migration_ledger")->fetch();
+        $lines[]='Managed migration ledger: FOUND.';
+        $lines[]='Fresh-install baseline: VERIFIED (1.0.0).';
+        $lines[]='Ledger rows: '.(int)$summary['total'];
+        $lines[]='Failed records: '.(int)$summary['failed'];
+        $lines[]='Interrupted records: '.(int)$summary['interrupted'];
+        $lines[]='Applying records: '.(int)$summary['applying'];
+        if((int)$summary['failed']>0||(int)$summary['interrupted']>0||(int)$summary['applying']>0) {
+            $lines[]='BLOCKER — unresolved migration execution state requires manual recovery review.';
+        } else {
+            $lines[]='No unresolved execution records were found.';
+        }
+        $lines[]='This command is read-only and does not authorize migration execution.';
         return implode("\n",$lines);
     }
 
