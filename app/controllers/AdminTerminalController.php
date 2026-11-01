@@ -76,7 +76,7 @@ final class AdminTerminalController extends Controller
             $file=$this->path($root,'database/migrations/'.$name,false);
             if (filesize($file)>65536) throw new \InvalidArgumentException('ملف migration أكبر من 64KB.');
             $sql=file_get_contents($file);
-            if (!is_string($sql)) throw new \\RuntimeException('تعذرت قراءة migration.');
+            if (!is_string($sql)) throw new \RuntimeException('تعذرت قراءة migration.');
             return ['db migration',$this->redact($sql)];
         }
         if ($cmd==='logs'&&count($p)<=1) {
