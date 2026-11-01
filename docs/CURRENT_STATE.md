@@ -64,6 +64,7 @@ Zayan Hardware is an Arabic-first, RTL technical community for mobile-phone hard
 - [Post composer and drafts](post-composer-and-drafts.md)
 - [Profiles and personal help](profiles-personal-help.md)
 - [Graphify guide](graphify.md)
+- [Performance guide](performance.md)
 - [System rebuild audit snapshot](system-rebuild-audit.md)
 
 Documentation is a map, not proof. Inspect the actual code and live database state relevant to the change.
