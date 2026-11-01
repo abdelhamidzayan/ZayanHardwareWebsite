@@ -59,7 +59,8 @@ final class AdminTerminalController extends Controller
     {
         if (preg_match('/[;&|<>$(){}\x00-\x1F]/',$input)) throw new \InvalidArgumentException('رموز shell المركبة غير مسموحة.');
         $p=preg_split('/\s+/',$input) ?: []; $cmd=array_shift($p) ?? '';
-        if (in_array($cmd,['sudo','su'],true)) throw new \\InvalidArgumentException('sudo متاح من جلسة SSH موثوقة فقط. لا تدخل كلمة المرور داخل الموقع.');\n        $root=realpath(App::root()); if (!$root) throw new \RuntimeException('Project root unavailable.');
+        if (in_array($cmd,['sudo','su'],true)) throw new \InvalidArgumentException('sudo متاح من جلسة SSH موثوقة فقط. لا تدخل كلمة المرور داخل الموقع.');
+        $root=realpath(App::root()); if (!$root) throw new \RuntimeException('Project root unavailable.');
         if ($cmd==='help'&&!$p) return ['help',"help\npwd\nls [path]\ncat <file>\nphp -v\nphp -l <file.php>\ngit status\ngit log\ngit diff --stat\nlogs [app|access|security|audit]\ndb status\ndb tables\ndb migration <filename.sql>\ndb preflight"];
         if ($cmd==='pwd'&&!$p) return ['pwd',$root];
         if ($cmd==='ls'&&count($p)<=1) {
