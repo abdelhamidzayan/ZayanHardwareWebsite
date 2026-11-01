@@ -68,6 +68,17 @@ final class AdminTerminalController extends Controller
         if ($cmd==='git'&&$p===['status']) return ['git status',$this->process(['/usr/bin/git','-C',$root,'status','--short','--branch'],$root)];
         if ($cmd==='git'&&$p===['log']) return ['git log',$this->process(['/usr/bin/git','-C',$root,'log','-8','--oneline','--decorate'],$root)];
         if ($cmd==='git'&&$p===['diff','--stat']) return ['git diff --stat',$this->process(['/usr/bin/git','-C',$root,'diff','--stat'],$root)];
+        if ($cmd==='db' && $p===['status']) return ['db status',$this->databaseStatus($root)];
+        if ($cmd==='db' && $p===['tables']) return ['db tables',$this->databaseTables()];
+        if ($cmd==='db' && count($p)===2 && $p[0]==='migration') {
+            $name=$p[1];
+            if (!preg_match('/^\\d{3}_[a-z0-9_]+\\.sql$/D',$name)) throw new \\InvalidArgumentException('حدد اسم ملف migration مرقمًا من مجلد database/migrations فقط.');
+            $file=$this->path($root,'database/migrations/'.$name,false);
+            if (filesize($file)>65536) throw new \\InvalidArgumentException('ملف migration أكبر من 64KB.');
+            $sql=file_get_contents($file);
+            if (!is_string($sql)) throw new \\RuntimeException('تعذرت قراءة migration.');
+            return ['db migration',$this->redact($sql)];
+        }
         if ($cmd==='logs'&&count($p)<=1) {
             $ch=$p[0]??'app'; if(!in_array($ch,['app','access','security','audit'],true)) throw new \InvalidArgumentException('القنوات: app / access / security / audit');
             $files=glob(App::root('storage/logs/'.$ch.'-*.log'))?:[]; rsort($files); if(!$files) return ['logs '.$ch,'لا توجد سجلات.'];
@@ -75,6 +86,56 @@ final class AdminTerminalController extends Controller
         }
         throw new \InvalidArgumentException('الأمر غير مدعوم أو صياغته غير صحيحة. اكتب help.');
     }
+    private function databaseStatus(string $root): string
+    {
+        $pdo=Database::connection();
+        $meta=$pdo->query('SELECT DATABASE() AS db_name, VERSION() AS server_version')->fetch();
+        $files=glob($root.'/database/migrations/[0-9][0-9][0-9]_*.sql')?:[];
+        sort($files,SORT_NATURAL);
+        $names=array_map('basename',$files);
+        $lines=[
+            'Database: '.(string)($meta['db_name']??'unknown'),
+            'Server: '.(string)($meta['server_version']??'unknown'),
+            'Migration files in repository: '.count($names),
+        ];
+        $table=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'schema_migrations'");
+        $table->execute();
+        if ((int)$table->fetchColumn()===0) {
+            $lines[]='Migration ledger: NOT FOUND';
+            $lines[]='Applied state: UNKNOWN — لا يمكن اعتبار وجود ملف SQL دليلًا على تنفيذه.';
+            $lines[]='لن يتم تشغيل أو تسجيل أي migration تلقائيًا من وحدة التشخيص.';
+            $lines[]='Files:';
+            foreach($names as $name) $lines[]='  '.$name;
+            return implode("\\n",$lines);
+        }
+        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'schema_migrations'")->fetchAll(\\PDO::FETCH_COLUMN);
+        if (!in_array('migration',$columns,true)) {
+            $lines[]='Migration ledger: FOUND but unsupported schema (expected migration column).';
+            return implode("\\n",$lines);
+        }
+        $applied=$pdo->query('SELECT migration FROM schema_migrations ORDER BY migration')->fetchAll(\\PDO::FETCH_COLUMN);
+        $appliedMap=array_fill_keys(array_map('strval',$applied),true);
+        $lines[]='Migration ledger: FOUND ('.count($applied).' recorded).';
+        $pending=[];
+        foreach($names as $name) {
+            if(isset($appliedMap[$name])) $lines[]='[APPLIED] '.$name;
+            else { $lines[]='[NOT RECORDED] '.$name; $pending[]=$name; }
+        }
+        $lines[]='Unrecorded files: '.count($pending);
+        $lines[]='تنبيه: السجل يوضح ما تم تسجيله فقط؛ لا يثبت تطابق schema الفعلي.';
+        return implode("\\n",$lines);
+    }
+
+    private function databaseTables(): string
+    {
+        $pdo=Database::connection();
+        $rows=$pdo->query('SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY TABLE_NAME')->fetchAll();
+        if(!$rows) return 'لا توجد جداول في قاعدة البيانات الحالية.';
+        $lines=['Database: '.(string)$pdo->query('SELECT DATABASE()')->fetchColumn(),'Tables/views: '.count($rows)];
+        foreach($rows as $row) $lines[]='['.($row['TABLE_TYPE']==='VIEW'?'VIEW':'TABLE').'] '.$row['TABLE_NAME'];
+        return implode("\\n",$lines);
+    }
+
     private function path(string $root,string $rel,bool $dir): string
     {
         if($rel===''||str_starts_with($rel,'/')||str_contains($rel,'\\')||str_contains($rel,'..')) throw new \InvalidArgumentException('المسار غير مسموح.');
