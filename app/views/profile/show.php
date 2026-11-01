@@ -5,6 +5,7 @@
 
 <div class="container public-profile">
     <section class="card profile">
+        <div class="profile__intro">
         <header class="profile__head">
             <img class="avatar avatar--lg avatar-image" src="<?= $e($baseUrl . $profile['avatar_src']) ?>" alt="الصورة الشخصية لـ <?= $e($profile['display_name']) ?>" width="72" height="72">
             <div class="profile__who">
@@ -15,7 +16,10 @@
         </header>
 
         <?php if ($profile['biography'] !== '') : ?><p class="public-profile__bio"><?= $e($profile['biography']) ?></p><?php endif; ?>
+        </div>
 
+        <section class="profile-details" aria-labelledby="profile-details-title">
+            <h2 id="profile-details-title" class="profile-section-title">المعلومات الفنية</h2>
         <dl class="profile__list">
             <?php if ($profile['device'] !== '') : ?><div><dt>مجال التخصص</dt><dd><?= $e($profile['device']) ?></dd></div><?php endif; ?>
             <?php if ($profile['level'] !== '') : ?>
@@ -25,10 +29,11 @@
             <?php if ($profile['workshop'] !== '') : ?><div><dt>الورشة</dt><dd><?= $e($profile['workshop']) ?></dd></div><?php endif; ?>
             <div><dt>تاريخ الانضمام</dt><dd class="tech"><?= $e($profile['joined']) ?></dd></div>
         </dl>
+        </section>
 
         <?php if ($skillRatings) : ?>
-            <section class="profile-skills">
-                <h2>تقييم المهارات</h2>
+            <section class="profile-skills" aria-labelledby="profile-skills-title">
+                <h2 id="profile-skills-title" class="profile-section-title">تقييم المهارات</h2>
                 <?php foreach ($skillRatings as $skillRating) : ?>
                     <div class="profile-skills__row"><span><?= $e($skillRating['skill_name']) ?></span><strong><?= $e((string) $skillRating['rating']) ?>%</strong><small class="muted"><?= (int) $skillRating['approved_assessments'] ?> تقييمات مجتازة</small></div>
                 <?php endforeach; ?>
@@ -36,6 +41,7 @@
         <?php endif; ?>
 
         <?php if ($profile['is_owner']) : ?>
+            <div class="profile__actions">
             <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/settings">تعديل إعدادات الملف الشخصي</a>
             <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/skills/tests">اختبارات المهارات</a>
         <?php elseif ($currentUser) : ?>
@@ -64,6 +70,7 @@
         <?php if ($currentUser && ($currentUser['role'] ?? '') === 'admin') : ?>
             <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/admin/users">إدارة الحسابات</a>
         <?php endif; ?>
+        <?php if ($profile['is_owner']) : ?></div><?php endif; ?>
     </section>
 
     <section class="profile-activity">
