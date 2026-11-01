@@ -1,3 +1,11 @@
+## 2026-11-02 — Disable mobile pinch-to-zoom globally
+
+- Updated the shared `app/views/layouts/head.php` viewport declaration with `maximum-scale=1` and `user-scalable=no`.
+- Because both authenticated and guest layouts include this shared head, the setting applies across all application pages, including login and registration.
+- No JavaScript zoom-blocking listeners, CSS touch restrictions, routes, database, or user content were changed.
+- Verification: source-level change only; browser/mobile Safari and Android runtime behavior has not been tested. Browser accessibility settings may override viewport zoom restrictions.
+- Status: implemented on `feat/disable-mobile-pinch-zoom`; not merged or deployed. GitHub Actions were not triggered due to the current usage-cost restriction.
+
 ## 2026-11-01 — Bounded multi-command admin diagnostics and SSH privilege boundary
 
 - Added up to 8 separate allowlisted commands per batch (300 characters per line, 1,800 total), 10 batches/minute, bounded output, CSRF, active-admin revalidation, and audit events.
