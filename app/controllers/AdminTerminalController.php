@@ -91,39 +91,75 @@ final class AdminTerminalController extends Controller
     {
         $pdo=Database::connection();
         $meta=$pdo->query('SELECT DATABASE() AS db_name, VERSION() AS server_version')->fetch();
-        $files=glob($root.'/database/migrations/[0-9][0-9][0-9]_*.sql')?:[];
-        sort($files,SORT_NATURAL);
-        $names=array_map('basename',$files);
+        $historical=glob($root.'/database/migrations/[0-9][0-9][0-9]_*.sql')?:[];
+        $managed=glob($root.'/database/managed_migrations/[0-9][0-9][0-9]_*.sql')?:[];
+        sort($historical,SORT_NATURAL);
+        sort($managed,SORT_NATURAL);
         $lines=[
             'Database: '.(string)($meta['db_name']??'unknown'),
             'Server: '.(string)($meta['server_version']??'unknown'),
-            'Migration files in repository: '.count($names),
+            'Historical SQL files (not an execution queue): '.count($historical),
+            'Managed forward migration files: '.count($managed),
         ];
-        $table=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'schema_migrations'");
-        $table->execute();
-        if ((int)$table->fetchColumn()===0) {
-            $lines[]='Migration ledger: NOT FOUND';
-            $lines[]='Applied state: UNKNOWN — لا يمكن اعتبار وجود ملف SQL دليلًا على تنفيذه.';
-            $lines[]='لن يتم تشغيل أو تسجيل أي migration تلقائيًا من وحدة التشخيص.';
-            $lines[]='Files:';
-            foreach($names as $name) $lines[]='  '.$name;
+
+        $exists=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='app_migration_ledger' AND table_type='BASE TABLE'");
+        $exists->execute();
+        if((int)$exists->fetchColumn()===0) {
+            $lines[]='Managed migration ledger: NOT FOUND.';
+            $lines[]='Applied state: UNKNOWN — existing database adoption is blocked until a verified baseline is approved.';
             return implode("\n",$lines);
         }
-        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'schema_migrations'")->fetchAll(\PDO::FETCH_COLUMN);
-        if (!in_array('migration',$columns,true)) {
-            $lines[]='Migration ledger: FOUND but unsupported schema (expected migration column).';
+
+        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='app_migration_ledger'")->fetchAll(\PDO::FETCH_COLUMN);
+        $required=['migration_name','checksum','applied_at','execution_status','application_version','execution_duration_ms','failure_details','is_baseline','baseline_marker'];
+        $missing=array_values(array_diff($required,$columns));
+        if($missing) {
+            $lines[]='BLOCKER — unsupported managed ledger; missing columns: '.implode(', ',$missing);
             return implode("\n",$lines);
         }
-        $applied=$pdo->query('SELECT migration FROM schema_migrations ORDER BY migration')->fetchAll(\PDO::FETCH_COLUMN);
-        $appliedMap=array_fill_keys(array_map('strval',$applied),true);
-        $lines[]='Migration ledger: FOUND ('.count($applied).' recorded).';
-        $pending=[];
-        foreach($names as $name) {
-            if(isset($appliedMap[$name])) $lines[]='[APPLIED] '.$name;
-            else { $lines[]='[NOT RECORDED] '.$name; $pending[]=$name; }
+
+        $rows=$pdo->query("SELECT migration_name, checksum, applied_at, execution_status, application_version, execution_duration_ms, failure_details, is_baseline, baseline_marker FROM app_migration_ledger ORDER BY migration_name")->fetchAll();
+        $byName=[];
+        foreach($rows as $row) $byName[(string)$row['migration_name']]=$row;
+        $baseline=$byName['__baseline_fresh_install_1_0_0__']??null;
+        $expectedBaseline=hash('sha256','zayan-hardware:fresh-install:1.0.0');
+        $baselineValid=is_array($baseline)
+            && hash_equals($expectedBaseline,(string)$baseline['checksum'])
+            && $baseline['execution_status']==='applied'
+            && $baseline['application_version']==='1.0.0'
+            && (int)$baseline['is_baseline']===1
+            && $baseline['baseline_marker']==='fresh_install:1.0.0'
+            && $baseline['applied_at']!==null;
+        $baselineCount=count(array_filter($rows,static fn(array $row): bool => (int)$row['is_baseline']===1));
+        $lines[]=$baselineValid&&$baselineCount===1
+            ? 'Fresh-install baseline: VERIFIED (1.0.0).'
+            : 'BLOCKER — fresh-install baseline is missing, duplicated, or does not match the approved identity.';
+
+        $seen=[];
+        foreach($managed as $file) {
+            $name=basename($file);
+            $seen[$name]=true;
+            $checksum=hash_file('sha256',$file);
+            $row=$byName[$name]??null;
+            if(!is_array($row)) {
+                $lines[]='[NOT RECORDED] '.$name.' — not eligible for automatic execution.';
+            } elseif(!is_string($checksum)||!hash_equals((string)$row['checksum'],$checksum)) {
+                $lines[]='[CHECKSUM DRIFT] '.$name.' — file differs from its ledger checksum.';
+            } elseif($row['execution_status']!=='applied') {
+                $lines[]='[BLOCKED: '.strtoupper((string)$row['execution_status']).'] '.$name.' — manual recovery review required.';
+            } else {
+                $lines[]='[APPLIED] '.$name.' — '.(string)$row['applied_at'];
+            }
         }
-        $lines[]='Unrecorded files: '.count($pending);
-        $lines[]='تنبيه: السجل يوضح ما تم تسجيله فقط؛ لا يثبت تطابق schema الفعلي.';
+
+        foreach($rows as $row) {
+            $name=(string)$row['migration_name'];
+            if((int)$row['is_baseline']===1||isset($seen[$name])) continue;
+            if(str_starts_with($name,'__baseline_')) continue;
+            $lines[]='[ORPHAN LEDGER ROW] '.$name.' — ledger entry has no matching managed file.';
+        }
+        $lines[]='Ledger records: '.count($rows);
+        $lines[]='Historical migrations 000–019 are informational only and are never auto-executed.';
         return implode("\n",$lines);
     }
 
