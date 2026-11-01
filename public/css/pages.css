@@ -625,7 +625,7 @@
   min-block-size: 2.65rem;
   padding-inline: 1.1rem;
   border-radius: var(--radius-md);
-  background: #1769d2;
+  background: var(--color-primary);
   color: #fff;
   font-weight: 600;
   text-decoration: none;
@@ -633,12 +633,12 @@
   transition: background-color 150ms ease, transform 150ms ease;
 }
 .guest-header__login:hover {
-  background: #1257b4;
+  background: var(--color-primary-hover);
   color: #fff;
 }
 .guest-header__login:active { transform: translateY(1px); }
 .guest-header__login:focus-visible {
-  outline: 2px solid #1769d2;
+  outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
 @media (max-width: 520px) {
@@ -665,7 +665,7 @@
   inline-size: 2.75rem;
   block-size: 2.75rem;
   overflow: visible;
-  background: #123f78;
+  background: var(--color-primary-deep);
   color: #fff;
 }
 .guest .brand__logo .icon {
@@ -788,11 +788,11 @@
   font-weight: 750;
 }
 .wizard__stepper-item.is-active,
-.wizard__stepper-item.is-done { color: #2563eb; font-weight: 700; }
+.wizard__stepper-item.is-done { color: var(--color-primary); font-weight: 700; }
 .wizard__stepper-item.is-active .wizard__stepper-circle,
 .wizard__stepper-item.is-done .wizard__stepper-circle {
-  border-color: #2563eb;
-  background: #2563eb;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
   color: #fff;
 }
 .wizard__step { display: grid; gap: 1rem; min-inline-size: 0; }
@@ -894,7 +894,7 @@
   direction: ltr;
 }
 .wizard-contact__phone > input:focus,
-.wizard-contact__email > input:focus { outline: 2px solid #2563eb; }
+.wizard-contact__email > input:focus { outline: 2px solid var(--color-primary); }
 .wizard-contact__at {
   display: grid;
   flex: 0 0 auto;
@@ -935,7 +935,7 @@
 }
 .country-list__item:last-child { border-block-end: 0; }
 .country-list__item:hover,
-.country-list__item[aria-selected="true"] { background: rgb(37 99 235 / 8%); }
+.country-list__item[aria-selected="true"] { background: var(--color-primary-soft); }
 .country-list__flag { font-size: 1.1rem; }
 .country-list__name { min-inline-size: 0; direction: rtl; text-align: right; }
 .country-list__iso { color: var(--color-muted, #7b8493); font-size: .75rem; }
@@ -984,10 +984,10 @@
 .wizard-suggestion {
   max-inline-size: 100%;
   padding: .4rem .65rem;
-  border: 1px solid rgb(37 99 235 / 30%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
   border-radius: 999px;
-  background: rgb(37 99 235 / 7%);
-  color: #2563eb;
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  color: var(--color-primary);
   font: inherit;
   font-size: .82rem;
   cursor: pointer;
@@ -999,7 +999,7 @@
   padding: .2rem 0;
   border: 0;
   background: transparent;
-  color: #2563eb;
+  color: var(--color-primary);
   font: inherit;
   font-size: .84rem;
   cursor: pointer;
@@ -1031,12 +1031,12 @@
   position: absolute;
   inset-block-start: .65rem;
   inset-inline-start: .65rem;
-  accent-color: #2563eb;
+  accent-color: var(--color-primary);
 }
 .wizard-choice__card:has(input:checked) {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px #2563eb;
-  background: rgb(37 99 235 / 5%);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 .wizard-choice__card strong { font-size: .98rem; }
 .wizard-choice__card > span:last-child { color: var(--color-muted, #7b8493); font-size: .8rem; }
@@ -1060,8 +1060,8 @@
   align-self: start;
   padding: .3rem .65rem;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   font-size: .78rem;
   font-weight: 700;
 }
@@ -1076,7 +1076,7 @@
   background: rgb(148 163 184 / 5%);
   text-align: center;
 }
-.wizard-profile-placeholder > span { display: grid; place-items: center; inline-size: 3rem; block-size: 3rem; border-radius: 50%; background: #eff6ff; color: #2563eb; }
+.wizard-profile-placeholder > span { display: grid; place-items: center; inline-size: 3rem; block-size: 3rem; border-radius: 50%; background: var(--color-primary-soft); color: var(--color-primary); }
 .wizard-profile-placeholder svg { inline-size: 1.5rem; block-size: 1.5rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .wizard-profile-placeholder p { margin: 0; color: var(--color-muted, #7b8493); font-size: .85rem; }
 .wizard__step textarea:disabled,
@@ -1198,7 +1198,7 @@
   position: absolute;
   inset-block-start: .65rem;
   inset-inline-start: .65rem;
-  accent-color: #2563eb;
+  accent-color: var(--color-primary);
   inline-size: 1rem;
   block-size: 1rem;
 }
