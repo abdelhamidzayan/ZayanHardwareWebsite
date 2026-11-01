@@ -58,7 +58,7 @@
 }
 
 .btn--primary { background: var(--color-cta); color: var(--color-cta-ink); }
-.btn--primary:hover { background: var(--color-cta-hover); }
+.btn--primary:hover { background: var(--color-cta-hover); color: #fff; }
 
 /* ---------- Empty / error state ---------- */
 .empty-state {
