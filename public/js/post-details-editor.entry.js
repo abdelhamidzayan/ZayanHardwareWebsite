@@ -54,7 +54,7 @@ function decorationsFor(view) {
       ranges.push(Decoration.replace({}).range(line.from, line.from + prefix[0].length));
       ranges.push(Decoration.line({ class: 'cm-live-preview-list' }).range(line.from));
     }
-    const inline = /\*\*(.*?)\*\*|`([^`]+)`/g;
+    const inline = /\*\*(.*?)\*\*|`(.*?)`/g;
     let match;
     while ((match = inline.exec(value)) !== null) {
       const token = match[0];
@@ -62,7 +62,7 @@ function decorationsFor(view) {
       const from = line.from + match.index;
       ranges.push(Decoration.replace({}).range(from, from + width));
       ranges.push(Decoration.replace({}).range(from + token.length - width, from + token.length));
-      ranges.push(Decoration.mark({ class: width === 2 ? 'cm-live-preview-bold' : 'cm-live-preview-inline-code' }).range(from + width, from + token.length - width));
+      if (token.length > width * 2) ranges.push(Decoration.mark({ class: width === 2 ? 'cm-live-preview-bold' : 'cm-live-preview-inline-code' }).range(from + width, from + token.length - width));
     }
   }
   return Decoration.set(ranges, true);
@@ -157,12 +157,6 @@ function applyFormat(view, format) {
   view.focus();
 }
 
-function positionToolbar(toolbar) {
-  if (!toolbar || !window.visualViewport) return;
-  const viewport = window.visualViewport;
-  const offset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-  toolbar.style.setProperty('--editor-keyboard-offset', offset + 'px');
-}
 
 function create({ textarea, host, onChange }) {
   let applyingExternalValue = false;
@@ -196,11 +190,6 @@ function create({ textarea, host, onChange }) {
     toolbar.addEventListener('mousedown', event => {
       if (event.target.closest('button')) event.preventDefault();
     });
-    const refresh = () => positionToolbar(toolbar);
-    window.visualViewport?.addEventListener('resize', refresh);
-    window.visualViewport?.addEventListener('scroll', refresh);
-    window.addEventListener('resize', refresh);
-    refresh();
   }
   textarea.classList.add('is-code-editor-enhanced');
   return {
