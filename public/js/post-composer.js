@@ -997,6 +997,7 @@
                     return;
                 }
                 detailsInput.value = '';
+                if (detailsEditor) detailsEditor.setValue('');
             }
             if (radio.checked && radio.value === 'text' && media.some(function (item) { return item.media_kind === 'audio'; })) {
                 if (!window.confirm('التحويل للكتابة هيحذف التسجيل الصوتي الحالي. تكمل؟')) {
