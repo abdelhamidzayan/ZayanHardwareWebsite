@@ -19,7 +19,7 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 11. [Migration readiness and safe upgrade policy](docs/MIGRATION_READINESS.md) — legacy migration ambiguity, existing-database adoption, and forward migration rules.
 12. [Database backup and restore runbook](docs/DATABASE_BACKUP_RESTORE.md) — safe separate-database restore and read-only schema/row-count comparison.
 13. [Storage recovery triage](docs/STORAGE_RECOVERY_RUNBOOK.md) — safe handling of pending filesystem recovery records.
-13. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
+14. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
 
 The documentation is a map, not a substitute for source inspection. Always verify the active branch, commit, local changes, runtime, and database before changing code. GitHub branches, local checkouts, CI results, and deployments are separate states.
 
