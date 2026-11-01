@@ -1,3 +1,10 @@
+## 2026-11-01 — Admin database diagnostics feature branch
+
+- Added read-only `db status`, `db tables`, and `db migration <filename.sql>` commands to the admin diagnostic console on `feat/admin-database-migration-diagnostics`.
+- Applied migration state is reported as UNKNOWN when no supported ledger exists; no SQL execution or migration application is provided.
+- Source review only so far; PHP/CI/browser/runtime checks are pending. No database was modified.
+- See [Admin database diagnostics](ADMIN_DATABASE_DIAGNOSTICS.md).
+
 # Zayan Hardware — Current Project State
 
 > **Last updated:** 2026-10-31. Always recheck live GitHub refs, local checkout, database, and deployment before acting.
