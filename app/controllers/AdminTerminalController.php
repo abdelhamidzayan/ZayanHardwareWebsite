@@ -48,7 +48,7 @@ final class AdminTerminalController extends Controller
         if (preg_match('/[;&|<>$(){}\x00-\x1F]/',$input)) throw new \InvalidArgumentException('رموز shell المركبة غير مسموحة.');
         $p=preg_split('/\s+/',$input) ?: []; $cmd=array_shift($p) ?? '';
         $root=realpath(App::root()); if (!$root) throw new \RuntimeException('Project root unavailable.');
-        if ($cmd==='help'&&!$p) return ['help',"help\npwd\nls [path]\ncat <file>\nphp -v\nphp -l <file.php>\ngit status\ngit log\ngit diff --stat\nlogs [app|access|security|audit]\ndb status\ndb tables\ndb migration <filename.sql>"];
+        if ($cmd==='help'&&!$p) return ['help',"help\npwd\nls [path]\ncat <file>\nphp -v\nphp -l <file.php>\ngit status\ngit log\ngit diff --stat\nlogs [app|access|security|audit]\ndb status\ndb tables\ndb migration <filename.sql>\ndb preflight"];
         if ($cmd==='pwd'&&!$p) return ['pwd',$root];
         if ($cmd==='ls'&&count($p)<=1) {
             $d=$this->path($root,$p[0]??'.',true); $a=[];
@@ -69,6 +69,7 @@ final class AdminTerminalController extends Controller
         if ($cmd==='git'&&$p===['log']) return ['git log',$this->process(['/usr/bin/git','-C',$root,'log','-8','--oneline','--decorate'],$root)];
         if ($cmd==='git'&&$p===['diff','--stat']) return ['git diff --stat',$this->process(['/usr/bin/git','-C',$root,'diff','--stat'],$root)];
         if ($cmd==='db' && $p===['status']) return ['db status',$this->databaseStatus($root)];
+        if ($cmd==='db' && $p===['preflight']) return ['db preflight',$this->databasePreflight($root)];
         if ($cmd==='db' && $p===['tables']) return ['db tables',$this->databaseTables()];
         if ($cmd==='db' && count($p)===2 && $p[0]==='migration') {
             $name=$p[1];
@@ -123,6 +124,60 @@ final class AdminTerminalController extends Controller
         }
         $lines[]='Unrecorded files: '.count($pending);
         $lines[]='تنبيه: السجل يوضح ما تم تسجيله فقط؛ لا يثبت تطابق schema الفعلي.';
+        return implode("\n",$lines);
+    }
+
+    private function databasePreflight(string $root): string
+    {
+        $pdo=Database::connection();
+        $meta=$pdo->query('SELECT DATABASE() AS db_name, VERSION() AS server_version')->fetch();
+        $files=glob($root.'/database/migrations/[0-9][0-9][0-9]_*.sql')?:[];
+        sort($files,SORT_NATURAL);
+        $prefixes=[];
+        $lines=[
+            'Database: '.(string)($meta['db_name']??'unknown'),
+            'Server: '.(string)($meta['server_version']??'unknown'),
+            'Historical SQL files: '.count($files),
+            'Execution mode: READ-ONLY PREFLIGHT — no SQL is executed.',
+        ];
+        foreach($files as $file) {
+            if(preg_match('/^([0-9]{3})_/',basename($file),$m)) $prefixes[$m[1]][] = basename($file);
+        }
+        $duplicates=[];
+        foreach($prefixes as $number=>$names) if(count($names)>1) $duplicates[]=$number.': '.implode(', ',$names);
+        if($duplicates) {
+            $lines[]='BLOCKER — duplicate migration sequence numbers:';
+            foreach($duplicates as $duplicate) $lines[]='  '.$duplicate;
+        } else {
+            $lines[]='Sequence numbers: no duplicate three-digit prefixes found.';
+        }
+        $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='schema_migrations'");
+        $q->execute();
+        if((int)$q->fetchColumn()===0) {
+            $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE'");
+            $q->execute();
+            $count=(int)$q->fetchColumn();
+            $lines[]='Migration ledger: NOT FOUND.';
+            $lines[]='Applied history: UNKNOWN — never infer it from current schema or Git history.';
+            $lines[]='Base tables currently present: '.$count;
+            $lines[]=$count===0
+                ? 'Empty database: use the separately reviewed fresh-install procedure.'
+                : 'BLOCKER — existing database without a ledger. Prove its baseline before any migration.';
+            $lines[]='Historical files 000–019 are not a safe automatic execution queue.';
+            return implode("\n",$lines);
+        }
+        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='schema_migrations'")->fetchAll(\PDO::FETCH_COLUMN);
+        if(!in_array('migration',$columns,true)) {
+            $lines[]='BLOCKER — schema_migrations exists but has no supported migration column.';
+            return implode("\n",$lines);
+        }
+        $applied=$pdo->query('SELECT migration FROM schema_migrations ORDER BY migration')->fetchAll(\PDO::FETCH_COLUMN);
+        $lines[]='Ledger rows: '.count($applied);
+        $lines[]='Ledger format: filename-only history does not prove schema equivalence or file integrity.';
+        $lines[] = in_array('checksum',$columns,true)
+            ? 'Checksum column exists; this preflight does not yet verify checksums.'
+            : 'BLOCKER — no checksum column; historical file drift cannot be detected.';
+        $lines[]='This preflight does not authorize replaying unrecorded historical SQL.';
         return implode("\n",$lines);
     }
 

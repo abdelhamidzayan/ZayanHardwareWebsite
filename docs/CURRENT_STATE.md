@@ -1,3 +1,11 @@
+## 2026-11-01 — Migration readiness preflight
+
+- PR #38 merged read-only database diagnostics into main as `fbc78e69534f97f5ace9a370af549eeb940f7064`.
+- Follow-up branch `feat/migration-readiness-preflight` adds read-only `db preflight`, which detects duplicate historical sequence prefixes and reports whether the selected database has a migration ledger or an unknown existing baseline.
+- Historical migration files are not a safe execution queue: two files share prefix 002, and the consolidated fresh-install SQL is only for an empty database.
+- No migration runner or SQL execution has been enabled. Existing-database adoption still requires a verified backup/restore, schema comparison, and explicit baseline approval.
+- Verification for the follow-up branch is pending; no owner database or private media was changed.
+
 ## 2026-11-01 — Admin database diagnostics feature branch
 
 - Added read-only `db status`, `db tables`, and `db migration <filename.sql>` commands to the admin diagnostic console on `feat/admin-database-migration-diagnostics`.
