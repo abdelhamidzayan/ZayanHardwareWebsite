@@ -1,3 +1,13 @@
+## 2026-11-01 — Establish managed migration ledger baseline for fresh installs
+
+- **Type:** Database / Migration safety / CI / Documentation
+- **Summary:** Added the managed migration ledger schema and an explicit fresh-install baseline marker. The marker is created only by the consolidated empty-database install and is never inferred for existing installations.
+- **Code areas:** `database/fresh_install.sql`, `.github/workflows/database-migrations.yml`, `app/controllers/AdminTerminalController.php`, `docs/MIGRATION_READINESS.md`.
+- **Database:** Fresh installs gain `app_migration_ledger`; no existing database was accessed or changed. Historical migrations 000–019 remain untouched.
+- **Safety:** The admin preflight validates the ledger structure, exact baseline identity/checksum, and unresolved execution states using read-only queries. Existing databases without the managed ledger remain blocked.
+- **Verification:** Pending PR CI on MySQL 8.0, MariaDB 10.4.32, and MariaDB 10.11; no live database or private media was used.
+- **Status:** Implemented on an isolated feature branch; awaiting CI and review.
+
 ## 2026-11-01 — Read-only migration readiness preflight
 
 - **Type:** Database / Admin diagnostics / Safety / Documentation

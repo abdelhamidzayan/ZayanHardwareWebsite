@@ -1292,3 +1292,44 @@ SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Storage recovery audit tasks must be
 -- Existing sessions without auth_version are required to sign in again after deployment.
 ALTER TABLE users
     ADD COLUMN auth_version INT UNSIGNED NOT NULL DEFAULT 1 AFTER password_hash;
+
+
+-- ============================================================================
+-- Managed migration ledger baseline (fresh installs only)
+-- ============================================================================
+-- Existing installations must not receive a synthetic baseline marker.
+CREATE TABLE app_migration_ledger (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    migration_name VARCHAR(190) NOT NULL,
+    checksum CHAR(64) NOT NULL,
+    applied_at DATETIME(6) NULL,
+    execution_status ENUM('applying','applied','failed','interrupted') NOT NULL,
+    application_version VARCHAR(32) NOT NULL,
+    execution_duration_ms BIGINT UNSIGNED NULL,
+    failure_details TEXT NULL,
+    is_baseline TINYINT(1) NOT NULL DEFAULT 0,
+    baseline_marker VARCHAR(100) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_app_migration_ledger_name (migration_name),
+    KEY idx_app_migration_ledger_status (execution_status, applied_at),
+    KEY idx_app_migration_ledger_baseline (is_baseline, baseline_marker)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO app_migration_ledger (
+    migration_name, checksum, applied_at, execution_status,
+    application_version, execution_duration_ms, failure_details,
+    is_baseline, baseline_marker
+) VALUES (
+    '__baseline_fresh_install_1_0_0__',
+    SHA2('zayan-hardware:fresh-install:1.0.0', 256),
+    UTC_TIMESTAMP(6),
+    'applied',
+    '1.0.0',
+    0,
+    NULL,
+    1,
+    'fresh_install:1.0.0'
+);
