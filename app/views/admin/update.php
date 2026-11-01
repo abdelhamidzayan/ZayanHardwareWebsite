@@ -3,7 +3,7 @@
         <h1 class="page-head__title">تحديث الموقع</h1>
         <p class="muted">اسحب آخر إصدار من GitHub وطبّقه على نسخة الموقع المحلية.</p>
     </div>
-    <a class="btn btn--ghost" href="<?= $e($baseUrl) ?>/admin">إدارة الموقع</a>
+    <div class="admin-update__head-actions"><a class="btn btn--secondary" href="<?= $e($baseUrl) ?>/admin/terminal">فتح وحدة التشخيص</a><a class="btn btn--ghost" href="<?= $e($baseUrl) ?>/admin">إدارة الموقع</a></div>
 </div>
 
 <div class="container admin-update">
