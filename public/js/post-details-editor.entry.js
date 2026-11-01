@@ -100,21 +100,91 @@ function continueList(view) {
   if (!selection.empty) return false;
   const line = view.state.doc.lineAt(selection.head);
   const list = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line.text);
-  if (!list) {
-    const offset = selection.head - line.from;
-    const bold = /^\*\*(.*)\*\*$/.exec(line.text);
-    const tick = String.fromCharCode(96);
-    const inlineCode = new RegExp('^' + tick + '(.*)' + tick + '
-  if (/^\d+[.)]$/.test(marker)) {
-    marker = String(Number.parseInt(marker, 10) + 1) + marker.slice(-1);
+  const tick = String.fromCharCode(96);
+
+  if (list) {
+    if (!list[3].trim()) {
+      view.dispatch({
+        changes: { from: line.from, to: line.to, insert: '' },
+        selection: { anchor: line.from },
+        scrollIntoView: true
+      });
+      return true;
+    }
+
+    let marker = list[2];
+    if (/^\d+[.)]$/.test(marker)) {
+      marker = String(Number.parseInt(marker, 10) + 1) + marker.slice(-1);
+    }
+
+    const contentStart = line.text.length - list[3].length;
+    const contentOffset = selection.head - line.from - contentStart;
+    const bold = /^\*\*(.*)\*\*$/.exec(list[3]);
+    const inlineCode = new RegExp('^' + tick + '(.*)' + tick + '$').exec(list[3]);
+    const nextPrefix = list[1] + marker + ' ';
+
+    if (bold && contentOffset > 2 && contentOffset < list[3].length - 2) {
+      const left = list[3].slice(2, contentOffset);
+      const right = list[3].slice(contentOffset, -2);
+      const insert = line.text.slice(0, contentStart) + '**' + left + '**\n' + nextPrefix + right;
+      view.dispatch({
+        changes: { from: line.from, to: line.to, insert },
+        selection: { anchor: line.from + insert.indexOf('\n') + 1 + nextPrefix.length },
+        scrollIntoView: true
+      });
+      return true;
+    }
+
+    if (inlineCode && contentOffset > 1 && contentOffset < list[3].length - 1) {
+      const left = list[3].slice(1, contentOffset);
+      const right = list[3].slice(contentOffset, -1);
+      const insert = line.text.slice(0, contentStart) + tick + left + tick + '\n' + nextPrefix + right;
+      view.dispatch({
+        changes: { from: line.from, to: line.to, insert },
+        selection: { anchor: line.from + insert.indexOf('\n') + 1 + nextPrefix.length },
+        scrollIntoView: true
+      });
+      return true;
+    }
+
+    const prefix = '\n' + nextPrefix;
+    view.dispatch({
+      changes: { from: selection.head, insert: prefix },
+      selection: { anchor: selection.head + prefix.length },
+      scrollIntoView: true
+    });
+    return true;
   }
-  const prefix = '\n' + list[1] + marker + ' ';
-  view.dispatch({
-    changes: { from: selection.head, insert: prefix },
-    selection: { anchor: selection.head + prefix.length },
-    scrollIntoView: true
-  });
-  return true;
+
+  const offset = selection.head - line.from;
+  const bold = /^\*\*(.*)\*\*$/.exec(line.text);
+  const inlineCode = new RegExp('^' + tick + '(.*)' + tick + '$').exec(line.text);
+
+  if (bold && offset > 2 && offset < line.text.length - 2) {
+    const left = line.text.slice(2, offset);
+    const right = line.text.slice(offset, -2);
+    const insert = '**' + left + '**\n' + right;
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert },
+      selection: { anchor: line.from + insert.indexOf('\n') + 1 },
+      scrollIntoView: true
+    });
+    return true;
+  }
+
+  if (inlineCode && offset > 1 && offset < line.text.length - 1) {
+    const left = line.text.slice(1, offset);
+    const right = line.text.slice(offset, -1);
+    const insert = tick + left + tick + '\n' + right;
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert },
+      selection: { anchor: line.from + insert.indexOf('\n') + 1 },
+      scrollIntoView: true
+    });
+    return true;
+  }
+
+  return false;
 }
 
 function applyFormat(view, format) {
