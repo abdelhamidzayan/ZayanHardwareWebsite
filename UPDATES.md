@@ -1,3 +1,13 @@
+## 2026-11-01 — Read-only database and migration diagnostics in admin console
+
+- **Type:** Database / Admin diagnostics / Security / Documentation
+- **Summary:** Added database inspection commands to the restricted administrator console: `db status`, `db tables`, and `db migration <filename.sql>`.
+- **Behavior:** Reports the connected database/server, numbered migration files, table/view names, and recorded migration filenames only if a supported `schema_migrations` ledger exists. When no ledger exists, applied state is explicitly UNKNOWN rather than guessed.
+- **Safety:** All commands are read-only. No SQL input, migration execution, ledger creation/backfill, schema mutation, or fresh-install execution is exposed through the browser.
+- **Verification:** Source review only at this point. PHP lint, automated tests, CI, and browser/runtime checks have not yet been run for this feature.
+- **Documentation:** [Admin database diagnostics](docs/ADMIN_DATABASE_DIAGNOSTICS.md).
+- **Status:** Implemented on feature branch; pending review and verification. No database was accessed or modified during implementation.
+
 ## 2026-11-01 — Simplify the logged-out header help navigation
 
 - **Type:** UI / Navigation / Accessibility
