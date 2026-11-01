@@ -98,8 +98,8 @@
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 50%;
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--color-success-soft);
+  color: var(--color-success-ink);
   font-weight: 800;
 }
 .pwa-guide__instructions {
