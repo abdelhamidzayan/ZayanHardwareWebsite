@@ -94,6 +94,7 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
                 <svg class="icon settings-row__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </button>
         </div>
+    </section>
 
     <section class="help-section settings-logout" aria-labelledby="settings-logout-title">
         <div class="help-section__head">
@@ -107,6 +108,5 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
                 تسجيل الخروج من الحساب
             </button>
         </form>
-    </section>
     </section>
 </div>
