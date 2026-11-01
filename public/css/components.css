@@ -515,3 +515,25 @@
  .account-admin__links { grid-template-columns:minmax(0,1fr); }
  .account-admin__link { padding:var(--space-3); }
 }
+
+
+/* Restricted administrator diagnostic console. */
+.admin-update__head-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.admin-terminal{display:grid;gap:var(--space-4);max-width:64rem;padding-block-end:var(--space-8)}
+.admin-terminal__notice{display:grid;gap:var(--space-2);border-inline-start:3px solid var(--color-primary)}
+.admin-terminal__console{display:grid;gap:var(--space-4);background:#101923;color:#e5edf5;border-color:#263747}
+.admin-terminal__top,.admin-terminal__result-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-2)}
+.admin-terminal__top .muted,.admin-terminal__result-head .muted{color:#9aabba}
+.admin-terminal__form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:var(--space-3)}
+.admin-terminal__form .field__label{color:#d5e0ea}
+.admin-terminal__form .field__input{direction:ltr;text-align:left;background:#0a1119;border-color:#34495b;color:#d8f3dc;font-family:monospace}
+.admin-terminal__examples{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-2);color:#a9bac9;font-size:var(--text-xs)}
+.admin-terminal__examples code,.admin-terminal__help code{padding:.15rem .4rem;border-radius:5px;background:#243443;color:#b9e6c2;direction:ltr}
+.admin-terminal__result{display:grid;gap:var(--space-2)}
+.admin-terminal__result pre{max-height:32rem;overflow:auto;margin:0;padding:var(--space-4);border:1px solid #34495b;border-radius:var(--radius-md);background:#080e14;color:#d7e5ef;direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;font:.82rem/1.65 ui-monospace,monospace}
+.admin-terminal__empty{display:grid;justify-items:center;gap:var(--space-2);padding:var(--space-6);color:#9aabba}
+.admin-terminal__empty>span{color:#9ee5ae;font:700 2rem monospace}
+.admin-terminal__help{display:grid;gap:var(--space-3)}
+.admin-terminal__help h2{font-size:var(--text-lg)}
+.admin-terminal__help ul{display:grid;gap:var(--space-2);padding-inline-start:1.2rem}
+@media(max-width:639px){.admin-update__head-actions{width:100%}.admin-update__head-actions .btn{flex:1}.admin-terminal__form{grid-template-columns:minmax(0,1fr)}.admin-terminal__form .btn{width:100%}.admin-terminal__examples{align-items:flex-start}}
