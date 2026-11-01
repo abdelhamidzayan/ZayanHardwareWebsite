@@ -64,7 +64,7 @@ jobs:
           mysql --default-character-set=utf8mb4 -h 127.0.0.1 -uroot -proot "${DB_NAME}" < database/fresh_install.sql
 
           expected_tables=(
-            users technician_profiles technician_profile_specialization_history storage_recovery_tasks
+            users technician_profiles technician_profile_specialization_history storage_recovery_tasks app_migration_ledger
             issues issue_attachments issue_replies reply_votes issue_edit_history issue_results reputation_events
             terms_acceptances user_device_specializations skill_domains user_skill_domains user_skill_ratings
             skill_tests skill_test_attempts admin_password_resets account_deletion_requests security_audit_logs
@@ -85,6 +85,11 @@ jobs:
 
           auth_version_columns="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '${DB_NAME}' AND table_name = 'users' AND column_name = 'auth_version';")"
           test "${auth_version_columns}" -eq 1
+
+          ledger_columns="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '${DB_NAME}' AND table_name = 'app_migration_ledger' AND column_name IN ('migration_name','checksum','applied_at','execution_status','application_version','execution_duration_ms','failure_details','is_baseline','baseline_marker');")"
+          test "${ledger_columns}" -eq 9
+          baseline_rows="$(mysql -N -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "SELECT COUNT(*) FROM app_migration_ledger WHERE migration_name = '__baseline_fresh_install_1_0_0__' AND checksum = SHA2('zayan-hardware:fresh-install:1.0.0',256) AND execution_status = 'applied' AND application_version = '1.0.0' AND is_baseline = 1 AND baseline_marker = 'fresh_install:1.0.0' AND applied_at IS NOT NULL;")"
+          test "${baseline_rows}" -eq 1
 
           mysql -h 127.0.0.1 -uroot -proot "${DB_NAME}" -e "
             INSERT INTO users (username, display_name, email, password_hash)
