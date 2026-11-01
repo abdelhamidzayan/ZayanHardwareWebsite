@@ -129,4 +129,4 @@ $statusLabel = match ($helpRequest['status']) { 'pending' => 'في انتظار 
         <section class="card personal-help-notice">تم نشر ملخص المساعدة بموافقة الطرفين. <a class="text-action text-action--primary" href="<?= $e($baseUrl) ?>/help-library/<?= (int) $publication['public_post_id'] ?>">عرض المرجع العام</a></section>
     <?php endif; ?>
 </div>
-<script src="<?= $e($baseUrl) ?>/js/help-requests.js" defer></script>
+<script src="<?= $e($asset('/js/help-requests.js')) ?>" defer></script>

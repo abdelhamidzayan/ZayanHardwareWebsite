@@ -39,4 +39,4 @@
     <?php endif; ?>
 </div>
 
-<script src="<?= $e($baseUrl) ?>/js/notifications.js" defer></script>
+<script src="<?= $e($asset('/js/notifications.js')) ?>" defer></script>

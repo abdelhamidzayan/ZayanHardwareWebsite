@@ -60,9 +60,9 @@ $guestHelpActive = $guestPath === '/help';
     </nav>
 </footer>
 
-<script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
+<script src="<?= $e($asset('/js/app.js')) ?>" defer></script>
 <?php foreach (($scripts ?? []) as $script) : ?>
-    <script src="<?= $e($baseUrl) ?>/js/<?= $e($script) ?>" defer></script>
+    <script src="<?= $e($asset('/js/' . $script)) ?>" defer></script>
 <?php endforeach; ?>
 </body>
 </html>

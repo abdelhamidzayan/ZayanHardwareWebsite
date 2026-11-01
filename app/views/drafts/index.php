@@ -37,4 +37,4 @@
         </div>
     <?php endif; ?>
 </div>
-<script src="<?= $e($baseUrl) ?>/js/drafts.js" defer></script>
+<script src="<?= $e($asset('/js/drafts.js')) ?>" defer></script>

@@ -3,7 +3,7 @@
  * app/views/layouts/app.php — app shell for logged-in pages (header, nav, content).
  *
  * Passed by the controller:  $content (set by View), $title, $active, $showHeader, $aside
- * Passed by View::shared():  $e, $appName, $baseUrl, $lang, $dir, $flash
+ * Passed by View::shared():  $e, $appName, $baseUrl, $lang, $dir, $flash, $asset
  */
 $active     = $active ?? 'home';
 $showHeader = $showHeader ?? true;
@@ -50,10 +50,10 @@ $unreadHelpCount = is_array($currentUser) && isset($currentUser['id'])
     </div>
 
 </div>
-<script src="<?= $e($baseUrl) ?>/js/content-editor.js" defer></script>
-<script src="<?= $e($baseUrl) ?>/js/image-viewer.js" defer></script>
-<script src="<?= $e($baseUrl) ?>/js/avatar-crop.js" defer></script>
-<script src="<?= $e($baseUrl) ?>/js/app.js" defer></script>
-<script src="<?= $e($baseUrl) ?>/js/pwa-guide.js" defer></script>
+<script src="<?= $e($asset('/js/content-editor.js')) ?>" defer></script>
+<script src="<?= $e($asset('/js/image-viewer.js')) ?>" defer></script>
+<script src="<?= $e($asset('/js/avatar-crop.js')) ?>" defer></script>
+<script src="<?= $e($asset('/js/app.js')) ?>" defer></script>
+<script src="<?= $e($asset('/js/pwa-guide.js')) ?>" defer></script>
 </body>
 </html>

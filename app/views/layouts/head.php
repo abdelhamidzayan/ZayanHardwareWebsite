@@ -1,7 +1,9 @@
 <?php
 /**
  * app/views/layouts/head.php — shared <head> content for every layout.
- * Scope comes from the layout: $e, $baseUrl, $appName, $title.
+ * Scope comes from the layout: $e, $baseUrl, $appName, $title, $asset.
+ * Stylesheets use $asset() so their URLs change whenever the file changes,
+ * which allows the long-lived cache policy in public/.htaccess.
  */
 $pageTitle = isset($title) && $title !== '' ? $title . ' | ' . $appName : $appName;
 ?>
@@ -21,11 +23,11 @@ $pageTitle = isset($title) && $title !== '' ? $title . ' | ' . $appName : $appNa
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/tokens.css">
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/app.css">
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/components.css">
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/pages.css">
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/responsive.css">
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/issue-discussion.css">
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/pwa-guide.css">
-<link rel="stylesheet" href="<?= $e($baseUrl) ?>/css/post-composer.css">
+<link rel="stylesheet" href="<?= $e($asset('/css/tokens.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/css/app.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/css/components.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/css/pages.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/css/responsive.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/css/issue-discussion.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/css/pwa-guide.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/css/post-composer.css')) ?>">
