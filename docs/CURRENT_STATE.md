@@ -24,7 +24,7 @@
 
 # Zayan Hardware — Current Project State
 
-> **Last updated:** 2026-10-31. Always recheck live GitHub refs, local checkout, database, and deployment before acting.
+> **Last updated:** 2026-11-01. Always recheck live GitHub refs, local checkout, database, and deployment before acting.
 
 ## 1. Current goal and delivery plan
 
@@ -41,10 +41,10 @@ The full scope and acceptance criteria are in [COMPLETION_PLAN.md](COMPLETION_PL
 - PR [#17](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/17) merged into `main` on 2026-10-31. Merge commit: `94ad4e077de6d0698ca1f2dad138a9fa9ada62cf`.
 - PR [#18](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/18) merged into `main` on 2026-10-31. Merge commit: `dadddde53f394a0fe353b575ec13dbeb85749f6e`.
 - PR [#19](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/pull/19) merged into `main` on 2026-10-31. Merge commit: `bf871bba8de078588a0d17778ed4520199188f96` (skill-test input and answer-exposure hardening).
-- Superseded PRs #13, #14, and #15 were closed after reviewing their changes; the live repository currently has no open pull requests or open issues. A path-scoped one-time GitHub Actions workflow has been added to delete the 26 reviewed superseded branch refs while preserving `main`; verify its run before claiming branch cleanup complete.
+- Superseded PRs #13, #14, and #15 were closed after reviewing their changes; a live GitHub search currently reports no open pull requests or open issues. A fresh branch search on 2026-11-01 returned 26 branch refs, including `main` and `brand/cream-green-identity`; therefore, the earlier branch-cleanup completion statement is not currently accurate. Do not delete historical refs without reviewing their contents and confirming the intended cleanup scope.
 - **Authoritative development branch:** `main`. The Phase 2 code-integration merge commit is `dadddde53f394a0fe353b575ec13dbeb85749f6e`; subsequent commits on `main` are documentation updates. Current exact-head CI on `53d24bb038b656c05d7c0aaea4fb460b1cb15ed5`: PHP [41240801476](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41240801476), Graphify [41240801444](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41240801444), and database matrix [41240801466](https://github.com/abdelhamidzayan/ZayanHardwareWebsite/actions/runs/41240801466) all passed. Resolve the live `main` head before new work.
 - The merged work includes the accumulated product features, Phase 1 reliability work, and the Phase 2 session/CSRF/object-authorization baseline. It has not been deployed.
-- `main` is the only remaining branch ref. The 26 reviewed historical branch refs were deleted; future feature work should branch from `main`.
+- `main` remains the authoritative development branch. The live branch search currently shows 26 refs in total; `brand/cream-green-identity` is the isolated brand-work branch, while the other refs require individual review before any cleanup. Future feature work should branch from the latest `main`.
 - The owner's local Kali checkout remains on `local/audit-update-20261031` at `46960cf9efb33b2b0affa503d5e832725bdba4b4`, with modified and untracked files. It is not synchronized with `main`. Preserve those files; do not run the updater, reset, clean, or pull until a safe local reconciliation plan is prepared.
 - No merge above is evidence of deployment, live database migration, or production acceptance.
 
