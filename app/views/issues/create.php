@@ -157,12 +157,13 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
                     <button type="button" data-format="code_block" aria-label="كتلة كود" title="كتلة كود">{ }</button>
                     <button type="button" data-format="divider" aria-label="فاصل" title="فاصل">―</button>
                 </div>
-                <label class="field post-composer__details-field">
-                    <span class="sr-only">تفاصيل المنشور</span>
-                    <div class="post-composer__details-editor" data-details-editor></div>
+                <div class="field post-composer__details-field" role="group" aria-label="تفاصيل المنشور">
+                    <span class="sr-only" id="post-details-label">تفاصيل المنشور</span>
+                    <div class="post-composer__details-editor" data-details-editor role="textbox" aria-multiline="true" aria-labelledby="post-details-label"></div>
                     <textarea class="field__input post-composer__details" name="description" data-details rows="7" maxlength="10000"
+                        aria-label="تفاصيل المنشور"
                         placeholder="اشرح المشكلة أو المعلومة الفنية، واذكر القياسات والنتيجة..."><?= $e((string) ($draftPayload['description'] ?? '')) ?></textarea>
-                </label>
+                </div>
             </div>
 
             <div class="post-composer__audio-mode" data-audio-mode <?= $detailsMode !== 'audio' ? 'hidden' : '' ?>>
