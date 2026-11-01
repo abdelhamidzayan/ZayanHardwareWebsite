@@ -48,7 +48,7 @@ final class AdminTerminalController extends Controller
         if (preg_match('/[;&|<>$(){}\x00-\x1F]/',$input)) throw new \InvalidArgumentException('رموز shell المركبة غير مسموحة.');
         $p=preg_split('/\s+/',$input) ?: []; $cmd=array_shift($p) ?? '';
         $root=realpath(App::root()); if (!$root) throw new \RuntimeException('Project root unavailable.');
-        if ($cmd==='help'&&!$p) return ['help',"help\npwd\nls [path]\ncat <file>\nphp -v\nphp -l <file.php>\ngit status\ngit log\ngit diff --stat\nlogs [app|access|security|audit]"];
+        if ($cmd==='help'&&!$p) return ['help',"help\npwd\nls [path]\ncat <file>\nphp -v\nphp -l <file.php>\ngit status\ngit log\ngit diff --stat\nlogs [app|access|security|audit]\ndb status\ndb tables\ndb migration <filename.sql>"];
         if ($cmd==='pwd'&&!$p) return ['pwd',$root];
         if ($cmd==='ls'&&count($p)<=1) {
             $d=$this->path($root,$p[0]??'.',true); $a=[];
@@ -72,9 +72,9 @@ final class AdminTerminalController extends Controller
         if ($cmd==='db' && $p===['tables']) return ['db tables',$this->databaseTables()];
         if ($cmd==='db' && count($p)===2 && $p[0]==='migration') {
             $name=$p[1];
-            if (!preg_match('/^\\d{3}_[a-z0-9_]+\\.sql$/D',$name)) throw new \\InvalidArgumentException('حدد اسم ملف migration مرقمًا من مجلد database/migrations فقط.');
+            if (!preg_match('/^\\d{3}_[a-z0-9_]+\\.sql$/D',$name)) throw new \InvalidArgumentException('حدد اسم ملف migration مرقمًا من مجلد database/migrations فقط.');
             $file=$this->path($root,'database/migrations/'.$name,false);
-            if (filesize($file)>65536) throw new \\InvalidArgumentException('ملف migration أكبر من 64KB.');
+            if (filesize($file)>65536) throw new \InvalidArgumentException('ملف migration أكبر من 64KB.');
             $sql=file_get_contents($file);
             if (!is_string($sql)) throw new \\RuntimeException('تعذرت قراءة migration.');
             return ['db migration',$this->redact($sql)];
@@ -106,14 +106,14 @@ final class AdminTerminalController extends Controller
             $lines[]='لن يتم تشغيل أو تسجيل أي migration تلقائيًا من وحدة التشخيص.';
             $lines[]='Files:';
             foreach($names as $name) $lines[]='  '.$name;
-            return implode("\\n",$lines);
+            return implode("\n",$lines);
         }
-        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'schema_migrations'")->fetchAll(\\PDO::FETCH_COLUMN);
+        $columns=$pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'schema_migrations'")->fetchAll(\PDO::FETCH_COLUMN);
         if (!in_array('migration',$columns,true)) {
             $lines[]='Migration ledger: FOUND but unsupported schema (expected migration column).';
-            return implode("\\n",$lines);
+            return implode("\n",$lines);
         }
-        $applied=$pdo->query('SELECT migration FROM schema_migrations ORDER BY migration')->fetchAll(\\PDO::FETCH_COLUMN);
+        $applied=$pdo->query('SELECT migration FROM schema_migrations ORDER BY migration')->fetchAll(\PDO::FETCH_COLUMN);
         $appliedMap=array_fill_keys(array_map('strval',$applied),true);
         $lines[]='Migration ledger: FOUND ('.count($applied).' recorded).';
         $pending=[];
@@ -123,7 +123,7 @@ final class AdminTerminalController extends Controller
         }
         $lines[]='Unrecorded files: '.count($pending);
         $lines[]='تنبيه: السجل يوضح ما تم تسجيله فقط؛ لا يثبت تطابق schema الفعلي.';
-        return implode("\\n",$lines);
+        return implode("\n",$lines);
     }
 
     private function databaseTables(): string
@@ -133,7 +133,7 @@ final class AdminTerminalController extends Controller
         if(!$rows) return 'لا توجد جداول في قاعدة البيانات الحالية.';
         $lines=['Database: '.(string)$pdo->query('SELECT DATABASE()')->fetchColumn(),'Tables/views: '.count($rows)];
         foreach($rows as $row) $lines[]='['.($row['TABLE_TYPE']==='VIEW'?'VIEW':'TABLE').'] '.$row['TABLE_NAME'];
-        return implode("\\n",$lines);
+        return implode("\n",$lines);
     }
 
     private function path(string $root,string $rel,bool $dir): string
