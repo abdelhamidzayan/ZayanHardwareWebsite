@@ -16,6 +16,7 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 8. [Three-phase completion plan](docs/COMPLETION_PLAN.md) — phase scope, acceptance criteria, and remaining release gates.
 9. [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md) — CSRF, guest access, and authorization review for every POST endpoint.
 10. [Admin database and migration diagnostics](docs/ADMIN_DATABASE_DIAGNOSTICS.md) — read-only checks and migration safety boundary.
+11. [Migration readiness and safe upgrade policy](docs/MIGRATION_READINESS.md) — legacy migration ambiguity, existing-database adoption, and forward migration rules.
 11. [Database backup and restore runbook](docs/DATABASE_BACKUP_RESTORE.md) — safe separate-database restore and read-only schema/row-count comparison.
 12. [Storage recovery triage](docs/STORAGE_RECOVERY_RUNBOOK.md) — safe handling of pending filesystem recovery records.
 13. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
