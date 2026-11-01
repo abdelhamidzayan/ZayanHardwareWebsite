@@ -4,7 +4,7 @@
 - No shell interpreter, arbitrary command execution, file mutation, package installation, `sudo`, or `su` is available in the web console.
 - Documented direct SSH over Tailscale for sudo operations; the password remains in the SSH TTY and never enters PHP.
 - Added `tests/php/admin-terminal-policy.php` and wired it into PHP CI. After fixing PHP exception-name escaping, terminal output newlines, and literal test markers, exact implementation commit `bf6950a395adc33849f5cff2237050e7246d9bcf` passed PHP syntax + focused policy tests, Graphify, and the full MySQL 8.0 / MariaDB 10.4.32 / MariaDB 10.11 integration matrix. Browser/mobile runtime and host SSH setup remain unverified.
-- No schema, routes, user content, uploads, or host SSH/Tailscale/sudoers settings changed. Implemented on `feat/admin-terminal-batch-safe`; not merged or deployed.
+- No schema, routes, user content, uploads, or host SSH/Tailscale/sudoers settings changed. Merged into `main` via PR #44 (merge commit `32a73406a19620d81b763920aca5b0423629283a`); deployment has not been performed.
 
 ## 2026-11-01 — Establish Zayan Hardware cream-and-green brand identity
 
