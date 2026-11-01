@@ -67,11 +67,44 @@
             <a class="btn btn--primary btn--block" href="<?= $e($baseUrl) ?>/login">سجّل الدخول لطلب مساعدة شخصية</a>
         <?php endif; ?>
 
-        <?php if ($currentUser && ($currentUser['role'] ?? '') === 'admin') : ?>
-            <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/admin/users">إدارة الحسابات</a>
-        <?php endif; ?>
         <?php if ($profile['is_owner']) : ?></div><?php endif; ?>
     </section>
+
+    <?php if ($profile['is_owner'] && ($currentUser['role'] ?? '') === 'admin') : ?>
+        <section class="card account-admin" aria-labelledby="account-admin-title">
+            <div class="account-admin__head">
+                <div>
+                    <span class="account-admin__eyebrow">مساحة خاصة بالمدير</span>
+                    <h2 id="account-admin-title">لوحة الإدارة</h2>
+                    <p class="muted">كل أدوات إدارة Zayan Hardware مجمعة هنا في مكان واحد.</p>
+                </div>
+                <a class="btn btn--primary" href="<?= $e($baseUrl) ?>/admin">فتح لوحة التحكم</a>
+            </div>
+
+            <div class="account-admin__group">
+                <h3>إدارة المجتمع</h3>
+                <div class="account-admin__links">
+                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/users"><strong>إدارة الحسابات</strong><span>مراجعة الأعضاء والصلاحيات وحالة الحسابات</span></a>
+                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/device-model-suggestions"><strong>اقتراحات موديلات الأجهزة</strong><span>مراجعة واعتماد أو رفض الموديلات المقترحة</span></a>
+                </div>
+            </div>
+
+            <div class="account-admin__group">
+                <h3>المحتوى والتقييم</h3>
+                <div class="account-admin__links">
+                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin"><strong>منشورات الرئيسية</strong><span>اختيار المنشورات الفنية المعروضة في الرئيسية</span></a>
+                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/skill-tests"><strong>اختبارات المهارات</strong><span>إنشاء الاختبارات ومراجعة تفعيلها</span></a>
+                </div>
+            </div>
+
+            <div class="account-admin__group">
+                <h3>النظام</h3>
+                <div class="account-admin__links">
+                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/update"><strong>تحديث الموقع</strong><span>تطبيق آخر إصدار من GitHub على النسخة المحلية</span></a>
+                </div>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <section class="profile-activity">
         <div class="profile-activity__head"><h2>مشاركات <?= $e($profile['display_name']) ?></h2><span class="badge"><?= count($profilePosts) ?></span></div>
