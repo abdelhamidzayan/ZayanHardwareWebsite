@@ -637,7 +637,7 @@ textarea { max-inline-size: 100%; }
 .app-header .header-actions > .account-menu > .account-menu__trigger {
   transition: background-color .18s ease, color .18s ease;
 }
-.app-header .header-actions > .a.header-page-link.is-active > .icon,
+.app-header .header-actions > a.header-page-link.is-active > .icon,
 .app-header .header-actions > .account-menu > .account-menu__trigger.is-active > .icon,
 .app-header .header-actions > .account-menu[open] > .account-menu__trigger > .icon {
   color: #fff !important;
