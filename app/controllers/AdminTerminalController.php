@@ -78,7 +78,7 @@ final class AdminTerminalController extends Controller
     private function path(string $root,string $rel,bool $dir): string
     {
         if($rel===''||str_starts_with($rel,'/')||str_contains($rel,'\\')||str_contains($rel,'..')) throw new \InvalidArgumentException('المسار غير مسموح.');
-        $f=realpath($root.'/'.$rel); if(!$f||!str_starts_with($f,$root.DIRECTORY_SEPARATOR)) throw new \InvalidArgumentException('المسار خارج المشروع أو غير موجود.');
+        $f=realpath($root.'/'.$rel); if(!$f||($f!==$root&&!str_starts_with($f,$root.DIRECTORY_SEPARATOR))) throw new \InvalidArgumentException('المسار خارج المشروع أو غير موجود.');
         $parts=preg_split('~[\\\\/]~',substr($f,strlen($root)))?:[];
         if(array_intersect($parts,['.git','vendor','storage','uploads','cache'])) throw new \InvalidArgumentException('الوصول لهذا المجلد محظور.');
         $base=strtolower(basename($f));
