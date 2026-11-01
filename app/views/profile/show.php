@@ -100,7 +100,8 @@
             <div class="account-admin__group">
                 <h3>النظام</h3>
                 <div class="account-admin__links">
-                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/update"><strong>تحديث الموقع</strong><span>تطبيق آخر إصدار من GitHub على النسخة المحلية</span></a>\n                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/terminal"><strong>وحدة التشخيص</strong><span>فحص الملفات والأوامر والسجلات من المتصفح</span></a>
+                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/update"><strong>تحديث الموقع</strong><span>تطبيق آخر إصدار من GitHub على النسخة المحلية</span></a>
+                    <a class="account-admin__link" href="<?= $e($baseUrl) ?>/admin/terminal"><strong>وحدة التشخيص</strong><span>فحص الملفات والأوامر والسجلات من المتصفح</span></a>
                 </div>
             </div>
         </section>
