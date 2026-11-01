@@ -36,13 +36,7 @@ final class AvatarController extends Controller
                 ? (string) $user['avatar_key'] : 'technician-blue';
             $defaultFile = \App\Core\App::root('public/assets/avatars/' . $key . '.svg');
             if (!is_file($defaultFile)) return $this->notFound();
-            return Response::streamFile($defaultFile, 0, (int) filesize($defaultFile), 200, [
-                'Content-Type' => 'image/svg+xml; charset=utf-8',
-                'Content-Length' => (string) filesize($defaultFile),
-                'Cache-Control' => 'public, max-age=0, must-revalidate',
-                'X-Content-Type-Options' => 'nosniff',
-                'Content-Security-Policy' => "default-src 'none'; sandbox",
-            ]);
+            return $this->avatarFileResponse($defaultFile, 'image/svg+xml; charset=utf-8');
         }
         $relative = (string) $user['avatar_path'];
         if (!preg_match('~^avatars/' . $userId . '/[a-f0-9]{40}\.(?:jpg|png|webp)$~', $relative)) {
@@ -56,13 +50,45 @@ final class AvatarController extends Controller
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
         if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) return $this->notFound();
-        return Response::streamFile($file, 0, (int) filesize($file), 200, [
-            'Content-Type' => $mime,
-            'Content-Length' => (string) filesize($file),
-            'Cache-Control' => 'public, max-age=0, must-revalidate',
-            'X-Content-Type-Options' => 'nosniff',
-            'Content-Security-Policy' => "default-src 'none'; sandbox",
-        ]);
+        return $this->avatarFileResponse($file, $mime);
+    }
+
+    /**
+     * Stream an avatar with validator headers so repeat views revalidate with
+     * a cheap 304 instead of re-downloading the image on every page.
+     * The URL stays the same when a member changes their avatar, so caching
+     * remains revalidation-based: a changed file means a new mtime/ETag and
+     * browsers immediately receive the fresh image.
+     */
+    private function avatarFileResponse(string $file, string $contentType): Response
+    {
+        $size  = (int) filesize($file);
+        $mtime = (int) filemtime($file);
+        $etag  = '"' . dechex($mtime) . '-' . dechex($size) . '"';
+
+        $headers = [
+            'Content-Type'              => $contentType,
+            'Cache-Control'             => 'public, max-age=0, must-revalidate',
+            'ETag'                      => $etag,
+            'Last-Modified'             => gmdate('D, d M Y H:i:s', $mtime) . ' GMT',
+            'X-Content-Type-Options'    => 'nosniff',
+            'Content-Security-Policy'   => "default-src 'none'; sandbox",
+        ];
+
+        $ifNoneMatch = trim((string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? ''));
+        if ($ifNoneMatch !== '') {
+            foreach (explode(',', $ifNoneMatch) as $candidate) {
+                $candidate = trim($candidate);
+                $candidate = preg_replace('/^W\//i', '', $candidate) ?? $candidate;
+                if ($candidate === '*' || $candidate === $etag) {
+                    return new Response('', 304, $headers);
+                }
+            }
+        }
+
+        $headers['Content-Length'] = (string) $size;
+
+        return Response::streamFile($file, 0, $size, 200, $headers);
     }
 
     public function update(): Response

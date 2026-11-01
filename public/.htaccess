@@ -2,13 +2,45 @@
 Options -Indexes -MultiViews
 DirectoryIndex index.php
 
-# Correct PWA manifest MIME type and keep worker updates fresh.
+# Correct PWA manifest MIME type.
 AddType application/manifest+json .webmanifest
-<Files "service-worker.js">
-    <IfModule mod_headers.c>
-        Header set Cache-Control "no-cache, no-store, must-revalidate"
-    </IfModule>
-</Files>
+
+# Compress text-based responses. Binary media stays untouched, and partial
+# (range) responses are never compressed by mod_deflate.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml
+</IfModule>
+
+# The app links every stylesheet/script with a content-derived ?v= marker
+# (see App\Core\Assets), so a deployed change always produces a new URL.
+# That makes long-lived caching safe for versioned static files.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 month"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Versioned CSS/JS never changes under the same URL.
+    <FilesMatch "\.(?:css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(?:svg|png|jpe?g|webp|gif|ico|woff2?)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+    <FilesMatch "\.(?:css|js|svg|png|jpe?g|webp|gif|ico|woff2?|webmanifest)$">
+        Header set X-Content-Type-Options "nosniff"
+    </FilesMatch>
+</IfModule>
 
 <FilesMatch "^\.">
     Require all denied
@@ -22,3 +54,14 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 RewriteRule ^ index.php [L,QSA]
+
+# The service worker itself must always be revalidated so updates roll out
+# immediately. This block intentionally follows the cache rules above:
+# Apache applies matching <Files>/<FilesMatch> sections in order, so this
+# override wins for service-worker.js.
+<Files "service-worker.js">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header unset Expires
+    </IfModule>
+</Files>

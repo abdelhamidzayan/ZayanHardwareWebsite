@@ -38,13 +38,16 @@ final class View
             unset($_SESSION['flash']);
         }
 
+        $baseUrl = Request::basePath();
+
         return [
             'appName' => (string) App::config('app.name', 'Hardware Tech'),
-            'baseUrl' => Request::basePath(),
+            'baseUrl' => $baseUrl,
             'lang'    => (string) App::config('app.lang', 'ar'),
             'dir'     => (string) App::config('app.dir', 'rtl'),
             'flash'   => $flash,
             'e'       => static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8'),
+            'asset'   => static fn (string $path): string => Assets::url($baseUrl, $path),
             'csrf'    => static fn (): string => Csrf::field(),
             'currentUser' => AuthService::user(),
         ];
