@@ -200,9 +200,9 @@
 .post-composer__text-mode .cm-live-preview-fence { min-height: .3rem; background: var(--color-primary-soft); }
 .post-composer__text-mode .cm-live-preview-code-line { background: var(--color-field); }
 .cm-live-preview-rule { display: block; height: 1px; margin: .6em 0; background: var(--color-border); }
-.post-composer__format-tools { position: sticky; top: .5rem; z-index: 15; flex-wrap: nowrap; overflow-x: auto; }
+.post-composer__format-tools { position: static; z-index: auto; flex-wrap: nowrap; overflow-x: auto; }
 .post-composer__format-tools button { flex: 0 0 auto; min-width: 44px; min-height: 44px; }
 @media (max-width: 640px) {
-  .post-composer__format-tools { position: fixed; inset-inline: .5rem; bottom: calc(.5rem + var(--editor-keyboard-offset, 0px)); z-index: 80; border: 1px solid var(--color-border); border-radius: .8rem; box-shadow: var(--shadow-float); background: var(--color-surface); }
-  .post-composer__text-mode { padding-bottom: 3.8rem; }
+  .post-composer__format-tools { position: static; inset: auto; bottom: auto; z-index: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md) var(--radius-md) 0 0; box-shadow: none; background: var(--color-field); }
+  .post-composer__text-mode { padding-bottom: 0; }
 }
