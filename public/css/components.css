@@ -494,3 +494,24 @@
   .profile-details, .profile-skills { padding: var(--space-3); }
   .profile__list > div { align-items: flex-start; }
 }
+
+
+/* Organized administrator tools inside the account profile. */
+.account-admin { display:grid; gap:var(--space-5); border-color:var(--color-primary-soft); }
+.account-admin__head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; }
+.account-admin__head > div { display:grid; gap:.35rem; }
+.account-admin__head h2 { font-size:var(--text-xl); }
+.account-admin__eyebrow { color:var(--color-primary); font-size:var(--text-xs); font-weight:800; }
+.account-admin__group { display:grid; gap:var(--space-3); }
+.account-admin__group > h3 { font-size:var(--text-md); }
+.account-admin__links { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); }
+.account-admin__link { display:grid; align-content:start; gap:.35rem; min-width:0; padding:var(--space-4); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-bg); color:var(--color-ink); text-decoration:none; transition:border-color .15s ease,background-color .15s ease; }
+.account-admin__link:hover,.account-admin__link:focus-visible { border-color:var(--color-primary); background:var(--color-primary-soft); }
+.account-admin__link strong { font-size:var(--text-sm); }
+.account-admin__link span { color:var(--color-muted); font-size:var(--text-xs); line-height:1.65; }
+@media(max-width:639px) {
+ .account-admin__head { align-items:stretch; }
+ .account-admin__head .btn { width:100%; }
+ .account-admin__links { grid-template-columns:minmax(0,1fr); }
+ .account-admin__link { padding:var(--space-3); }
+}
