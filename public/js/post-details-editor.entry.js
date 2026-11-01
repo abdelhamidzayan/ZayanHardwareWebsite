@@ -129,8 +129,8 @@ function create({ textarea, host, onChange }) {
         }),
         EditorView.theme({
           '&': { direction: 'auto' },
-          '.cm-content': { minHeight: '12em', padding: '.85rem', fontFamily: 'inherit' },
-          '.cm-scroller': { maxHeight: '12em', overflow: 'auto', fontFamily: 'inherit' },
+          '.cm-content': { minHeight: '0', padding: '.85rem', fontFamily: 'inherit' },
+          '.cm-scroller': { height: '100%', maxHeight: 'none', overflow: 'auto', fontFamily: 'inherit' },
           '.cm-line': { paddingInline: '.15rem' }
         })
       ]
