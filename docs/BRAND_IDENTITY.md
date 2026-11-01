@@ -61,4 +61,4 @@ The canonical CSS tokens live in `public/css/tokens.css`. Components should cons
 | `--color-muted` | `#6B6D65` |
 | `--color-brand-gray` | `#74766E` |
 
-This guide describes the intended system. It does not claim that every legacy hard-coded color or every screen has already been migrated.
+The admin diagnostic console and image-editing workspace may use dark charcoal surfaces as focused technical tools; their accent and status colors should still follow the shared semantic tokens. This guide describes the intended system and does not claim that every screen has been browser-verified.
