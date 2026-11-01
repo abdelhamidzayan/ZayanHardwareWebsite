@@ -95,4 +95,18 @@ $avatarSrc = !empty($currentUser['avatar_path']) ? $baseUrl . '/avatar/' . (int)
             </button>
         </div>
     </section>
+
+    <section class="help-section settings-logout" aria-labelledby="settings-logout-title">
+        <div class="help-section__head">
+            <div><h2 class="help-section__title" id="settings-logout-title">جلسة الحساب</h2><p class="help-section__intro">أنه جلسة تسجيل الدخول على هذا الجهاز بأمان. ستحتاج إلى تسجيل الدخول مرة أخرى لاستخدام حسابك.</p></div>
+        </div>
+        <form class="card settings-logout__card" method="post" action="<?= $e($baseUrl) ?>/logout">
+            <?= $csrf() ?>
+            <div><strong>تسجيل الخروج</strong><p class="muted">لن يتم حذف ملفك الشخصي أو منشوراتك أو أي بيانات محفوظة.</p></div>
+            <button class="btn btn--secondary settings-logout__button" type="submit">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
+                تسجيل الخروج من الحساب
+            </button>
+        </form>
+    </section>
 </div>

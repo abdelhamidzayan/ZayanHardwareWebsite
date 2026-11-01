@@ -42,7 +42,10 @@
 
         <?php if ($profile['is_owner']) : ?>
             <div class="profile__actions">
-            <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/settings">تعديل إعدادات الملف الشخصي</a>
+            <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/settings">إعدادات الحساب والملف الشخصي</a>
+            <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/workbench">طاولة العمل</a>
+            <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/drafts">المسودات المحفوظة</a>
+            <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/my-posts">إدارة منشوراتي</a>
             <a class="btn btn--secondary btn--block" href="<?= $e($baseUrl) ?>/skills/tests">اختبارات المهارات</a>
         <?php elseif ($currentUser) : ?>
             <?php if ($profile['accept_help_requests']) : ?>

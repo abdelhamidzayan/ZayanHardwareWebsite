@@ -1202,3 +1202,21 @@
   inline-size: 1rem;
   block-size: 1rem;
 }
+
+
+/* Account settings sign-out area */
+.settings-logout__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
+}
+.settings-logout__card > div { display: grid; gap: .3rem; min-width: 0; }
+.settings-logout__card p { margin: 0; }
+.settings-logout__button { color: var(--color-danger); border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border)); }
+.settings-logout__button .icon { inline-size: 1.1rem; block-size: 1.1rem; }
+@media (max-width: 520px) {
+  .settings-logout__button { inline-size: 100%; justify-content: center; }
+}
