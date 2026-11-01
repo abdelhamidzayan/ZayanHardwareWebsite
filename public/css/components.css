@@ -57,8 +57,8 @@
   font-weight: 600;
 }
 
-.btn--primary { background: var(--color-primary); color: #fff; }
-.btn--primary:hover { background: var(--color-primary-hover); }
+.btn--primary { background: var(--color-cta); color: #fff; }
+.btn--primary:hover { background: var(--color-cta-hover); }
 
 /* ---------- Empty / error state ---------- */
 .empty-state {
@@ -278,7 +278,7 @@
 .notification-item__body { display: grid; gap: var(--space-2); min-inline-size: 0; }
 .notification-item__heading { display: flex; align-items: center; gap: var(--space-2); }
 .notification-item__body p { line-height: 1.7; overflow-wrap: anywhere; }
-.notification-item.is-unread { border-color: rgb(37 99 235 / 35%); background: linear-gradient(0deg, var(--color-primary-soft), var(--color-surface) 90%); }
+.notification-item.is-unread { border-color: color-mix(in srgb, var(--color-primary) 35%, transparent); background: linear-gradient(0deg, var(--color-primary-soft), var(--color-surface) 90%); }
 .notification-item__dot { inline-size: .5rem; block-size: .5rem; border-radius: 50%; background: var(--color-primary); flex: none; }
 @media (max-width: 639px) {
   .notification-item { align-items: stretch; flex-direction: column; }
@@ -383,7 +383,7 @@
 .personal-help-card__actions,.personal-help-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .help-status { display:inline-flex; align-items:center; width:max-content; padding:.3rem .7rem; border:1px solid var(--color-border); border-radius:var(--radius-pill); color:var(--color-muted); font-size:var(--text-xs); font-weight:700; }
 .help-status--pending { color:#a16207; background:#fef9c3; border-color:#fde68a; }
-.help-status--active { color:#1d4ed8; background:var(--color-primary-soft); border-color:#bfdbfe; }
+.help-status--active { color:var(--color-primary); background:var(--color-primary-soft); border-color:var(--color-primary-border); }
 .help-status--closed { color:#475569; background:#f1f5f9; }
 .help-status--declined { color:var(--color-danger); background:#fef2f2; border-color:#fecaca; }
 .personal-help-head { align-items:center; }
@@ -396,7 +396,7 @@
 .personal-help-thread__head { display:flex; justify-content:space-between; align-items:center; gap:var(--space-3); flex-wrap:wrap; padding-block-end:var(--space-3); border-block-end:1px solid var(--color-border); }
 .personal-help-thread__head h2 { font-size:var(--text-lg); }
 .personal-message { display:grid; gap:var(--space-2); max-width:92%; padding:var(--space-3); border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-bg); }
-.personal-message.is-mine { justify-self:end; border-color:#bfdbfe; background:var(--color-primary-soft); }
+.personal-message.is-mine { justify-self:end; border-color:var(--color-primary-border); background:var(--color-primary-soft); }
 .personal-message__head { display:flex; align-items:center; gap:var(--space-2); }
 .personal-message__head strong { font-size:var(--text-sm); }
 .personal-message__head time { margin-inline-start:auto; color:var(--color-muted); font-size:var(--text-xs); }
