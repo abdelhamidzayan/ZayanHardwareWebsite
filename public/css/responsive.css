@@ -773,3 +773,48 @@ textarea { max-inline-size: 100%; }
   inline-size: 2.2rem;
   block-size: 2.2rem;
 }
+
+
+/* Header icon alignment and consistent outline icons on every viewport. */
+.app-header .header-actions > .icon-btn,
+.app-header .header-actions > .notification-menu > summary,
+.app-header .header-actions > .help-request-menu > summary {
+  display: grid;
+  place-items: center;
+  padding: 0 !important;
+  line-height: 0;
+  text-align: center;
+  box-sizing: border-box;
+}
+.app-header .header-actions > .icon-btn > .icon,
+.app-header .header-actions > .notification-menu > summary > .icon,
+.app-header .header-actions > .help-request-menu > summary > .icon {
+  display: block;
+  inline-size: 1.35rem;
+  block-size: 1.35rem;
+  margin: 0;
+  transform: none;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.app-header .header-actions > .icon-btn,
+.app-header .header-actions > .notification-menu > summary,
+.app-header .header-actions > .help-request-menu > summary {
+  inline-size: 2.75rem;
+  min-inline-size: 2.75rem;
+  block-size: 2.75rem;
+  min-block-size: 2.75rem;
+}
+@media (max-width: 1023px) {
+  .app-header .header-actions > .icon-btn,
+  .app-header .header-actions > .notification-menu > summary,
+  .app-header .header-actions > .help-request-menu > summary {
+    inline-size: 2.55rem;
+    min-inline-size: 2.55rem;
+    block-size: 2.55rem;
+    min-block-size: 2.55rem;
+  }
+}
