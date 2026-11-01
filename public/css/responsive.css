@@ -625,7 +625,7 @@ textarea { max-inline-size: 100%; }
 }
 
 
-/* Match the guest header: soft blue background with blue foreground. */
+/* Match the guest header: soft green background with green foreground. */
 .app-header .header-actions > a.header-page-link.is-active,
 .app-header .header-actions > .account-menu > .account-menu__trigger.is-active,
 .app-header .header-actions > .account-menu[open] > .account-menu__trigger {
@@ -644,7 +644,7 @@ textarea { max-inline-size: 100%; }
   stroke: currentColor !important;
 }
 
-/* Guest header uses the same soft-blue active treatment. */
+/* Guest header uses the same soft-green active treatment. */
 .guest-header__actions .guest-header__link.is-active {
   border: 0 !important;
   background: var(--color-primary-soft) !important;
