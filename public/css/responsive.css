@@ -134,7 +134,7 @@ img, video, canvas, iframe {
   color: var(--color-primary) !important;
 }
 .registration-progress__step:not(:last-child)::before {
-  background: var(--color-border, #e5e7eb) !important;
+  background: var(--color-border, #e8e2d2) !important;
 }
 .choice-card:has(input:checked),
 .wizard-choice__card:has(input:checked) {
@@ -348,7 +348,7 @@ textarea { max-inline-size: 100%; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: 0 14px 36px rgb(15 23 42 / 14%);
+  box-shadow: 0 14px 36px rgb(51 60 55 / 14%);
 }
 
 .guest-nav-menu__item {
@@ -704,7 +704,7 @@ textarea { max-inline-size: 100%; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: 0 1rem 2.5rem rgb(15 30 45 / 16%);
+  box-shadow: 0 1rem 2.5rem rgb(51 60 55 / 16%);
   transform-origin: top right;
 }
 .notification-menu[open] .notification-menu__panel,
