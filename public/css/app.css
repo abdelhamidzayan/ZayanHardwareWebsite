@@ -260,7 +260,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: 0 1rem 2.5rem rgba(15, 30, 45, .14);
+  box-shadow: 0 1rem 2.5rem rgba(51, 60, 55, .14);
 }
 .account-menu__identity { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-block-end: 1px solid var(--color-border); margin-block-end: var(--space-2); }
 .account-menu__identity-copy { display: grid; gap: .15rem; min-inline-size: 0; }
@@ -305,7 +305,7 @@
  position:absolute; z-index:60; inset-block-start:calc(100% + .65rem); inset-inline-end:0;
  inline-size:min(23rem,calc(100vw - 1.5rem)); max-block-size:min(70vh,34rem); overflow:auto;
  border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface);
- box-shadow:0 1rem 2.5rem rgba(15,30,45,.16); transform-origin:top right;
+ box-shadow:0 1rem 2.5rem rgba(51,60,55,.16); transform-origin:top right;
 }
 .notification-menu[open] .notification-menu__panel { animation:notification-slide-down .2s ease-out; }
 @keyframes notification-slide-down {
