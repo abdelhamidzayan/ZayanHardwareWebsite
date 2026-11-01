@@ -818,3 +818,24 @@ textarea { max-inline-size: 100%; }
     min-block-size: 2.55rem;
   }
 }
+
+
+/* Active state for message and notification controls on all screen sizes. */
+.app-header .header-actions > .icon-btn.is-active,
+.app-header .header-actions > .notification-menu > summary.is-active,
+.app-header .header-actions > .help-request-menu > summary.is-active,
+.app-header .header-actions > .notification-menu[open] > summary,
+.app-header .header-actions > .help-request-menu[open] > summary {
+  border-color: transparent !important;
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
+  box-shadow: none !important;
+}
+.app-header .header-actions > .icon-btn.is-active > .icon,
+.app-header .header-actions > .notification-menu > summary.is-active > .icon,
+.app-header .header-actions > .help-request-menu > summary.is-active > .icon,
+.app-header .header-actions > .notification-menu[open] > summary > .icon,
+.app-header .header-actions > .help-request-menu[open] > summary > .icon {
+  color: var(--color-primary) !important;
+  stroke: currentColor !important;
+}

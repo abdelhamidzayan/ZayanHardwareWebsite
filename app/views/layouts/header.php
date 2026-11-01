@@ -26,11 +26,14 @@ foreach ($accountActivePrefixes as $prefix) {
 <header class="app-header">
     <div class="topbar">
         <a class="brand" href="<?= $e($baseUrl) ?>/feed" aria-label="<?= $e($appName) ?> - الرئيسية">
+            <span class="brand__logo" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
+            </span>
             <span class="brand__name"><?= $e($appName) ?></span>
         </a>
 
         <div class="header-actions">
-        <a class="icon-btn header-mobile-only" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة">
+        <a class="icon-btn header-mobile-only<?= $helpRequestsActive ? ' is-active' : '' ?>" href="<?= $e($baseUrl) ?>/help-requests" aria-label="المحادثات وطلبات المساعدة">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.25c-5.02 0-9 3.56-9 8s3.98 8 9 8c1.1 0 2.18-.19 3.18-.56L20.5 21l-1.08-5.12A7.4 7.4 0 0 0 21 11.25c0-4.44-3.98-8-9-8Z"/><circle cx="8" cy="11.25" r=".8" fill="currentColor" stroke="none"/><circle cx="12" cy="11.25" r=".8" fill="currentColor" stroke="none"/><circle cx="16" cy="11.25" r=".8" fill="currentColor" stroke="none"/></svg>
             <?php if ($unreadHelpCount > 0) : ?><span class="notification-btn__count"><?= $unreadHelpCount > 99 ? '99+' : $unreadHelpCount ?></span><?php endif; ?>
         </a>
@@ -91,9 +94,6 @@ foreach ($accountActivePrefixes as $prefix) {
             </div>
         </details>
 
-        <a class="account-menu__mobile-profile<?= $accountActive ? ' is-active' : '' ?>" href="<?= $e($profileHref) ?>" aria-label="الملف الشخصي">
-            <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="38" height="38">
-        </a>
         </div>
     </div>
 </header>
