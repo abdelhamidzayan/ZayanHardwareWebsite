@@ -3,7 +3,7 @@
 - Created isolated branch `brand/cream-green-identity` from the authoritative `main`.
 - Applied the cream/ivory + workshop-green palette to shared tokens, CTAs, public/onboarding screens, post composer, issue discussion, PWA guide, browser/PWA theme metadata, and launcher artwork.
 - Added `docs/BRAND_IDENTITY.md` as the canonical palette and usage guide.
-- Self-review added accessible foreground variants for orange actions, higher-contrast muted text, and centralized semantic status colors. The seven layout-loaded CSS files were checked for balanced braces and the targeted legacy palette values; this is source-level verification only.
+- Self-review added accessible foreground variants for orange actions, higher-contrast muted text, and centralized semantic status colors. All eight layout-loaded CSS files were checked for balanced braces and the targeted legacy palette values; this is source-level verification only.
 - No database, routes, technical content, or private media were changed.
 - PHP/JS tests, CI, browser/mobile runtime, merge, and deployment remain pending. The branch must not be treated as the live `main` or local XAMPP state.
 
