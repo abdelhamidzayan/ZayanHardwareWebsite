@@ -179,10 +179,28 @@ def main() -> int:
             backup_file.write_bytes(saved_htaccess)
             print(f"نسخة إعداد XAMPP الاحتياطية: {backup_file}")
 
-        git(repo, "merge", "--ff-only", target_ref)
+            # Temporarily restore the exact tracked version so a future upstream
+            # .htaccess edit cannot make Git refuse the fast-forward.
+            tracked_htaccess = git(repo, "show", f"HEAD:{HTACCESS}").stdout.encode("utf-8")
+            atomic_write(repo / HTACCESS, tracked_htaccess)
+
+        try:
+            git(repo, "merge", "--ff-only", target_ref)
+        except Exception:
+            if saved_htaccess is not None:
+                atomic_write(repo / HTACCESS, saved_htaccess)
+            raise
+
         if merged_htaccess is not None:
-            atomic_write(repo / HTACCESS, merged_htaccess)
-            print("تم الحفاظ على RewriteBase /zayan_hardware/ المحلي.")
+            try:
+                atomic_write(repo / HTACCESS, merged_htaccess)
+                print("تم الحفاظ على RewriteBase /zayan_hardware/ المحلي.")
+            except OSError:
+                # Keep the user's working configuration recoverable even if
+                # the final atomic write fails after the code fast-forward.
+                if saved_htaccess is not None:
+                    atomic_write(repo / HTACCESS, saved_htaccess)
+                raise
 
         print("\nتم تحديث ملفات المشروع بنجاح.")
         print("لم يتم تشغيل migrations أو تعديل قاعدة البيانات أو المنشورات أو uploads.")
