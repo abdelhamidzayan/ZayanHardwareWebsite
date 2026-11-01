@@ -79,12 +79,12 @@ function syncToolbar(view, toolbar) {
     if (/^\s*\x60{3}/.test(view.state.doc.line(n).text)) inFence = !inFence;
   }
   const states = {
-    bold: /^\*\*.*\*\*$/.test(value),
+    bold: /^(?:\s*(?:[-*+]|\d+[.)])\s+|>\s?|#{1,6}\s+)?\*\*.*\*\*$/.test(value),
     heading: /^#{1,6}\s+/.test(value),
     bulleted: /^\s*[-*+]\s+/.test(value),
     numbered: /^\s*\d+[.)]\s+/.test(value),
     quote: /^>\s?/.test(value),
-    inline_code: /^\x60.*\x60$/.test(value),
+    inline_code: /^(?:\s*(?:[-*+]|\d+[.)])\s+|>\s?|#{1,6}\s+)?\x60.*\x60$/.test(value),
     code_block: inFence,
     divider: /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(value)
   };
@@ -291,6 +291,174 @@ window.ZayanPostDetailsEditor = { create };
   let marker = list[2];
   if (/^\d+[.)]$/.test(marker)) {
     marker = String(Number.parseInt(marker, 10) + 1) + marker.slice(-1);
+  }
+  const linePrefix = list[1] + list[2] + ' ';
+  const contentOffset = selection.head - line.from - linePrefix.length;
+  const bold = /^\*\*(.*)\*\*$/.exec(list[3]);
+  const tick = String.fromCharCode(96);
+  const inlineCode = new RegExp('^' + tick + '(.*)' + tick + '
+}
+
+function applyFormat(view, format) {
+  const selection = view.state.selection.main;
+  const hasSelection = !selection.empty;
+  const line = view.state.doc.lineAt(selection.head);
+  const from = hasSelection ? selection.from : line.from;
+  const to = hasSelection ? selection.to : line.to;
+  const selected = view.state.sliceDoc(from, to);
+  let insert = selected;
+  let anchor = from;
+
+  if (format === 'divider') {
+    const divider = /^\s*(?:---+|___+|\*\*\*+)\s*$/.test(line.text);
+    const value = divider ? '' : '---';
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert: value },
+      selection: { anchor: line.from + value.length },
+      scrollIntoView: true
+    });
+    view.focus();
+    return;
+  }
+
+  if (format === 'bold' || format === 'inline_code') {
+    const marker = format === 'bold' ? '**' : '`';
+    const alreadyWrapped = selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= marker.length * 2;
+    if (alreadyWrapped) {
+      insert = selected.slice(marker.length, selected.length - marker.length);
+      anchor = from + Math.max(0, Math.min(selected.length - marker.length * 2, selection.head - from - marker.length));
+    } else if (selected.length === 0 && format === 'bold') {
+      insert = '****';
+      anchor = from + 2;
+    } else if (selected.length === 0) {
+      insert = '``';
+      anchor = from + 1;
+    } else {
+      insert = marker + selected + marker;
+      anchor = from + marker.length + (hasSelection ? selected.length : selected.length);
+    }
+  } else if (format === 'heading' || format === 'numbered' || format === 'bulleted' || format === 'quote') {
+    const prefixes = { heading: '### ', numbered: '1. ', bulleted: '- ', quote: '> ' };
+    const prefix = prefixes[format];
+    const current = line.text;
+    const existing = format === 'heading' ? /^#{1,6}\s+/.exec(current)
+      : format === 'numbered' ? /^\d+[.)]\s+/.exec(current)
+      : format === 'bulleted' ? /^[-*+]\s+/.exec(current)
+      : /^>\s?/.exec(current);
+    if (existing && (format !== 'heading' || existing[0] === prefix)) {
+      insert = current.slice(existing[0].length);
+      anchor = line.from + Math.max(0, selection.head - line.from - existing[0].length);
+    } else {
+      insert = prefix + current;
+      anchor = line.from + prefix.length + Math.max(0, selection.head - line.from);
+    }
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert },
+      selection: { anchor },
+      scrollIntoView: true
+    });
+    view.focus();
+    return;
+  } else if (format === 'code_block') {
+    const fence = /^\s*```/.test(line.text);
+    if (fence) {
+      view.dispatch({ changes: { from: line.from, to: line.to, insert: '' }, selection: { anchor: line.from }, scrollIntoView: true });
+    } else {
+      const block = '```\n' + (line.text || '') + '\n```';
+      view.dispatch({ changes: { from: line.from, to: line.to, insert: block }, selection: { anchor: line.from + 4 + line.text.length }, scrollIntoView: true });
+    }
+    view.focus();
+    return;
+  } else {
+    return;
+  }
+
+  view.dispatch({
+    changes: { from, to, insert },
+    selection: { anchor },
+    scrollIntoView: true
+  });
+  view.focus();
+}
+
+
+function create({ textarea, host, onChange }) {
+  let applyingExternalValue = false;
+  const toolbar = textarea.closest('[data-text-mode]')?.querySelector('[data-details-toolbar]');
+  const view = new EditorView({
+    state: EditorState.create({
+      doc: textarea.value || '',
+      extensions: [
+        history(),
+        markdown(),
+        keymap.of([{ key: 'Enter', run: continueList }, ...defaultKeymap, ...historyKeymap]),
+        EditorView.perLineTextDirection.of(true),
+        livePreview,
+        EditorView.updateListener.of(update => {
+          if (update.docChanged) {
+            textarea.value = update.state.doc.toString();
+            if (!applyingExternalValue && typeof onChange === 'function') onChange(textarea.value);
+          }
+          if (update.docChanged || update.selectionSet) syncToolbar(update.view, toolbar);
+        }),
+        EditorView.theme({
+          '&': { direction: 'auto' },
+          '.cm-content': { minHeight: '0', padding: '.85rem', fontFamily: 'inherit' },
+          '.cm-scroller': { height: '100%', maxHeight: 'none', overflow: 'auto', fontFamily: 'inherit' },
+          '.cm-line': { paddingInline: '.15rem' }
+        })
+      ]
+    }),
+    parent: host
+  });
+  syncToolbar(view, toolbar);
+  if (toolbar) {
+    toolbar.addEventListener('mousedown', event => {
+      if (event.target.closest('button')) event.preventDefault();
+    });
+  }
+  textarea.classList.add('is-code-editor-enhanced');
+  return {
+    setValue(value) {
+      const next = String(value || '');
+      if (view.state.doc.toString() !== next) {
+        applyingExternalValue = true;
+        try {
+          view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+        } finally {
+          applyingExternalValue = false;
+        }
+      }
+      textarea.value = next;
+    },
+    focus() { view.focus(); },
+    applyFormat(format) { applyFormat(view, format); }
+  };
+}
+
+window.ZayanPostDetailsEditor = { create };
+).exec(list[3]);
+  if (bold && contentOffset > 2 && contentOffset < list[3].length - 2) {
+    const left = list[3].slice(2, contentOffset);
+    const right = list[3].slice(contentOffset, -2);
+    const insert = linePrefix + '**' + left + '**\n' + list[1] + marker + ' ' + right;
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert },
+      selection: { anchor: line.from + insert.indexOf('\n') + 1 + list[1].length + marker.length + 1 },
+      scrollIntoView: true
+    });
+    return true;
+  }
+  if (inlineCode && contentOffset > 1 && contentOffset < list[3].length - 1) {
+    const left = list[3].slice(1, contentOffset);
+    const right = list[3].slice(contentOffset, -1);
+    const insert = linePrefix + tick + left + tick + '\n' + list[1] + marker + ' ' + right;
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert },
+      selection: { anchor: line.from + insert.indexOf('\n') + 1 + list[1].length + marker.length + 1 },
+      scrollIntoView: true
+    });
+    return true;
   }
   const prefix = '\n' + list[1] + marker + ' ';
   view.dispatch({
