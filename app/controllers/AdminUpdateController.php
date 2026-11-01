@@ -14,7 +14,7 @@ use App\Services\RateLimiter;
 
 final class AdminUpdateController extends Controller
 {
-    private const UPDATE_SCRIPT = '/home/a/bin/zayan-hardware-update.sh';
+    private const UPDATE_SCRIPT = '/opt/lampp/htdocs/zayan_hardware/tools/update_local.py';
     private const PROJECT_DIR = '/opt/lampp/htdocs/zayan_hardware';
 
     public function index(): Response
@@ -113,7 +113,7 @@ final class AdminUpdateController extends Controller
             '-u',
             'a',
             '--',
-            '/usr/bin/bash',
+            '/usr/bin/python3',
             self::UPDATE_SCRIPT,
         ];
 
