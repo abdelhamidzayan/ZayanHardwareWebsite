@@ -17,7 +17,7 @@ PHP 8.2+ MVC + MySQL. Document root must be `public/`.
 9. [POST route security matrix](docs/SECURITY_POST_ROUTE_MATRIX.md) — CSRF, guest access, and authorization review for every POST endpoint.
 10. [Admin database and migration diagnostics](docs/ADMIN_DATABASE_DIAGNOSTICS.md) — read-only checks and migration safety boundary.\n11. [Database backup and restore runbook](docs/DATABASE_BACKUP_RESTORE.md) — safe separate-database restore and read-only schema/row-count comparison.
 12. [Storage recovery triage](docs/STORAGE_RECOVERY_RUNBOOK.md) — safe handling of pending filesystem recovery records.
-12. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
+13. [Graphify guide](docs/graphify.md) · [Security hardening](docs/security-hardening.md) · [Account retention policy](docs/account-retention.md) · [Post composer and drafts](docs/post-composer-and-drafts.md) · [Profiles and personal help](docs/profiles-personal-help.md)
 
 The documentation is a map, not a substitute for source inspection. Always verify the active branch, commit, local changes, runtime, and database before changing code. GitHub branches, local checkouts, CI results, and deployments are separate states.
 
