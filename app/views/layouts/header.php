@@ -82,6 +82,12 @@ foreach ($accountActivePrefixes as $prefix) {
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.5.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.5-.9l-1.7.6-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.8L6.3 12l1.4-2.4 1.7.6a8 8 0 0 1 1.5-.9l.3-1.8H14l.3 1.8a8 8 0 0 1 1.5.9l1.7-.6 1.4 2.4-1.4 1.1a7 7 0 0 1-.1 1.9Z"/></svg>
                     <span>الإعدادات</span>
                 </a>
+                <?php if (($currentUser['role'] ?? '') === 'admin') : ?>
+                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/admin">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span>لوحة الإدارة</span>
+                    </a>
+                <?php endif; ?>
                 <form class="account-menu__logout" method="post" action="<?= $e($baseUrl) ?>/logout">
                     <?= $csrf() ?>
                     <button class="account-menu__item account-menu__item--danger" type="submit">
