@@ -94,6 +94,38 @@ foreach ($accountActivePrefixes as $prefix) {
             </div>
         </details>
 
+
+        <?php if ($currentUser) : ?>
+            <a class="account-menu__mobile-profile<?= $accountActive ? ' is-active' : '' ?>" href="<?= $e($profileHref) ?>" aria-label="الملف الشخصي">
+                <?php if (!empty($currentUser['avatar_path'])) : ?>
+                    <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="40" height="40">
+                <?php else : ?>
+                    <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="40" height="40">
+                <?php endif; ?>
+            </a>
+            <details class="account-menu">
+                <summary class="account-menu__trigger<?= $accountActive ? ' is-active' : '' ?>" aria-label="قائمة الحساب">
+                    <img class="avatar account-menu__avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="40" height="40">
+                    <span class="account-menu__name"><?= $e($displayName) ?></span>
+                    <svg class="icon account-menu__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="account-menu__panel">
+                    <div class="account-menu__identity">
+                        <img class="avatar avatar-image" src="<?= $e($avatarSrc) ?>" alt="" width="44" height="44">
+                        <span class="account-menu__identity-copy"><strong><?= $e($displayName) ?></strong><span>@<?= $e($username) ?></span></span>
+                    </div>
+                    <a class="account-menu__item" href="<?= $e($profileHref) ?>"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>ملفي الشخصي</span></a>
+                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/workbench"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4V2h8v2M3 10h18M10 10v2h4v-2"/></svg><span>طاولة العمل</span></a>
+                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/drafts"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg><span>المسودات</span></a>
+                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/my-posts"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span>منشوراتي</span></a>
+                    <a class="account-menu__item" href="<?= $e($baseUrl) ?>/settings"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.5.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.5-.9l-1.7.6-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.8L6.3 12l1.4-2.4 1.7.6a8 8 0 0 1 1.5-.9l.3-1.8H14l.3 1.8a8 8 0 0 1 1.5.9l1.7-.6 1.4 2.4-1.4 1.1a7 7 0 0 1-.1 1.9Z"/></svg><span>إعدادات الحساب</span></a>
+                    <form class="account-menu__logout" method="post" action="<?= $e($baseUrl) ?>/logout">
+                        <?= $csrf() ?>
+                        <button class="account-menu__item account-menu__item--danger" type="submit"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>تسجيل الخروج</span></button>
+                    </form>
+                </div>
+            </details>
+        <?php endif; ?>
         </div>
     </div>
 </header>
