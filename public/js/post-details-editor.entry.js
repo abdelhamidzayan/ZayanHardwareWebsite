@@ -45,7 +45,7 @@ function decorationsFor(view) {
     if (heading) {
       const prefix = heading[1].length + 1;
       ranges.push(Decoration.replace({}).range(line.from, line.from + prefix));
-      ranges.push(Decoration.mark({ class: 'cm-live-preview-heading cm-live-preview-h' + heading[1].length }).range(line.from + prefix, line.to));
+      if (line.to > line.from + prefix) ranges.push(Decoration.mark({ class: 'cm-live-preview-heading cm-live-preview-h' + heading[1].length }).range(line.from + prefix, line.to));
     } else if (quote) {
       ranges.push(Decoration.replace({}).range(line.from, line.from + quote[0].length));
       ranges.push(Decoration.line({ class: 'cm-live-preview-quote' }).range(line.from));
