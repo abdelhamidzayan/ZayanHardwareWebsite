@@ -144,3 +144,11 @@ Remaining manual review before production:
 Account anonymization has no approved CLI entry point or cron worker. The 30-day deadline does not mean automatic completion; the removed CLI must not be reintroduced or scheduled without separate review and explicit owner approval.
 
 Phase 3 remains unstarted: complete browser/mobile/PWA acceptance, cross-device journeys, and final readiness report before claiming production readiness.
+
+
+## 2026-11-01 — Administrator terminal boundary
+
+- Branch `feat/admin-terminal-batch-safe` adds bounded multi-line diagnostics to the browser console: at most 8 allowlisted commands, 300 characters per command, 1,800 characters per batch, and 10 batches/minute. Each command is dispatched internally without a shell interpreter.
+- Browser terminal does not provide arbitrary command execution, file mutation, package installation, `sudo`, or `su`. Never send a sudo password or SSH credential through the website.
+- Use direct SSH from a trusted Tailscale-connected client for privileged host operations; sudo prompts remain inside the SSH TTY. No host SSH/Tailscale/sudoers settings were changed by the repository work.
+- Focused policy test added at `tests/php/admin-terminal-policy.php`; CI/runtime verification must be checked against the exact branch commit before treating this as complete.
