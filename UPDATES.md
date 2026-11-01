@@ -63,7 +63,7 @@
 - **Review:** Rechecked the complete stylesheet set loaded by the shared layout, including the post composer, discussion view, PWA guide, registration wizard, public header, and shared components.
 - **Corrections:** Migrated remaining legacy blue/gray fallbacks and status colors to semantic brand tokens; aligned composer warnings and media overlays; fixed the sign-in action so its hover state remains legible; centralized success, warning, danger, and neutral surfaces.
 - **Contrast:** Added accessible CTA foreground and orange-text variants. The supplied orange #D75421 uses near-black text on the CTA surface; the darker hover orange #B94418 uses white text. Muted text now uses #6B6D65 while the supplied decorative gray remains available as --color-brand-gray.
-- **Static checks:** Reviewed all seven CSS files loaded by the shared layout; brace counts balance and the targeted legacy palette values are absent from those files. No PHP/JS test suite, CI workflow, browser rendering, mobile/PWA acceptance, or deployment was run in this review.
+- **Static checks:** Reviewed all eight CSS files loaded by the shared layout; brace counts balance and the targeted legacy palette values are absent from those files. No PHP/JS test suite, CI workflow, browser rendering, mobile/PWA acceptance, or deployment was run in this review.
 - **Status:** Changes remain isolated on brand/cream-green-identity; no PR was opened and main was not changed.
 
 
