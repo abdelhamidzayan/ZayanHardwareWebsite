@@ -38,19 +38,19 @@ final class AdminTerminalController extends Controller
                 try {
                     [$label,$result]=$this->execute($command);
                     App::audit('admin.terminal.command',['user_id'=>$id,'command'=>$label,'success'=>true]);
-                    $output[]='$ '.$label."\\n".$result;
-                } catch (\\InvalidArgumentException $e) {
+                    $output[]='$ '.$label."\n".$result;
+                } catch (\InvalidArgumentException $e) {
                     $allSucceeded=false;
                     App::audit('admin.terminal.command_rejected',['user_id'=>$id]);
-                    $output[]='$ [command '.($index+1).']\\n'.$e->getMessage();
+                    $output[]='$ [command '.($index+1).']\n'.$e->getMessage();
                 }
             }
-            $combined=implode("\\n\\n",$output);
-            if(strlen($combined)>30000) $combined=substr($combined,0,30000)."\\n[output truncated]";
+            $combined=implode("\n\n",$output);
+            if(strlen($combined)>30000) $combined=substr($combined,0,30000)."\n[output truncated]";
             return $this->result($allSucceeded,$combined);
-        } catch (\\DomainException $e) {
+        } catch (\DomainException $e) {
             return $this->result(false,'صلاحية المدير لم تعد نشطة.');
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             App::logException('ERROR','admin.terminal.command_failed',$e,['user_id'=>$id]);
             return $this->result(false,'حدث خطأ. راجع سجل التطبيق.');
         }
