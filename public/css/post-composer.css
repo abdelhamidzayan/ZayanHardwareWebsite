@@ -178,3 +178,29 @@
 .post-composer__media-item { cursor: grab; }
 .post-composer__media-item.is-dragging { opacity: .45; cursor: grabbing; }
 .post-composer__media-item.is-drag-over { outline: 2px dashed var(--color-primary); outline-offset: 2px; }
+
+
+/* CodeMirror 6 post-details Live Preview */
+.post-composer__text-mode [data-details-editor] { border: 1px solid var(--color-border); border-radius: 0 0 var(--radius-md) var(--radius-md); background: var(--color-field); overflow: hidden; }
+.post-composer__text-mode.is-editor-ready .post-composer__details { position: absolute !important; inline-size: 1px !important; block-size: 1px !important; min-height: 1px !important; padding: 0 !important; opacity: 0 !important; pointer-events: none !important; }
+.post-composer__text-mode .cm-editor { color: var(--color-ink); background: transparent; font-size: 1rem; }
+.post-composer__text-mode .cm-editor.cm-focused { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.post-composer__text-mode .cm-gutters { display: none; }
+.post-composer__text-mode .cm-live-preview-bold { font-weight: 800; }
+.post-composer__text-mode .cm-live-preview-heading { display: inline-block; font-weight: 800; color: var(--color-primary); }
+.post-composer__text-mode .cm-live-preview-h1 { font-size: 1.35em; }
+.post-composer__text-mode .cm-live-preview-h2 { font-size: 1.2em; }
+.post-composer__text-mode .cm-live-preview-h3 { font-size: 1.1em; }
+.post-composer__text-mode .cm-live-preview-inline-code, .post-composer__text-mode .cm-live-preview-code-line { font-family: var(--font-mono); direction: ltr; unicode-bidi: plaintext; }
+.post-composer__text-mode .cm-live-preview-inline-code { padding: .08em .3em; border-radius: .3rem; background: var(--color-primary-soft); }
+.post-composer__text-mode .cm-live-preview-quote { border-inline-start: 3px solid var(--color-primary); padding-inline-start: .7rem; color: var(--color-muted); }
+.post-composer__text-mode .cm-live-preview-list { padding-inline-start: .35rem; }
+.post-composer__text-mode .cm-live-preview-fence { min-height: .3rem; background: var(--color-primary-soft); }
+.post-composer__text-mode .cm-live-preview-code-line { background: var(--color-field); }
+.cm-live-preview-rule { display: block; height: 1px; margin: .6em 0; background: var(--color-border); }
+.post-composer__format-tools { position: sticky; top: .5rem; z-index: 15; flex-wrap: nowrap; overflow-x: auto; }
+.post-composer__format-tools button { flex: 0 0 auto; min-width: 44px; min-height: 44px; }
+@media (max-width: 640px) {
+  .post-composer__format-tools { position: fixed; inset-inline: .5rem; bottom: calc(.5rem + var(--editor-keyboard-offset, 0px)); z-index: 80; border: 1px solid var(--color-border); border-radius: .8rem; box-shadow: var(--shadow-float); background: var(--color-surface); }
+  .post-composer__text-mode { padding-bottom: 3.8rem; }
+}
