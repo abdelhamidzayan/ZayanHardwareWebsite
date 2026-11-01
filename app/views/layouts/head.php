@@ -6,7 +6,7 @@
 $pageTitle = isset($title) && $title !== '' ? $title . ' | ' . $appName : $appName;
 ?>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title><?= $e($pageTitle) ?></title>
 <meta name="theme-color" content="#105023">
 <meta name="apple-mobile-web-app-capable" content="yes">
