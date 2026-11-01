@@ -63,3 +63,14 @@ A future runner must be CLI-only, use a database advisory lock, verify the ledge
 - Never drop, truncate, overwrite, or recreate the live database as a recovery shortcut.
 - Never physically delete technical posts, replies, attachments, schematics, diagnostics, or audit history during migration work.
 - Never claim the owner's database or private media is backed up or restore-verified based on CI fixtures.
+
+
+## Managed migration ledger baseline (fresh installs only)
+
+The consolidated fresh-install SQL now creates `app_migration_ledger` and writes exactly one explicit marker: `__baseline_fresh_install_1_0_0__`. Its SHA-256 value fingerprints the fixed baseline identity string `zayan-hardware:fresh-install:1.0.0`; it is not presented as a checksum of the complete SQL file. The marker records application version 1.0.0, UTC applied time, zero baseline execution duration, and `is_baseline=1`.
+
+The ledger schema reserves the fields required by the managed runner: migration filename, SHA-256 checksum, applied timestamp, execution status, application version, execution duration in milliseconds, failure details, and baseline marker. It also stores applying/failed/interrupted states so a future runner can stop for explicit recovery rather than retrying DDL blindly.
+
+This marker is emitted only when `database/fresh_install.sql` creates a new empty database. It must never be copied into an existing installation merely because the tables look similar. Existing databases without this ledger remain UNKNOWN/BLOCKED until the separately documented backup, isolated restore, schema/data comparison, private-media verification, and explicit baseline-adoption review are complete.
+
+New forward-only migrations will live in `database/managed_migrations/`, beginning at sequence 020 or later. The historical `database/migrations/000–019` directory remains immutable evidence and is not an execution queue. No runner or migration execution is introduced by this ledger-schema change.
