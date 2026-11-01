@@ -5,7 +5,7 @@ $controller = file_get_contents($root . '/app/controllers/AdminTerminalControlle
 $view = file_get_contents($root . '/app/views/admin/terminal.php');
 if (!is_string($controller) || !is_string($view)) { fwrite(STDERR, "Unable to read admin terminal source.\\n"); exit(1); }
 $required = [
-    "$"."this->request->input('commands')", "preg_split('/\\\\R/'", 'count($commands)>8',
+    "$"."this->request->input('commands')", 'preg_split(', 'count($commands)>8',
     'strlen($command)>300', "RateLimiter::allowForUser('admin.diagnostic_terminal',$id,10,60,30)",
     "in_array($cmd,['sudo','su'],true)", 'proc_open($args,', "App::audit('admin.terminal.command'",
 ];
