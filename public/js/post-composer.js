@@ -1067,6 +1067,10 @@
             setStatus('سجّل مقطعًا صوتيًا قبل النشر.', 'error');
             return;
         }
+        if (getMode() === 'audio' && !window.ZayanComposer.isAudioTrimApplied()) {
+            setStatus('اعتمد القص الصوتي أولًا حتى ننشر ملف WAV المقصوص فعلًا.', 'error');
+            return;
+        }
         if (getMode() === 'text' && detailsInput.value.trim().length < 10) {
             if (detailsEditor) detailsEditor.focus();
             else detailsInput.focus();
@@ -1293,6 +1297,13 @@
             item.url = URL.createObjectURL(blob);
             item.dirtyEditor = true;
             item.needsRender = false;
+            item.editor_state = {
+                version: 1,
+                kind: 'audio-trim',
+                trim_start_ms: Math.round(trimStartMs),
+                trim_end_ms: Math.round(trimEndMs),
+                source_duration_ms: Math.round(sourceDurationMs)
+            };
             audioMeta = Object.assign({}, audioMeta || {}, {
                 duration_ms: sourceDurationMs,
                 trim_start_ms: trimStartMs,
@@ -1338,6 +1349,13 @@
         clearAudioSession: clearAudioSession,
         getAudio: function () { return media.find(function (item) { return item.media_kind === 'audio'; }) || null; },
         getAudioMeta: function () { return audioMeta; },
+        isAudioTrimApplied: function () {
+            const item = media.find(function (entry) { return entry.media_kind === 'audio'; });
+            const state = item && item.editor_state;
+            return Boolean(item && (item.rendered || item.renderedBlob) && state && state.kind === 'audio-trim'
+                && Number(state.trim_start_ms) === Number(audioMeta?.trim_start_ms || 0)
+                && Number(state.trim_end_ms) === Number(audioMeta?.trim_end_ms || 0));
+        },
         getDraftId: function () { return draftId; },
         saveImageEditorDraft: function (item, state) {
             item.editor_state = state;
