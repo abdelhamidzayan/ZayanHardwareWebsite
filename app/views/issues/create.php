@@ -174,7 +174,8 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
                     <div class="audio-recorder__trim" data-audio-trim hidden>
                         <label>بداية القص <input type="range" min="0" max="100" value="0" data-trim-start></label>
                         <label>نهاية القص <input type="range" min="0" max="100" value="100" data-trim-end></label>
-                        <small class="muted">حدد الجزء المطلوب من التسجيل قبل النشر.</small>
+                        <small class="muted">حدد الجزء المطلوب من التسجيل، ثم اعتمد القص لإنشاء ملف WAV فعلي.</small>
+                        <button class="btn btn--primary" type="button" data-audio-apply-trim>اعتماد القص</button>
                     </div>
                     <p class="muted" data-audio-error hidden></p>
                 </div>
