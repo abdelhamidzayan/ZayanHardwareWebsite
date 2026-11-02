@@ -37,7 +37,9 @@ Profile, composer and consent additions follow migration 010:
 - `016_protect_technical_history.sql` — changes dependent-content and attribution foreign keys to `RESTRICT`, preventing cascading loss of technical history.
 - `017_block_physical_content_delete.sql` — adds `BEFORE DELETE` guards on core technical, personal-help and audit tables, including standalone rows that have no dependents.
 - `018_storage_recovery_tasks.sql` — stores retry/reconciliation metadata when filesystem compensation cannot safely complete; task rows are retained and no cleanup worker is started automatically.
+- `019_session_version_invalidation.sql` — invalidates stale authenticated sessions after security-sensitive account changes.
+- `020_audio_original_and_rendered_files.sql` — adds private original-recording path, MIME type, and size fields; the published `audio_path` points to the separately rendered WAV.
 
-Migration 013 uses `CREATE TABLE IF NOT EXISTS` because the terms table is already created by the supported 002 sequence. Migrations 014 and 015 have already been applied to the owner's current local database; never replay them there.
+Migration 013 uses `CREATE TABLE IF NOT EXISTS` because the terms table is already created by the supported 002 sequence. Migrations 014 and 015 have already been applied to the owner's current local database; never replay them there. Migration 020 is included in `database/fresh_install.sql` for new databases; do not run it after the consolidated fresh-install file. For a database already at 019, apply migration 020 once after verifying the actual schema.
 
 Migration 016 changes referential actions to `RESTRICT`; migration 017 also rejects direct physical deletes from core technical, personal-help and audit tables, even when no child row exists. Routine content deletion remains soft-delete/retention behavior; do not introduce physical content cleanup as part of schema installation. Draft deletion and transient notification/push cleanup remain separate explicit lifecycles.
