@@ -10,6 +10,7 @@ use App\Core\Response;
 use App\Models\PostDraft;
 use App\Services\AuthService;
 use App\Services\ImageUploadPolicy;
+use App\Services\AudioWavPolicy;
 use App\Services\RateLimiter;
 
 final class DraftController extends Controller
@@ -289,14 +290,16 @@ final class DraftController extends Controller
         $user = AuthService::user();
         if (!$user) return Response::json(['error' => 'unauthenticated'], 401);
         if (!Csrf::verify($this->request->input('_token'))) return Response::json(['error' => 'csrf_failed'], 419);
-
         if (!RateLimiter::allowForUser('draft.rendered_upload', (int) $user['id'], 20, 600, 80)) {
-            return Response::json(['error' => 'rate_limited', 'message' => 'وصلت للحد المسموح لحفظ الصور المعدلة. حاول مرة أخرى بعد قليل.'], 429);
+            return Response::json(['error' => 'rate_limited', 'message' => 'وصلت للحد المسموح لحفظ النسخة المعدلة. حاول مرة أخرى بعد قليل.'], 429);
         }
+
         $expectedRevision = filter_var($this->request->input('revision'), FILTER_VALIDATE_INT);
         if ($expectedRevision === false || $expectedRevision < 0) return Response::json(['error' => 'revision_invalid'], 422);
         $media = PostDraft::ownedMedia($draftId, $mediaUuid, (int) $user['id']);
-        if (!$media || $media['media_kind'] !== 'image') return Response::json(['error' => 'media_not_found'], 404);
+        if (!$media || !in_array($media['media_kind'], ['image', 'audio'], true)) {
+            return Response::json(['error' => 'media_not_found'], 404);
+        }
         $file = $_FILES['rendered'] ?? null;
         if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
             || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
@@ -306,50 +309,60 @@ final class DraftController extends Controller
         $tmp = (string) $file['tmp_name'];
         $size = (int) ($file['size'] ?? 0);
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
-        if ($size < 1 || $size > 12 * 1024 * 1024
-            || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-            return Response::json(['error' => 'rendered_file_invalid', 'message' => 'نسخة الصورة المعدلة غير صالحة أو أكبر من 12 ميجابايت.'], 422);
-        }
-        try {
-            ImageUploadPolicy::inspect($tmp);
-        } catch (\DomainException) {
-            return Response::json(['error' => 'rendered_image_dimensions_invalid', 'message' => 'أبعاد الصورة المعدلة أكبر من الحد المسموح.'], 422);
+        $durationMs = null;
+        if ($media['media_kind'] === 'image') {
+            if ($size < 1 || $size > 12 * 1024 * 1024
+                || !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                return Response::json(['error' => 'rendered_file_invalid', 'message' => 'نسخة الصورة المعدلة غير صالحة أو أكبر من 12 ميجابايت.'], 422);
+            }
+            try {
+                ImageUploadPolicy::inspect($tmp);
+            } catch (\DomainException) {
+                return Response::json(['error' => 'rendered_image_dimensions_invalid', 'message' => 'أبعاد الصورة المعدلة أكبر من الحد المسموح.'], 422);
+            }
+            $extension = match ($mime) { 'image/jpeg' => 'jpg', 'image/png' => 'png', default => 'webp' };
+        } else {
+            try {
+                $audio = AudioWavPolicy::inspect($tmp);
+            } catch (\DomainException $error) {
+                return Response::json([
+                    'error' => $error->getMessage(),
+                    'message' => 'ملف الصوت المقصوص غير صالح. يجب أن يكون WAV أحادي القناة PCM 16-bit بتردد 16 kHz.',
+                ], 422);
+            }
+            $mime = $audio['mime_type'];
+            $size = $audio['file_size'];
+            $durationMs = $audio['duration_ms'];
+            $extension = 'wav';
         }
 
         $directory = App::root('storage/private/drafts/' . $draftId);
         if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
             return Response::json(['error' => 'storage_unavailable'], 500);
         }
-        $extension = match ($mime) { 'image/jpeg' => 'jpg', 'image/png' => 'png', default => 'webp' };
         $filename = $mediaUuid . '-rendered-' . bin2hex(random_bytes(5)) . '.' . $extension;
         $destination = $directory . DIRECTORY_SEPARATOR . $filename;
         if (!move_uploaded_file($tmp, $destination)) return Response::json(['error' => 'storage_failed'], 500);
-        $relative = 'drafts/' . $draftId . '/' . $filename;
         $relative = 'drafts/' . $draftId . '/' . $filename;
         $sha = hash_file('sha256', $destination);
         if (!is_string($sha)) {
             PostDraft::cleanupPrivateMedia($relative);
             return Response::json(['error' => 'save_failed'], 500);
         }
+
         try {
             $newRevision = PostDraft::setRenderedPath(
-                $draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha, $expectedRevision
+                $draftId, $mediaUuid, (int) $user['id'], $relative, $mime, $sha, $expectedRevision, $durationMs
             );
         } catch (\Throwable $error) {
             $cleanupState = PostDraft::cleanupUploadIfUnreferenced(
-                $draftId,
-                $mediaUuid,
-                (int) $user['id'],
-                $relative,
-                'rendered_path'
+                $draftId, $mediaUuid, (int) $user['id'], $relative, 'rendered_path'
             );
             if ($cleanupState === 'referenced') {
                 $newRevision = $expectedRevision + 1;
             } elseif ($cleanupState === 'unknown') {
                 App::logException('ERROR', 'draft.rendered_upload_outcome_unknown', $error, [
-                    'draft_id' => $draftId,
-                    'media_uuid' => $mediaUuid,
-                    'user_id' => (int) $user['id'],
+                    'draft_id' => $draftId, 'media_uuid' => $mediaUuid, 'user_id' => (int) $user['id'],
                 ]);
                 return Response::json([
                     'error' => 'save_outcome_unknown',
@@ -365,15 +378,15 @@ final class DraftController extends Controller
             PostDraft::cleanupPrivateMedia($relative);
             return Response::json(['error' => 'media_not_found'], 404);
         }
-        if (!empty($media['rendered_path'])) {
-            PostDraft::cleanupPrivateMedia((string) $media['rendered_path']);
-        }
+        if (!empty($media['rendered_path'])) PostDraft::cleanupPrivateMedia((string) $media['rendered_path']);
 
         return Response::json([
             'saved' => true,
             'revision' => $newRevision,
             'rendered_url' => $this->mediaUrl($draftId, $mediaUuid, true),
             'original_url' => $this->mediaUrl($draftId, $mediaUuid),
+            'duration_ms' => $durationMs,
+            'mime_type' => $mime,
         ]);
     }
 
