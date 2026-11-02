@@ -1,3 +1,13 @@
+## 2026-11-02 — Audio Stage 2: actual WAV trimming and private original preservation
+
+- Added `database/migrations/020_audio_original_and_rendered_files.sql` and matching columns to `database/fresh_install.sql`. Fresh installs must not run migration 020 afterward; databases already at 019 may apply it once after schema verification.
+- The recorder now exports the selected time range as mono 16 kHz PCM16 WAV and requires explicit confirmation before publishing. Microphone selection is available when the browser exposes multiple inputs.
+- The existing draft upload/rendered-media pipeline stores the source recording and trimmed WAV separately. The original remains private; the published audio route serves only the trimmed WAV.
+- Server validation checks RIFF/WAVE structure, PCM16 mono format, 16 kHz sample rate, duration and size. Publishing verifies the trim state against the actual rendered WAV before promoting both files into private issue storage.
+- Updated migration, composer and project-plan documentation. No new draft store or route was introduced.
+- Verification: source-level implementation only. PHP/JS syntax, WAV tests, browser recording, offline recovery, database application and end-to-end publishing remain unverified. No GitHub Actions were triggered. No PR was opened, merged or deployed.
+- Status: implementation in progress on `feature/post-audio-real-trimming`.
+
 ## 2026-11-02 — Line-level formatting state in the post composer
 
 - Live Preview now hides Markdown formatting markers on both active and inactive lines; formatted text remains styled while the source markers stay invisible.
