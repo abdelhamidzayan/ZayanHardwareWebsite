@@ -7,3 +7,5 @@
 !/public/uploads/.htaccess
 !.gitkeep
 /.graphify/
+
+/node_modules/

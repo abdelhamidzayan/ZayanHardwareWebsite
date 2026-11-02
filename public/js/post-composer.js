@@ -10,6 +10,23 @@
     const revisionInput = form.querySelector('[data-draft-revision]');
     const titleInput = form.querySelector('[name="title"]');
     const detailsInput = form.querySelector('[data-details]');
+    const detailsEditorHost = form.querySelector('[data-details-editor]');
+    let detailsEditor = null;
+    if (detailsInput && detailsEditorHost && window.ZayanPostDetailsEditor) {
+        try {
+            detailsEditor = window.ZayanPostDetailsEditor.create({
+                textarea: detailsInput,
+                host: detailsEditorHost,
+                onChange: function (value) {
+                    detailsInput.value = value;
+                    detailsInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+            detailsInput.closest('[data-text-mode]')?.classList.add('is-editor-ready');
+        } catch (error) {
+            console.error('CodeMirror initialization failed; keeping the textarea fallback.', error);
+        }
+    }
     const typeRadios = Array.from(form.querySelectorAll('[name="content_type"]'));
     const modeRadios = Array.from(form.querySelectorAll('[name="details_mode"]'));
     const textMode = form.querySelector('[data-text-mode]');
@@ -276,14 +293,14 @@
         });
     }
 
-    function addStep(value) {
+    function addStep(value, afterRow) {
         const row = document.createElement('div');
         row.className = 'post-composer__step-row';
         row.dataset.stepRow = '';
         const number = document.createElement('span');
         number.className = 'post-composer__step-number';
-        const textarea = document.createElement('textarea');
-        textarea.rows = 1;
+        const textarea = document.createElement('input');
+        textarea.type = 'text';
         textarea.maxLength = 2000;
         textarea.dataset.stepInput = '';
         textarea.placeholder = 'اكتب الفحص أو التجربة...';
@@ -294,7 +311,7 @@
         remove.setAttribute('aria-label', 'حذف الخطوة');
         remove.textContent = '×';
         row.append(number, textarea, remove);
-        stepList.appendChild(row);
+        stepList.insertBefore(row, afterRow ? afterRow.nextElementSibling : null);
         renderSteps();
         textarea.focus();
         markDirty();
@@ -824,6 +841,7 @@
         modelQuery.value = payload.device_model_label || '';
         if (categoryInput) categoryInput.value = payload.category || '';
         detailsInput.value = payload.description || '';
+        if (detailsEditor) detailsEditor.setValue(detailsInput.value);
         stepList.replaceChildren();
         (payload.steps || []).forEach(function (step) { addStepWithoutFocus(step); });
         audioMeta = payload.audio || null;
@@ -839,8 +857,8 @@
         row.dataset.stepRow = '';
         const number = document.createElement('span');
         number.className = 'post-composer__step-number';
-        const textarea = document.createElement('textarea');
-        textarea.rows = 1;
+        const textarea = document.createElement('input');
+        textarea.type = 'text';
         textarea.maxLength = 2000;
         textarea.dataset.stepInput = '';
         textarea.placeholder = 'اكتب الفحص أو التجربة...';
@@ -873,25 +891,6 @@
     function updateTitleCount() {
         const count = form.querySelector('[data-title-count]');
         if (count) count.textContent = String(titleInput.value.length);
-    }
-
-    function applyFormat(format) {
-        const start = detailsInput.selectionStart;
-        const end = detailsInput.selectionEnd;
-        const selected = detailsInput.value.slice(start, end);
-        const wrappers = {
-            bold: ['**', '**'],
-            heading: ['### ', ''],
-            numbered: ['1. ', ''],
-            bulleted: ['• ', ''],
-            divider: ['\n────────────\n', '']
-        };
-        const pair = wrappers[format];
-        if (!pair) return;
-        const replacement = pair[0] + (selected || 'نص') + pair[1];
-        detailsInput.setRangeText(replacement, start, end, 'end');
-        detailsInput.focus();
-        markDirty();
     }
 
     brandTrigger.addEventListener('click', function () {
@@ -957,10 +956,6 @@
         }
     });
 
-    form.addEventListener('click', function (event) {
-        const formatButton = event.target.closest('[data-format]');
-        if (formatButton) applyFormat(formatButton.dataset.format);
-    });
     titleInput.addEventListener('input', function () { updateTitleCount(); markDirty(); });
     detailsInput.addEventListener('input', markDirty);
     categoryInput?.addEventListener('change', markDirty);
@@ -975,6 +970,7 @@
                     return;
                 }
                 detailsInput.value = '';
+                if (detailsEditor) detailsEditor.setValue('');
             }
             if (radio.checked && radio.value === 'text' && media.some(function (item) { return item.media_kind === 'audio'; })) {
                 if (!window.confirm('التحويل للكتابة هيحذف التسجيل الصوتي الحالي. تكمل؟')) {
@@ -1003,6 +999,11 @@
         }
     });
     stepList.addEventListener('input', markDirty);
+    stepList.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' || !event.target.matches('[data-step-input]')) return;
+        event.preventDefault();
+        addStep('', event.target.closest('[data-step-row]'));
+    });
     mediaInput.addEventListener('change', async function () {
         const incoming = Array.from(mediaInput.files || []);
         mediaInput.value = '';
@@ -1059,7 +1060,8 @@
             return;
         }
         if (getMode() === 'text' && detailsInput.value.trim().length < 10) {
-            detailsInput.focus();
+            if (detailsEditor) detailsEditor.focus();
+            else detailsInput.focus();
             setStatus('اكتب تفاصيل لا تقل عن 10 أحرف.', 'error');
             return;
         }

@@ -147,18 +147,13 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
             </div>
 
             <div class="post-composer__text-mode" data-text-mode <?= $detailsMode !== 'text' ? 'hidden' : '' ?>>
-                <div class="post-composer__format-tools" role="toolbar" aria-label="تنسيق النص">
-                    <button type="button" data-format="bold" aria-label="خط عريض"><strong>B</strong></button>
-                    <button type="button" data-format="heading" aria-label="عنوان فرعي">H</button>
-                    <button type="button" data-format="numbered" aria-label="قائمة مرقمة">1.</button>
-                    <button type="button" data-format="bulleted" aria-label="قائمة نقطية">•</button>
-                    <button type="button" data-format="divider" aria-label="فاصل">―</button>
-                </div>
-                <label class="field">
-                    <span class="sr-only">تفاصيل المنشور</span>
+                <div class="field post-composer__details-field" role="group" aria-label="تفاصيل المنشور">
+                    <span class="sr-only" id="post-details-label">تفاصيل المنشور</span>
+                    <div class="post-composer__details-editor" data-details-editor role="textbox" aria-multiline="true" aria-labelledby="post-details-label"></div>
                     <textarea class="field__input post-composer__details" name="description" data-details rows="7" maxlength="10000"
+                        aria-label="تفاصيل المنشور"
                         placeholder="اشرح المشكلة أو المعلومة الفنية، واذكر القياسات والنتيجة..."><?= $e((string) ($draftPayload['description'] ?? '')) ?></textarea>
-                </label>
+                </div>
             </div>
 
             <div class="post-composer__audio-mode" data-audio-mode <?= $detailsMode !== 'audio' ? 'hidden' : '' ?>>
@@ -196,7 +191,7 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
                     <?php if (!is_string($step)) continue; ?>
                     <div class="post-composer__step-row" data-step-row>
                         <span class="post-composer__step-number"><?= (int) $index + 1 ?></span>
-                        <textarea rows="1" maxlength="2000" data-step-input placeholder="اكتب الفحص أو التجربة..."><?= $e($step) ?></textarea>
+                        <input type="text" maxlength="2000" data-step-input placeholder="اكتب الفحص أو التجربة..." value="<?= $e($step) ?>">
                         <button type="button" data-remove-step aria-label="حذف الخطوة">×</button>
                     </div>
                 <?php endforeach; ?>
@@ -291,6 +286,7 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
     </div>
 </dialog>
 
+<script src="<?= $e($baseUrl) ?>/js/post-details-editor.bundle.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/post-composer.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/image-editor.js" defer></script>
 <script src="<?= $e($baseUrl) ?>/js/audio-recorder.js" defer></script>

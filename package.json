@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "scripts": {
+    "build:editor": "esbuild public/js/post-details-editor.entry.js --bundle --minify --legal-comments=none --format=iife --target=es2020 --outfile=public/js/post-details-editor.bundle.js"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.8.1",
+    "@codemirror/lang-markdown": "^6.3.3",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.6",
+    "esbuild": "^0.25.0"
+  }
+}

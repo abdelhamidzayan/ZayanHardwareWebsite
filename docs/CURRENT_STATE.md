@@ -1,3 +1,20 @@
+## 2026-11-02 — Line-level formatting state in the post composer
+
+- Live Preview now hides Markdown formatting markers on both active and inactive lines; formatted text remains styled while the source markers stay invisible.
+- The toolbar reflects the current line's detected style through active button state and `aria-pressed` (bold, heading, bullet, numbered list, quote, inline code, code block, divider).
+- Enter starts a plain line after ordinary formatted text, heading, quote, or inline formatting. Bold/inline-code wrappers are closed before the new line when Enter is pressed inside their content.
+- Enter continues bullet lists and increments numbered lists; Enter on an empty list item exits the list.
+- List continuation preserves the list marker but does not carry bold/inline-code styling into the next item.
+- Verification: source review only. The editor bundle still needs a local `npm run build:editor`; browser/mobile behavior and save/render round-trip are not yet verified. No GitHub Actions were triggered.
+- Status: implemented on `feat/line-style-toolbar-state`; not merged or deployed.
+
+## 2026-11-02 — Global mobile pinch-to-zoom restriction
+
+- Added `maximum-scale=1` and `user-scalable=no` to the shared viewport declaration in `app/views/layouts/head.php`; both authenticated and guest layouts include it, covering all application pages.
+- This is a browser viewport hint, not an absolute guarantee: some browsers or accessibility settings may still permit zoom. Mobile browser runtime verification is pending.
+- No JavaScript gesture interception, CSS touch-action lockout, routes, database, or technical content changed.
+- Implemented on `feat/disable-mobile-pinch-zoom`; not merged or deployed. GitHub Actions were not triggered.
+
 ## 2026-11-01 — Bounded admin terminal batches
 
 - New branch: `feat/admin-terminal-batch-safe`, based on the live `main` head inspected for this task.
