@@ -93,6 +93,8 @@ final class IssueController extends Controller
                     'device_model_unavailable' => 'الموديل لم يعد متاحًا. اختار موديلًا معتمدًا من القائمة.',
                     'device_manufacturer_unavailable' => 'الشركة المصنعة غير متاحة حاليًا.',
                     'draft_audio_required_or_conflict' => 'راجع التسجيل الصوتي: مطلوب تسجيل واحد فقط عند اختيار التسجيل، ولا يقبل مع الكتابة.',
+                    'draft_audio_trim_required', 'draft_audio_trim_not_confirmed' => 'اعتمد القص الصوتي أولًا قبل النشر.',
+                    'draft_audio_trim_invalid', 'draft_audio_render_invalid', 'draft_audio_render_duration_mismatch' => 'نسخة الصوت المقصوصة غير صالحة. أعد اعتماد القص ثم حاول مرة أخرى.',
                     'draft_mode_conflict' => 'اختار الكتابة أو التسجيل الصوتي فقط.',
                     'draft_text_invalid' => 'اكتب تفاصيل واضحة لا تقل عن 10 أحرف.',
                     'draft_media_missing' => 'أحد المرفقات غير موجود على الخادم. أعد مزامنته قبل النشر.',
