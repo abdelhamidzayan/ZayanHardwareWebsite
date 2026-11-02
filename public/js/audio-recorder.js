@@ -17,6 +17,7 @@
     const trimEnd = root.querySelector('[data-trim-end]');
     const errorLabel = root.querySelector('[data-audio-error]');
     const applyTrimButton = root.querySelector('[data-audio-apply-trim]');
+    const deviceSelect = root.querySelector('[data-audio-device]');
     const context = wave.getContext('2d');
 
     let recorder = null;
@@ -135,6 +136,29 @@
         }
     }
 
+    async function refreshMicrophones() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices || !deviceSelect) return;
+        try {
+            const devices = (await navigator.mediaDevices.enumerateDevices()).filter(function (device) {
+                return device.kind === 'audioinput';
+            });
+            const selected = deviceSelect.value;
+            deviceSelect.replaceChildren();
+            const fallback = document.createElement('option');
+            fallback.value = '';
+            fallback.textContent = 'الميكروفون الافتراضي';
+            deviceSelect.appendChild(fallback);
+            devices.forEach(function (device, index) {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.textContent = device.label || ('ميكروفون ' + (index + 1));
+                deviceSelect.appendChild(option);
+            });
+            deviceSelect.value = devices.some(function (device) { return device.deviceId === selected; }) ? selected : '';
+            deviceSelect.hidden = devices.length <= 1;
+        } catch (_) {}
+    }
+
     async function startRecording() {
         setError('');
         if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
@@ -146,13 +170,18 @@
             return;
         }
         try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-            });
+            const audioConstraints = {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            };
+            if (deviceSelect && deviceSelect.value) audioConstraints.deviceId = { exact: deviceSelect.value };
+            stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+            await refreshMicrophones();
             const mimeCandidates = [
                 'audio/webm;codecs=opus',
-                'audio/ogg;codecs=opus',
                 'audio/mp4',
+                'audio/ogg;codecs=opus',
                 'audio/webm'
             ];
             const mimeType = mimeCandidates.find(function (mime) {
@@ -411,6 +440,9 @@
         window.ZayanComposer?.updateAudioTrim(currentTrimStart, currentTrimEnd, durationMs);
     }
 
+    deviceSelect?.addEventListener('change', function () { setError('سيُستخدم الميكروفون المحدد في التسجيل التالي.'); });
+    navigator.mediaDevices?.addEventListener?.('devicechange', refreshMicrophones);
+    refreshMicrophones();
     startButton.addEventListener('click', startRecording);
     pauseButton.addEventListener('click', pauseRecording);
     resumeButton.addEventListener('click', resumeRecording);
