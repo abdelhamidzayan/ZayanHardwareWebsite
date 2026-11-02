@@ -159,6 +159,7 @@ $initialJson = json_encode($initialState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPE
             <div class="post-composer__audio-mode" data-audio-mode <?= $detailsMode !== 'audio' ? 'hidden' : '' ?>>
                 <div class="audio-recorder" data-audio-recorder>
                     <canvas class="audio-recorder__wave" data-audio-wave width="640" height="120" aria-label="الموجة الصوتية"></canvas>
+                    <label class="audio-recorder__device">الميكروفون <select data-audio-device aria-label="اختيار الميكروفون"><option value="">الميكروفون الافتراضي</option></select></label>
                     <div class="audio-recorder__time">
                         <strong data-audio-time>00:00</strong>
                         <span data-audio-status>جاهز للتسجيل</span>
