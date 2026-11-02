@@ -44,7 +44,7 @@ Replace the username and database name with the actual values. The command requi
 
 The numbered files under `database/migrations/` are retained as historical incremental migrations and for legacy/upgrade testing. The duplicate `002_` prefix is historical and those two files are sequential in the old upgrade path. **Do not execute the numbered sequence in addition to `fresh_install.sql` on a new database.**
 
-The consolidated file is built from the final schema represented by migrations 000–019. The duplicate terms table creation in migration 013 is omitted because it is already created in migration 002. The historical oldest-user auto-promotion in migration 002 is intentionally not part of the new-install SQL; first-admin assignment must use the guarded command above.
+The consolidated file includes the final schema through migration 020, including separate original and rendered audio metadata. Migration 020 is included directly in the fresh-install schema. The duplicate terms table creation in migration 013 is omitted because it is already created in migration 002. The historical oldest-user auto-promotion in migration 002 is intentionally not part of the new-install SQL; first-admin assignment must use the guarded command above.
 
 ## Verification
 
