@@ -235,6 +235,16 @@ final class DraftPublishingService
                     if ($sourceDuration < 100 || $trimEnd > $sourceDuration || $trimStart >= $trimEnd) {
                         throw new \\DomainException('draft_audio_trim_invalid');
                     }
+                    $audioEditorState = is_array($item['editor_state'] ?? null)
+                        ? $item['editor_state']
+                        : json_decode((string) ($item['editor_state'] ?? ''), true);
+                    if (!is_array($audioEditorState)
+                        || ($audioEditorState['kind'] ?? null) !== 'audio-trim'
+                        || (int) ($audioEditorState['trim_start_ms'] ?? -1) !== $trimStart
+                        || (int) ($audioEditorState['trim_end_ms'] ?? -1) !== $trimEnd
+                        || (int) ($audioEditorState['source_duration_ms'] ?? -1) !== $sourceDuration) {
+                        throw new \\DomainException('draft_audio_trim_not_confirmed');
+                    }
                     if (abs(($trimEnd - $trimStart) - $renderedMeta['duration_ms']) > 1500) {
                         throw new \\DomainException('draft_audio_render_duration_mismatch');
                     }
