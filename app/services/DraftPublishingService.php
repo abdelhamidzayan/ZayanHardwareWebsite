@@ -5,7 +5,7 @@ namespace App\Services;
 
 use App\Core\App;
 use App\Models\Database;
-use App\Models\PostDraft;
+use App\Models\PostDraft;\nuse App\Services\AudioWavPolicy;
 use PDO;
 use Throwable;
 
@@ -149,7 +149,8 @@ final class DraftPublishingService
                  VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)'
             );
             $audioUpdate = $pdo->prepare(
-                'UPDATE issues SET audio_path = ?, audio_mime_type = ?, audio_file_size = ?,
+                'UPDATE issues SET audio_path = ?, audio_original_path = ?, audio_original_mime_type = ?,
+                    audio_original_file_size = ?, audio_mime_type = ?, audio_file_size = ?,
                     audio_duration_ms = ?, audio_trim_start_ms = ?, audio_trim_end_ms = ?
                  WHERE id = ? AND user_id = ?'
             );
@@ -203,19 +204,52 @@ final class DraftPublishingService
                 }
 
                 if ($item['media_kind'] === 'audio') {
+                    if (empty($item['rendered_path']) || empty($item['rendered_mime_type'])) {
+                        throw new \\DomainException('draft_audio_trim_required');
+                    }
+                    $renderedRelativeSource = ltrim(str_replace('\\\\', '/', (string) $item['rendered_path']), '/');
+                    if ($renderedRelativeSource === '' || str_contains($renderedRelativeSource, '..')) {
+                        throw new \\DomainException('draft_media_path_invalid');
+                    }
+                    $renderedSource = realpath($privateRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $renderedRelativeSource));
+                    if ($renderedSource === false || !str_starts_with($renderedSource, $privateRoot . DIRECTORY_SEPARATOR) || !is_file($renderedSource)) {
+                        throw new \\DomainException('draft_media_missing');
+                    }
+                    $renderedMeta = AudioWavPolicy::inspect($renderedSource);
+                    if ((string) $item['rendered_mime_type'] !== 'audio/wav') {
+                        throw new \\DomainException('draft_audio_render_invalid');
+                    }
+                    $renderedFilename = bin2hex(random_bytes(16)) . '-trimmed.wav';
+                    $renderedDestination = $issueDirectory . DIRECTORY_SEPARATOR . $renderedFilename;
+                    if (!rename($renderedSource, $renderedDestination)) {
+                        throw new \\DomainException('draft_media_move_failed');
+                    }
+                    $publishedAudioPath = 'issues/' . $issueId . '/' . $renderedFilename;
+                    $moved[] = ['from' => $renderedSource, 'to' => $renderedDestination];
+
                     $audioMeta = is_array($payload['audio'] ?? null) ? $payload['audio'] : [];
-                    $duration = max(0, (int) ($audioMeta['duration_ms'] ?? $item['duration_ms'] ?? 0));
+                    $sourceDuration = max(0, (int) ($audioMeta['duration_ms'] ?? 0));
                     $trimStart = max(0, (int) ($audioMeta['trim_start_ms'] ?? 0));
-                    $trimEndRaw = $audioMeta['trim_end_ms'] ?? null;
-                    $trimEnd = $trimEndRaw === null ? null : max($trimStart, (int) $trimEndRaw);
-                    if ($duration > 0) {
-                        $trimStart = min($trimStart, $duration);
-                        if ($trimEnd !== null) $trimEnd = min(max($trimEnd, $trimStart), $duration);
+                    $trimEndRaw = $audioMeta['trim_end_ms'] ?? $sourceDuration;
+                    $trimEnd = max($trimStart, (int) $trimEndRaw);
+                    if ($sourceDuration < 100 || $trimEnd > $sourceDuration || $trimStart >= $trimEnd) {
+                        throw new \\DomainException('draft_audio_trim_invalid');
+                    }
+                    if (abs(($trimEnd - $trimStart) - $renderedMeta['duration_ms']) > 1500) {
+                        throw new \\DomainException('draft_audio_render_duration_mismatch');
                     }
                     $audioUpdate->execute([
-                        $newRelative, (string) $item['mime_type'], (int) $item['file_size'],
-                        $duration > 0 ? $duration : null, $trimStart > 0 ? $trimStart : null,
-                        $trimEnd, $issueId, $userId,
+                        $publishedAudioPath,
+                        $newRelative,
+                        (string) $item['mime_type'],
+                        (int) $item['file_size'],
+                        'audio/wav',
+                        $renderedMeta['file_size'],
+                        $renderedMeta['duration_ms'],
+                        $trimStart > 0 ? $trimStart : null,
+                        $trimEnd,
+                        $issueId,
+                        $userId,
                     ]);
                     continue;
                 }
