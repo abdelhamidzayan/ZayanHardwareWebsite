@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/app/services/AudioWavPolicy.php';
 
-use App\Services\AudioWavPolicy;
 
 function makeTestWav(int $sampleRate = 16000, int $channels = 1, int $bits = 16, int $durationMs = 1000): string
 {
@@ -24,7 +23,7 @@ function expectRejected(string $bytes, string $label): void
     if ($path === false) throw new RuntimeException('Unable to create test file.');
     file_put_contents($path, $bytes);
     try {
-        AudioWavPolicy::inspect($path);
+        \\App\\Services\\AudioWavPolicy::inspect($path);
         throw new RuntimeException('Expected WAV rejection: ' . $label);
     } catch (DomainException) {
         // Expected validation failure.
