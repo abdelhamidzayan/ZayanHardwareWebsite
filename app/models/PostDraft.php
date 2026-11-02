@@ -179,7 +179,7 @@ final class PostDraft extends Model
             }
             if ($kind === 'audio' && ($mimeType !== 'audio/wav' || $durationMs === null || $durationMs < 100)) {
                 self::rollbackRevisionMutation();
-                throw new \\DomainException('audio_wav_format_invalid');
+                throw new \DomainException('audio_wav_format_invalid');
             }
             $pdo->prepare(
                 'UPDATE post_draft_media SET rendered_path = ?, rendered_mime_type = ?, rendered_sha256 = ?,
