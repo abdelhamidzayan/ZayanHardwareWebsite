@@ -208,7 +208,7 @@ final class DraftPublishingService
                     if (empty($item['rendered_path']) || empty($item['rendered_mime_type'])) {
                         throw new \DomainException('draft_audio_trim_required');
                     }
-                    $renderedRelativeSource = ltrim(str_replace('\\\\', '/', (string) $item['rendered_path']), '/');
+                    $renderedRelativeSource = ltrim(str_replace('\\', '/', (string) $item['rendered_path']), '/');
                     if ($renderedRelativeSource === '' || str_contains($renderedRelativeSource, '..')) {
                         throw new \DomainException('draft_media_path_invalid');
                     }
