@@ -1,3 +1,10 @@
+## Current feature handoff — 2026-11-02
+
+- Active task branch: `feature/post-audio-real-trimming`, based on `main` commit `0d9a2f15645055d958adf583de284c97634d1eb7` at task start. Do not merge without owner approval.
+- Audio Stage 2 now has source changes for real browser WAV trimming, separate private original/rendered files, migration 020, server WAV validation, microphone selection and publish-time trim verification. All local syntax/browser/database/integration verification remains pending; do not describe it as tested or complete.
+- The owner's local Kali checkout is available to the owner but is not accessible through the GitHub connector. No GitHub Actions were triggered. Continue using local commands supplied to the owner for verification.
+- `plan.md` is the current stage tracker. Do not start Audio Display Stage 3 or Image Editor V2 before Stage 2 acceptance.
+
 # Zayan Hardware — AI Context and Handoff
 
 > **Start here in every new AI conversation.** Read [Contributor Rules](AGENTS.md), [Current Project State](docs/CURRENT_STATE.md), and [Update Log](UPDATES.md) first. This file is the durable project handoff. For the actual source architecture, open [Architecture and dependency map](docs/architecture-code-map.md). For the automated source graph, read [Graphify](docs/graphify.md). The short reusable prompt is [here](docs/AI_START_PROMPT.md).
