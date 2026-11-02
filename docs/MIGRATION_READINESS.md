@@ -36,7 +36,7 @@ No live database is changed by these steps until a separately reviewed migration
 
 ## Forward migration policy
 
-New upgrades must use a single, unique, monotonically increasing sequence after the historical set. They must be reviewed as forward-only changes and must not rewrite or replay historical files. Each managed migration must have:
+New upgrades use a single, unique, monotonically increasing sequence after the historical set. Until the managed CLI runner is ready, owner-approved migrations are added to `database/migrations/` and applied manually only after verifying the database's exact schema version. Each migration must be forward-only and must not rewrite or replay historical files. Each migration must have:
 
 - a unique filename and immutable SHA-256 checksum;
 - explicit prerequisites and expected preconditions;
@@ -46,7 +46,7 @@ New upgrades must use a single, unique, monotonically increasing sequence after 
 - MySQL and supported MariaDB compatibility coverage;
 - an explicit record of partial failure, because DDL is not reliably transactional.
 
-A future runner must be CLI-only, use a database advisory lock, verify the ledger and checksums, refuse unknown or drifted states, stop on the first error, and never automatically retry a partially applied DDL migration. The web diagnostic console must remain read-only.
+A future runner should be CLI-only, use a database advisory lock, verify the ledger and checksums, refuse unknown or drifted states, stop on the first error, and never automatically retry a partially applied DDL migration. The web diagnostic console remains read-only. Manual SQL migrations are run only through a trusted local SQL client or CLI after confirming the target schema.
 
 ## Commands available
 
@@ -73,4 +73,4 @@ The ledger schema reserves the fields required by the managed runner: migration 
 
 This marker is emitted only when `database/fresh_install.sql` creates a new empty database. It must never be copied into an existing installation merely because the tables look similar. Existing databases without this ledger remain UNKNOWN/BLOCKED until the separately documented backup, isolated restore, schema/data comparison, private-media verification, and explicit baseline-adoption review are complete.
 
-New forward-only migrations will live in `database/managed_migrations/`, beginning at sequence 020 or later. The historical `database/migrations/000–019` directory remains immutable evidence and is not an execution queue. No runner or migration execution is introduced by this ledger-schema change.
+The historical `database/migrations/000–019` files remain immutable evidence. Owner-approved forward migrations continue in that directory's numbered sequence while the managed runner is unfinished; the runner-specific directory is reserved for its later adoption. Migration 020 adds original-audio metadata and is included in the consolidated fresh-install schema. It must not be applied after `fresh_install.sql` has already created those columns.
