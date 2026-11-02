@@ -618,7 +618,11 @@
                 const renderedData = new FormData();
                 renderedData.append('_token', csrf);
                 renderedData.append('revision', String(revision));
-                renderedData.append('rendered', item.renderedBlob, 'edited-image.webp');
+                renderedData.append(
+                    'rendered',
+                    item.renderedBlob,
+                    item.media_kind === 'audio' ? 'trimmed-audio.wav' : 'edited-image.webp'
+                );
                 const renderedResponse = await fetch(
                     mediaBase + '/' + encodeURIComponent(draftId) + '/media/' + encodeURIComponent(item.media_uuid) + '/rendered',
                     { method: 'POST', body: renderedData, credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
@@ -632,6 +636,10 @@
                 item.renderedBlob = null;
                 item.needsRender = false;
                 item.rendered = true;
+                if (item.media_kind === 'audio' && audioMeta) {
+                    audioMeta.rendered_duration_ms = Number(renderedResult.duration_ms || 0);
+                    audioMeta.rendered_mime_type = renderedResult.mime_type || 'audio/wav';
+                }
             }
             const body = new URLSearchParams({
                 _token: csrf,
@@ -1276,6 +1284,26 @@
             audioMeta = null;
             await clearAudioSession();
             markDirty();
+        },
+        setAudioRenderedBlob: async function (blob, trimStartMs, trimEndMs, sourceDurationMs) {
+            const item = media.find(function (entry) { return entry.media_kind === 'audio'; });
+            if (!item || !blob || blob.type !== 'audio/wav') throw new Error('تعذر اعتماد ملف الصوت المقصوص.');
+            if (item.url && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
+            item.renderedBlob = blob;
+            item.url = URL.createObjectURL(blob);
+            item.dirtyEditor = true;
+            item.needsRender = false;
+            audioMeta = Object.assign({}, audioMeta || {}, {
+                duration_ms: sourceDurationMs,
+                trim_start_ms: trimStartMs,
+                trim_end_ms: trimEndMs,
+                rendered_duration_ms: Math.max(0, trimEndMs - trimStartMs),
+                rendered_mime_type: 'audio/wav'
+            });
+            await persistBlob(item);
+            markDirty();
+            await syncServer(false);
+            return true;
         },
         updateAudioTrim: function (startMs, endMs, durationMs) {
             audioMeta = Object.assign({}, audioMeta || {}, { duration_ms: durationMs, trim_start_ms: startMs, trim_end_ms: endMs });
