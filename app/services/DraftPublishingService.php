@@ -5,7 +5,8 @@ namespace App\Services;
 
 use App\Core\App;
 use App\Models\Database;
-use App\Models\PostDraft;\nuse App\Services\AudioWavPolicy;
+use App\Models\PostDraft;
+use App\Services\AudioWavPolicy;
 use PDO;
 use Throwable;
 
@@ -205,24 +206,24 @@ final class DraftPublishingService
 
                 if ($item['media_kind'] === 'audio') {
                     if (empty($item['rendered_path']) || empty($item['rendered_mime_type'])) {
-                        throw new \\DomainException('draft_audio_trim_required');
+                        throw new \DomainException('draft_audio_trim_required');
                     }
                     $renderedRelativeSource = ltrim(str_replace('\\\\', '/', (string) $item['rendered_path']), '/');
                     if ($renderedRelativeSource === '' || str_contains($renderedRelativeSource, '..')) {
-                        throw new \\DomainException('draft_media_path_invalid');
+                        throw new \DomainException('draft_media_path_invalid');
                     }
                     $renderedSource = realpath($privateRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $renderedRelativeSource));
                     if ($renderedSource === false || !str_starts_with($renderedSource, $privateRoot . DIRECTORY_SEPARATOR) || !is_file($renderedSource)) {
-                        throw new \\DomainException('draft_media_missing');
+                        throw new \DomainException('draft_media_missing');
                     }
                     $renderedMeta = AudioWavPolicy::inspect($renderedSource);
                     if ((string) $item['rendered_mime_type'] !== 'audio/wav') {
-                        throw new \\DomainException('draft_audio_render_invalid');
+                        throw new \DomainException('draft_audio_render_invalid');
                     }
                     $renderedFilename = bin2hex(random_bytes(16)) . '-trimmed.wav';
                     $renderedDestination = $issueDirectory . DIRECTORY_SEPARATOR . $renderedFilename;
                     if (!rename($renderedSource, $renderedDestination)) {
-                        throw new \\DomainException('draft_media_move_failed');
+                        throw new \DomainException('draft_media_move_failed');
                     }
                     $publishedAudioPath = 'issues/' . $issueId . '/' . $renderedFilename;
                     $moved[] = ['from' => $renderedSource, 'to' => $renderedDestination];
@@ -233,7 +234,7 @@ final class DraftPublishingService
                     $trimEndRaw = $audioMeta['trim_end_ms'] ?? $sourceDuration;
                     $trimEnd = max($trimStart, (int) $trimEndRaw);
                     if ($sourceDuration < 100 || $trimEnd > $sourceDuration || $trimStart >= $trimEnd) {
-                        throw new \\DomainException('draft_audio_trim_invalid');
+                        throw new \DomainException('draft_audio_trim_invalid');
                     }
                     $audioEditorState = is_array($item['editor_state'] ?? null)
                         ? $item['editor_state']
@@ -243,10 +244,10 @@ final class DraftPublishingService
                         || (int) ($audioEditorState['trim_start_ms'] ?? -1) !== $trimStart
                         || (int) ($audioEditorState['trim_end_ms'] ?? -1) !== $trimEnd
                         || (int) ($audioEditorState['source_duration_ms'] ?? -1) !== $sourceDuration) {
-                        throw new \\DomainException('draft_audio_trim_not_confirmed');
+                        throw new \DomainException('draft_audio_trim_not_confirmed');
                     }
                     if (abs(($trimEnd - $trimStart) - $renderedMeta['duration_ms']) > 1500) {
-                        throw new \\DomainException('draft_audio_render_duration_mismatch');
+                        throw new \DomainException('draft_audio_render_duration_mismatch');
                     }
                     $audioUpdate->execute([
                         $publishedAudioPath,
