@@ -162,7 +162,8 @@ final class PostDraft extends Model
         string $path,
         string $mimeType,
         string $sha256,
-        int $expectedRevision
+        int $expectedRevision,
+        ?int $durationMs = null
     ): ?int {
         $pdo = self::db();
         self::beginRevisionMutation($draftId, $userId, $expectedRevision);
@@ -171,14 +172,20 @@ final class PostDraft extends Model
                 'SELECT media_kind FROM post_draft_media WHERE draft_id = ? AND media_uuid = ? LIMIT 1'
             );
             $stmt->execute([$draftId, $mediaUuid]);
-            if ($stmt->fetchColumn() !== 'image') {
+            $kind = $stmt->fetchColumn();
+            if (!in_array($kind, ['image', 'audio'], true)) {
                 self::rollbackRevisionMutation();
                 return null;
             }
+            if ($kind === 'audio' && ($mimeType !== 'audio/wav' || $durationMs === null || $durationMs < 100)) {
+                self::rollbackRevisionMutation();
+                throw new \\DomainException('audio_wav_format_invalid');
+            }
             $pdo->prepare(
-                'UPDATE post_draft_media SET rendered_path = ?, rendered_mime_type = ?, rendered_sha256 = ?
+                'UPDATE post_draft_media SET rendered_path = ?, rendered_mime_type = ?, rendered_sha256 = ?,
+                    duration_ms = CASE WHEN media_kind = \'audio\' THEN ? ELSE duration_ms END
                  WHERE draft_id = ? AND media_uuid = ?'
-            )->execute([$path, $mimeType, $sha256, $draftId, $mediaUuid]);
+            )->execute([$path, $mimeType, $sha256, $durationMs, $draftId, $mediaUuid]);
 
             return self::finishRevisionMutation($draftId, $userId);
         } catch (\Throwable $e) {
