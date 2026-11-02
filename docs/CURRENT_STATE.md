@@ -1,3 +1,11 @@
+## 2026-11-02 — Audio Stage 2 implementation on feature/post-audio-real-trimming
+
+- Added migration 020 and matching fresh-install columns to retain the original audio path, MIME type and size separately from the playable rendered WAV.
+- Added browser-side decoding and real trimming to mono 16 kHz PCM16 WAV, plus an explicit trim-confirmation action and microphone selection.
+- Draft media stores the original in storage_path and the rendered WAV in rendered_path. Publishing promotes both into private issue storage; issues.audio_path points to the trimmed WAV and audio_original_path retains the original without a public delivery route.
+- Added strict server-side WAV validation and publish-time verification that the uploaded WAV matches the confirmed trim range.
+- Status: implementation committed to feature/post-audio-real-trimming; PHP/JS syntax, browser behavior, DB migration, draft recovery and publish round-trip tests are still pending. No local Kali test, GitHub Actions, PR, merge, deployment, or live database operation has been performed.
+
 ## 2026-11-02 — Line-level formatting state in the post composer
 
 - Live Preview now hides Markdown formatting markers on both active and inactive lines; formatted text remains styled while the source markers stay invisible.
