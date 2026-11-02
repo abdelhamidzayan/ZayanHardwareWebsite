@@ -1108,7 +1108,7 @@
         revisionInput.value = String(revision);
         applyPayload(data.payload || {});
         const serverMedia = (data.media || []).map(function (item) {
-            return Object.assign({}, item, { blob: null, local_id: item.media_uuid, uploaded: true });
+            return Object.assign({}, item, { blob: null, local_id: item.media_uuid, uploaded: true, rendered: Boolean(item.url && item.original_url && item.url !== item.original_url) });
         });
         media = serverMedia;
         renderMedia();
