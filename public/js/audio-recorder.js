@@ -34,6 +34,7 @@
     let durationMs = 0;
     let currentWaveform = [];
     let previewUrl = '';
+    let previewIsTrimmed = false;
     let currentTrimStart = 0;
     let currentTrimEnd = 0;
 
@@ -293,6 +294,7 @@
             preview.src = previewUrl;
         }
         preview.hidden = false;
+        previewIsTrimmed = false;
     }
 
     function resetRecorder(removeFromDraft) {
@@ -314,6 +316,7 @@
         currentTrimEnd = 0;
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = '';
+        previewIsTrimmed = false;
         preview.removeAttribute('src');
         preview.load();
         timeLabel.textContent = '00:00';
@@ -419,6 +422,7 @@
             }
             const wav = await createTrimmedWav(original, currentTrimStart, currentTrimEnd);
             setPreview(wav);
+            previewIsTrimmed = true;
             preview.currentTime = 0;
             preview.load();
             await window.ZayanComposer.setAudioRenderedBlob(wav, currentTrimStart, currentTrimEnd, durationMs);
@@ -457,13 +461,13 @@
     trimStart.addEventListener('input', updateTrim);
     trimEnd.addEventListener('input', updateTrim);
     preview.addEventListener('timeupdate', function () {
-        if (preview.currentTime * 1000 >= currentTrimEnd && currentTrimEnd > 0) {
+        if (!previewIsTrimmed && preview.currentTime * 1000 >= currentTrimEnd && currentTrimEnd > 0) {
             preview.pause();
             preview.currentTime = currentTrimStart / 1000;
         }
     });
     preview.addEventListener('play', function () {
-        if (currentTrimStart > 0 && preview.currentTime * 1000 < currentTrimStart) {
+        if (!previewIsTrimmed && currentTrimStart > 0 && preview.currentTime * 1000 < currentTrimStart) {
             preview.currentTime = currentTrimStart / 1000;
         }
     });
